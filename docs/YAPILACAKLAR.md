@@ -72,30 +72,17 @@ Kenarda açılır "Kütüphane" paneli, kategorilere ayrılmış, aranabilir; ek
 2. **Bilgi kutuları (Markdown benzeri bloklar)**: kement ile bir bölgeyi seçip "Kutuya çevir" → Kural / Tanım / Örnek / Dikkat / Formül / Özet başlıklı, renkli çerçeveli bir blok olur (el yazısı aynen kalır, düzenli bir kutuya alınır). Bloklar taşınabilir, daraltılabilir.
    - **Konu özeti**: defterdeki bütün kutular tek tıkla bir "Özet" sayfasında toplanır (kaynak sayfaya bağlantılı); PDF olarak paylaşılabilir.
    - El yazısını yazıya çevirme istenmediği için kutu içeriği el yazısı olarak kalır; istenirse kutuya klavyeyle başlık/alt yazı eklenir.
-3. **Yanlış defteri**: soruyu PDF'ten/fotoğraftan/sayfadan kırp → "Yanlış defteri"ne ekle (konu etiketi, kaynak, tarih). Defterde her soru için "çözüldü / tekrar" işareti, tekrar modu (cevap gizli).
+3. **Yanlış defteri**: PDF'ten (veya herhangi bir sayfadan) soru çözerken "Yanlış defterine ekle" aracıyla soruyu **dikdörtgen içine al → otomatik eklenir** (o bölgenin görüntüsü + üzerine yazılanlar, kaynak defter/sayfa, tarih). Ayrı bir "Yanlış defteri" defterinde her soru bir kart olarak durur: konu etiketi, "çözüldü / tekrar" işareti, kaynağa git, **sil**, tekrar modu (çözüm gizli, boş alanda yeniden çöz).
 4. **Kişisel formül kağıdı**: kütüphanedeki formül kartlarından seçerek düzenli bir formül sayfası oluşturma; kendi formüllerini ekleme; tek sayfa PDF.
 
-(Sınav kağıdı oluşturucu kullanıcı tarafından iptal edildi.)
+5. **Cebir karoları**: x², x, 1 (ve y, xy) karoları; sürükle-bırak, döndür, negatif (kırmızı) karolar; dikdörtgen oluşturup çarpanlara ayırma / özdeşlik gösterimi.
+6. **Kesir modelleri**: pasta ve çubuk modelleri (pay/payda ayarlanır, parçalar boyanır), sayı doğrusunda kesir; denk kesirleri yan yana gösterme.
+7. **Kavram haritası**: kutular (el yazısı veya klavye) ve aralarında oklar; kutular taşınınca oklar takip eder, oka etiket yazılabilir.
+8. **Değer tablosundan grafik**: x-y tablosu gir → noktalar koordinat düzlemine işlenir, istenirse noktalar birleştirilir veya doğru çizilir; tablo sayfada düzenlenebilir kalır.
 
-## J. Bekleyen öneriler (öğretmen)
-- Adım adım çözüm (satır satır açma), kaydırıcılı grafik (a, b değerleri canlı)
-- Bölünmüş ekran (solda soru PDF'i, sağda çözüm)
-- Bilimsel hesap makinesi, sonucu sayfaya yapıştırma
-- Sınıf listesi ve rastgele öğrenci seçici; yoklama/not çizelgesi
-- Ders planı şablonu, ödev PDF'i, ders sonu QR paylaşımı, takvim, sesli ders notu
-
-## K. Bekleyen öneriler (öğrenci ve aynı tarzda yeni fikirler)
-- Cevabı gizleme, konu takibi, deneme sınavı takibi, bilgi kartları, pomodoro, çalışma planı, etiket/arama, sayfa bağlantıları
-- **Örnekten alıştırmaya**: anlatılan örnek sorunun sayılarını değiştirip benzer alıştırma üretme (ör. 2³·2⁴ → 3²·3⁵); cevap otomatik hesaplanır (üslü, köklü, rasyonel sayılar, denklemler gibi hesaplanabilir konular)
-- **Adım kontrolü**: öğrencinin yazdığı ara sonuçları klavye/formül alanıyla girip doğru mu kontrol etme
-- **Kavram haritası**: kutuları oklarla bağlayıp konular arası ilişki gösterme (kutular taşınınca oklar takip eder)
-- **Görsel ispatlar / animasyonlu gösterimler**: Pisagor alan ispatı, üçgen iç açılar toplamı, birim çemberde açı dönerken sin/cos'un değişmesi gibi hazır animasyonlar
-- **Kesir ve oran görselleri**: pasta/çubuk kesir modelleri, sayı doğrusunda kesir gösterimi, sürüklenerek değişen
-- **Cebir karoları**: x², x, 1 karolarıyla çarpanlara ayırma / özdeşlik gösterimi
-- **Tablo ve grafik**: değer tablosu girip noktaları koordinat düzlemine işleme, doğruya uydurma
-- **Ezber / tekrar kartı oluşturma**: bilgi kutularından otomatik kart üretme
-- **Zamanlı soru çözme modu**: soru başına sayaç, süre istatistiği
-- **Sesli anlatım ekleme**: bir kutuya veya soruya kısa sesli açıklama iliştirme
+## İlke
+- **Yapay zeka desteği yok.** Uygulama sade kalacak; öğrenci ve öğretmen dikkat dağıtmayan, temiz bir alanda çalışacak.
+- Kullanıcının onaylamadığı öneriler listeden çıkarıldı (sınav kağıdı oluşturucu, adım adım çözüm, kaydırıcılı grafik, bölünmüş ekran, hesap makinesi, sınıf listesi, takvim, bilgi kartları, pomodoro, örnekten alıştırma, adım kontrolü, animasyonlar vb.). "F. Onaylanan ek özellikler" bölümündekiler (arama, ders programı, şablon defterler, soru kutuları, sayfa no/tarih, video listesi, çözüm katmanı, basınç eğrisi) ile G (PDF düzenleme) ve H (hazır kütüphane) geçerli.
 
 ## L. Kontrol
 - Her değişiklikten sonra emülatör testi ve ekran görüntüsü incelemesi.
