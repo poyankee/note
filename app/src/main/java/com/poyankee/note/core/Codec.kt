@@ -12,7 +12,7 @@ import java.io.IOException
 object Codec {
     private const val NB_MAGIC = 0x4E4F5445 // "NOTE"
     private const val PG_MAGIC = 0x50414745 // "PAGE"
-    private const val VERSION = 1
+    private const val VERSION = 2
 
     fun writeNotebook(nb: Notebook, out: DataOutputStream) {
         out.writeInt(NB_MAGIC); out.writeInt(VERSION)
@@ -20,12 +20,12 @@ object Codec {
         out.writeLong(nb.created); out.writeLong(nb.updated)
         out.writeBoolean(nb.pdfFile != null); nb.pdfFile?.let { out.writeUTF(it) }
         out.writeInt(nb.pageOffset)
-        out.writeInt(nb.defaultTemplate.ordinal); out.writeBoolean(nb.defaultDark); out.writeInt(nb.defaultSize.ordinal)
+        writePaper(nb.defaultPaper, out); out.writeInt(nb.defaultSize.ordinal); out.writeUTF(nb.folder)
         out.writeInt(nb.pages.size)
         for (p in nb.pages) {
             out.writeLong(p.id); out.writeFloat(p.width); out.writeFloat(p.height)
             when (val bg = p.background) {
-                is Background.Paper -> { out.writeByte(0); out.writeInt(bg.template.ordinal); out.writeBoolean(bg.dark) }
+                is Background.Paper -> { out.writeByte(0); writePaper(bg, out) }
                 is Background.PdfPage -> { out.writeByte(1); out.writeInt(bg.index) }
             }
         }
@@ -42,15 +42,15 @@ object Codec {
         val created = inp.readLong(); val updated = inp.readLong()
         val pdf = if (inp.readBoolean()) inp.readUTF() else null
         val offset = inp.readInt()
-        val tpl = Template.entries[inp.readInt()]
-        val dark = inp.readBoolean()
+        val paper = readPaper(inp, ver)
         val size = PageSize.entries[inp.readInt()]
-        val nb = Notebook(id, name, created, updated, pdf, offset, tpl, dark, size)
+        val folder = if (ver >= 2) inp.readUTF() else ""
+        val nb = Notebook(id, name, created, updated, pdf, offset, paper, size, folder)
         val pc = inp.readInt()
         repeat(pc) {
             val pid = inp.readLong(); val w = inp.readFloat(); val h = inp.readFloat()
             val bg = when (inp.readByte().toInt()) {
-                0 -> Background.Paper(Template.entries[inp.readInt()], inp.readBoolean())
+                0 -> readPaper(inp, ver)
                 else -> Background.PdfPage(inp.readInt())
             }
             nb.pages += Page(pid, bg, w, h)
@@ -58,6 +58,16 @@ object Codec {
         val bc = inp.readInt()
         repeat(bc) { nb.bookmarks += Bookmark(inp.readLong(), inp.readUTF()) }
         return nb
+    }
+
+    private fun writePaper(p: Background.Paper, out: DataOutputStream) {
+        out.writeInt(p.template.ordinal); out.writeInt(p.color); out.writeFloat(p.spacing); out.writeFloat(p.opacity)
+    }
+
+    private fun readPaper(inp: DataInputStream, ver: Int): Background.Paper {
+        val t = Template.entries[inp.readInt()]
+        if (ver < 2) return Background.Paper(t, inp.readBoolean())
+        return Background.Paper(t, inp.readInt(), inp.readFloat(), inp.readFloat())
     }
 
     fun writeItems(items: List<Item>, out: DataOutputStream) {

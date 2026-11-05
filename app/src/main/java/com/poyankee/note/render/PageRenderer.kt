@@ -22,6 +22,7 @@ import com.poyankee.note.core.Template
 import com.poyankee.note.core.Templates
 import com.poyankee.note.core.TextItem
 import java.util.WeakHashMap
+import kotlin.math.max
 
 /** Görsel dosyalarını sağlayan arayüz (yüklenmemişse null döner ve yükleme başlatır). */
 fun interface ImageSource {
@@ -48,7 +49,7 @@ class PageRenderer(private val images: ImageSource?) {
 
     companion object {
         const val PAPER = 0xFFFFFFFF.toInt()
-        const val BOARD = 0xFF1F3B32.toInt() // kara tahta yeşili
+        const val BOARD = com.poyankee.note.core.PaperColors.BOARD
 
         fun lineColor(kind: Templates.Kind, dark: Boolean): Int = if (!dark) when (kind) {
             Templates.Kind.MINOR -> 0xFFCFDCE8.toInt()
@@ -64,6 +65,8 @@ class PageRenderer(private val images: ImageSource?) {
             Templates.Kind.MARGIN -> 0xFF9C5A5A.toInt()
         }
 
+        fun dotColor(dark: Boolean) = if (dark) 0xFF7FA597.toInt() else 0xFF8FA3B6.toInt()
+
         fun lineWidth(kind: Templates.Kind) = when (kind) {
             Templates.Kind.MINOR -> 0.45f
             Templates.Kind.MEDIUM -> 0.6f
@@ -73,29 +76,29 @@ class PageRenderer(private val images: ImageSource?) {
         }
     }
 
-    /** Kağıt rengini ve şablon çizgilerini çizer (PDF sayfası değilse). */
+    /** Kağıt rengini ve şablon desenini çizer (PDF sayfası değilse). */
     fun drawPaper(c: Canvas, page: Page) {
         val bg = page.background
         if (bg !is Background.Paper) return
-        c.drawColor(if (bg.dark) BOARD else PAPER)
-        drawTemplate(c, bg.template, bg.dark, page.width, page.height)
+        c.drawColor(bg.color)
+        drawTemplate(c, bg.template, bg.dark, page.width, page.height, bg.spacing, bg.opacity)
     }
 
-    fun drawTemplate(c: Canvas, t: Template, dark: Boolean, w: Float, h: Float) {
-        if (t == Template.BLANK) return
-        val g = templateCache.getOrPut("$t/$w/$h") { Templates.geometry(t, w, h) }
+    fun drawTemplate(c: Canvas, t: Template, dark: Boolean, w: Float, h: Float, spacing: Float = Templates.defaultSpacing(t), opacity: Float = 1f) {
+        if (t == Template.BLANK || opacity <= 0.01f) return
+        val g = templateCache.getOrPut("$t/$w/$h/$spacing") { Templates.geometry(t, w, h, spacing) }
         for (l in g.lines) {
-            lineP.color = lineColor(l.kind, dark)
+            lineP.color = mulAlpha(lineColor(l.kind, dark), opacity)
             lineP.strokeWidth = lineWidth(l.kind)
             c.drawLine(l.x1, l.y1, l.x2, l.y2, lineP)
         }
         if (g.dots.isNotEmpty()) {
-            fill.color = if (dark) 0xFF7FA597.toInt() else 0xFF9DB0C2.toInt()
+            fill.color = mulAlpha(dotColor(dark), opacity)
             var i = 0
             while (i + 1 < g.dots.size) { c.drawCircle(g.dots[i], g.dots[i + 1], g.dotRadius, fill); i += 2 }
         }
         if (g.labels.isNotEmpty()) {
-            labelP.color = if (dark) 0xFFE0E0E0.toInt() else 0xFF455A64.toInt()
+            labelP.color = mulAlpha(if (dark) 0xFFE0E0E0.toInt() else 0xFF455A64.toInt(), max(opacity, 0.5f))
             for (lb in g.labels) c.drawText(lb.text, lb.x, lb.y, labelP)
         }
     }

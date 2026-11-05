@@ -164,8 +164,8 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
     fun invalidateAllPages() { dirty.addAll(nodes.keys); invalidate() }
     fun onPdfUpdated() { invalidate(); ctl.frameListeners.forEach { it() } }
 
-    private val deskColor = 0xFFDADDE2.toInt()
-    private val shadow = Paint().apply { color = 0x33000000 }
+    private val deskColor = 0xFFE9EBEF.toInt()
+    private val shadow = Paint().apply { color = 0x22000000 }
     private val bmpPaint = Paint(Paint.FILTER_BITMAP_FLAG)
     private val overlayStroke = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND }
     private val overlayFill = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
@@ -183,7 +183,15 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
      * [forOutput] = true iken seçim tutamaçları ve imleçler çizilmez.
      */
     fun drawScene(c: Canvas, z: Float, ox: Float, oy: Float, vw: Float, vh: Float, forOutput: Boolean) {
-        c.drawColor(deskColor)
+        // Önemli: yalnızca kendi alanımıza çiz (Compose içinde kırpma yapılmazsa üst çubuk ve menüler üzerine boyanır)
+        c.save()
+        c.clipRect(0f, 0f, vw, vh)
+        fillPaint.color = deskColor
+        c.drawRect(0f, 0f, vw, vh, fillPaint)
+        try { drawSceneInner(c, z, ox, oy, vw, vh, forOutput) } finally { c.restore() }
+    }
+
+    private fun drawSceneInner(c: Canvas, z: Float, ox: Float, oy: Float, vw: Float, vh: Float, forOutput: Boolean) {
         if (tops.isEmpty()) return
         val top = oy; val bottom = oy + vh / z
         val first = pageIndexAt(top)
@@ -196,7 +204,7 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
             c.save()
             c.translate((px - ox) * z, (py - oy) * z)
             c.scale(z, z)
-            c.drawRect(0.6f, 0.9f, page.width + 0.6f, page.height + 0.9f, shadow)
+            c.drawRect(-0.4f / z * 2f, -0.2f, page.width + 0.8f / z * 2f, page.height + 1.6f / z * 2f, shadow)
             // PDF zemini
             val bg = page.background
             if (bg is Background.PdfPage) {
@@ -822,7 +830,7 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
     private fun snapperFor(i: Int): Snapper {
         val page = nb.pages[i]
         val bg = page.background
-        val lattice = if (settings.gridSnap.value && bg is Background.Paper) Templates.snapLattice(bg.template, page.width, page.height) else null
+        val lattice = if (settings.gridSnap.value && bg is Background.Paper) Templates.snapLattice(bg.template, page.width, page.height, bg.spacing) else null
         return Snapper(lattice, Snapper.anchorsOf(page.items), max(3f, 13f * density / zoom), settings.angleSnap.value)
     }
 

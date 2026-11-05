@@ -29,6 +29,8 @@ class PdfPages(file: File, private val onUpdate: () -> Unit) {
     private val exec = Executors.newSingleThreadExecutor { r -> Thread(r, "pdf-render") }
     private val main = Handler(Looper.getMainLooper())
     @Volatile private var closed = false
+    /** Kapatma istendi: yeni iş alınmaz, sıradaki işler (ör. kapak) yine de tamamlanır. */
+    @Volatile private var closing = false
 
     private val base = object : LruCache<Int, Bitmap>(140 * 1024 * 1024) {
         override fun sizeOf(key: Int, value: Bitmap) = value.byteCount
@@ -40,7 +42,7 @@ class PdfPages(file: File, private val onUpdate: () -> Unit) {
     /** Temel görüntü; hazır değilse null döner ve hazırlamaya başlar. */
     fun base(index: Int): Bitmap? {
         base.get(index)?.let { return it }
-        if (closed || index !in 0 until pageCount || !pendingBase.add(index)) return null
+        if (closing || closed || index !in 0 until pageCount || !pendingBase.add(index)) return null
         exec.execute {
             if (closed) return@execute
             val bmp = try {
@@ -69,7 +71,7 @@ class PdfPages(file: File, private val onUpdate: () -> Unit) {
      * Aynı sayfa için daha yeni bir istek gelirse eskisi atlanır.
      */
     fun requestSharp(index: Int, rect: RectF, zoom: Float) {
-        if (closed || index !in 0 until pageCount) return
+        if (closing || closed || index !in 0 until pageCount) return
         val cur = sharp[index]
         if (cur != null && cur.zoom == zoom && cur.rect.contains(rect)) return
         val gen = (sharpGen[index] ?: 0) + 1
@@ -110,7 +112,7 @@ class PdfPages(file: File, private val onUpdate: () -> Unit) {
     }
 
     /** Arka plan iş parçacığında çalışan işler için (küçük resim, dışa aktarma). [block] PDF iş parçacığında çalışır. */
-    fun runOnPdfThread(block: () -> Unit) { if (!closed) exec.execute { if (!closed) block() } }
+    fun runOnPdfThread(block: () -> Unit) { if (!closing && !closed) exec.execute { if (!closed) block() } }
 
     /** Yalnızca PDF iş parçacığında çağrılmalı. */
     fun renderBlocking(index: Int, scale: Float): Bitmap? = try {
@@ -125,8 +127,10 @@ class PdfPages(file: File, private val onUpdate: () -> Unit) {
     } catch (_: Throwable) { null }
 
     fun close() {
-        closed = true
+        if (closing) return
+        closing = true
         exec.execute {
+            closed = true
             try { renderer.close() } catch (_: Throwable) {}
             try { fd.close() } catch (_: Throwable) {}
         }

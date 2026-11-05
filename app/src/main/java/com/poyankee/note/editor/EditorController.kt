@@ -20,7 +20,6 @@ import com.poyankee.note.core.Item
 import com.poyankee.note.core.Notebook
 import com.poyankee.note.core.Page
 import com.poyankee.note.core.PageNumbers
-import com.poyankee.note.core.Template
 import com.poyankee.note.core.TextItem
 import com.poyankee.note.core.UndoStack
 import com.poyankee.note.data.Settings
@@ -199,23 +198,18 @@ class EditorController(
         return true
     }
 
-    private fun newPaperLike(ref: Page?, template: Template?): Page {
+    /** Yeni sayfa: verilen stil ya da yanındaki sayfanın stili (PDF'in arasına eklenirse aynı boyutta). */
+    private fun newPaperLike(ref: Page?, style: Background.Paper?): Page {
         val bg = ref?.background
-        // PDF sayfasının arasına eklenen sayfa PDF ile aynı boyutta olsun
-        if (ref != null && bg is Background.PdfPage) {
-            return Page(Ids.next(), Background.Paper(template ?: nb.defaultTemplate, false), ref.width, ref.height)
-        }
-        val paper = bg as? Background.Paper
-        val t = template ?: paper?.template ?: nb.defaultTemplate
-        val dark = paper?.dark ?: nb.defaultDark
-        val w = if (ref != null && paper != null) ref.width else nb.defaultSize.w
-        val h = if (ref != null && paper != null) ref.height else nb.defaultSize.h
-        return Page(Ids.next(), Background.Paper(t, dark), w, h)
+        val paper = style ?: (bg as? Background.Paper) ?: nb.defaultPaper
+        val w = ref?.width ?: nb.defaultSize.w
+        val h = ref?.height ?: nb.defaultSize.h
+        return Page(Ids.next(), paper, w, h)
     }
 
-    fun insertPageAfter(index: Int, template: Template? = null) {
+    fun insertPageAfter(index: Int, style: Background.Paper? = null) {
         val ref = nb.pages.getOrNull(index)
-        val p = newPaperLike(ref, template)
+        val p = newPaperLike(ref, style)
         nb.pages.add((index + 1).coerceIn(0, nb.pages.size), p)
         pagesChanged()
         goToPage(index + 1, remember = false)
@@ -247,12 +241,19 @@ class EditorController(
         pagesChanged()
     }
 
-    fun setTemplate(index: Int, t: Template, dark: Boolean) {
-        val p = nb.pages.getOrNull(index) ?: return
-        if (p.background is Background.PdfPage) return
-        p.background = Background.Paper(t, dark)
+    /** Sayfanın kağıt stilini (şablon, renk, aralık, saydamlık) değiştirir. [all] = tüm kağıt sayfalarına uygula. */
+    fun setPageStyle(index: Int, style: Background.Paper, all: Boolean = false) {
+        val targets = if (all) nb.pages.filter { it.background is Background.Paper } else listOfNotNull(nb.pages.getOrNull(index)?.takeIf { it.background is Background.Paper })
+        for (p in targets) { p.background = style; view?.invalidatePage(p.id) }
+        nb.defaultPaper = style
         store.saveMeta(nb)
-        view?.invalidatePage(p.id)
+        pagesVersion++
+    }
+
+    fun rename(name: String) {
+        if (name.isBlank()) return
+        nb.name = name.trim()
+        store.saveMeta(nb)
         pagesVersion++
     }
 
@@ -343,6 +344,22 @@ class EditorController(
         }
     }
 
+    /** Ana sayfadaki defter kapağı için ilk sayfanın küçük resmini kaydeder. */
+    private fun saveCover() {
+        val page = nb.pages.firstOrNull() ?: return
+        val snapshot = Page(page.id, page.background, page.width, page.height).also { it.items.addAll(page.items) }
+        val scale = 360f / page.width
+        val job: () -> Unit = {
+            try {
+                val bg = (snapshot.background as? Background.PdfPage)?.let { pdf?.renderBlocking(it.index, scale) }
+                val bmp = thumbRenderer.renderPage(snapshot, scale, bg)
+                store.writeCover(nb.id, bmp)
+                bmp.recycle(); bg?.recycle()
+            } catch (_: Throwable) {}
+        }
+        if (pdf != null) pdf.runOnPdfThread(job) else thumbExec.execute { job() }
+    }
+
     /* ---------- küçük resimler ---------- */
 
     private val thumbExec = Executors.newSingleThreadExecutor()
@@ -372,6 +389,7 @@ class EditorController(
 
     fun close() {
         view?.clearSelection()
+        saveCover()
         store.saveMeta(nb)
         store.flush()
         pdf?.close()

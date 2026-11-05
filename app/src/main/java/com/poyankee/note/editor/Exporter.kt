@@ -155,12 +155,15 @@ object Exporter {
     }
 
     private fun drawPaper(cs: PDPageContentStream, page: Page, bg: Background.Paper) {
-        if (bg.dark) {
-            val c = rgb(PageRenderer.BOARD)
+        if (bg.color != PageRenderer.PAPER) {
+            val c = rgb(bg.color)
             cs.setNonStrokingColor(c[0], c[1], c[2])
             cs.addRect(0f, 0f, page.width, page.height); cs.fill()
         }
-        val g = Templates.geometry(bg.template, page.width, page.height)
+        if (bg.opacity <= 0.01f) return
+        val g = Templates.geometry(bg.template, page.width, page.height, bg.spacing)
+        cs.saveGraphicsState()
+        if (bg.opacity < 0.99f) setAlpha(cs, bg.opacity)
         for (l in g.lines) {
             val c = rgb(PageRenderer.lineColor(l.kind, bg.dark))
             cs.setStrokingColor(c[0], c[1], c[2])
@@ -168,7 +171,7 @@ object Exporter {
             cs.moveTo(l.x1, l.y1); cs.lineTo(l.x2, l.y2); cs.stroke()
         }
         if (g.dots.isNotEmpty()) {
-            val c = rgb(if (bg.dark) 0xFF7FA597.toInt() else 0xFF9DB0C2.toInt())
+            val c = rgb(PageRenderer.dotColor(bg.dark))
             cs.setNonStrokingColor(c[0], c[1], c[2])
             var i = 0
             while (i + 1 < g.dots.size) {
@@ -177,7 +180,7 @@ object Exporter {
                 i += 2
             }
         }
-        // koordinat etiketleri: küçük metin resmi yerine kısa çizgiler yeterli olmadığından görüntü olarak eklenmez (sade tutuldu)
+        cs.restoreGraphicsState()
     }
 
     private fun polygon(cs: PDPageContentStream, xy: FloatArray) {

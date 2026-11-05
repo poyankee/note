@@ -27,7 +27,16 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 /** Defter listesinde gösterilen özet bilgi. */
-data class NotebookInfo(val id: String, val name: String, val updated: Long, val pageCount: Int, val isPdf: Boolean)
+data class NotebookInfo(
+    val id: String,
+    val name: String,
+    val updated: Long,
+    val pageCount: Int,
+    val isPdf: Boolean,
+    val folder: String,
+    val cover: File?,
+    val coverStamp: Long,
+)
 
 /**
  * Defterleri cihazın uygulama klasöründe saklar:
@@ -48,7 +57,8 @@ class Store(context: Context) {
             try {
                 DataInputStream(BufferedInputStream(FileInputStream(f))).use { inp ->
                     val nb = Codec.readNotebook(inp)
-                    out += NotebookInfo(nb.id, nb.name, nb.updated, nb.pages.size, nb.pdfFile != null)
+                    val cover = File(d, "cover.png").takeIf { it.exists() }
+                    out += NotebookInfo(nb.id, nb.name, nb.updated, nb.pages.size, nb.pdfFile != null, nb.folder, cover, cover?.lastModified() ?: 0L)
                 }
             } catch (_: Exception) {
             }
@@ -56,18 +66,18 @@ class Store(context: Context) {
         return out.sortedByDescending { it.updated }
     }
 
-    fun create(name: String, template: Template, dark: Boolean, size: PageSize): Notebook {
+    fun create(name: String, paper: Background.Paper, size: PageSize, folder: String): Notebook {
         val id = UUID.randomUUID().toString()
         dir(id).mkdirs()
         val now = System.currentTimeMillis()
-        val nb = Notebook(id, name, now, now, null, 0, template, dark, size)
-        nb.pages += Page(Ids.next(), Background.Paper(template, dark), size.w, size.h)
+        val nb = Notebook(id, name, now, now, null, 0, paper, size, folder)
+        nb.pages += Page(Ids.next(), paper, size.w, size.h)
         writeMetaNow(nb)
         return nb
     }
 
     /** PDF'i kopyalayıp yeni defter oluşturur. Arka planda çağrılmalı. */
-    fun importPdf(context: Context, uri: Uri): Notebook {
+    fun importPdf(context: Context, uri: Uri, folder: String = ""): Notebook {
         val id = UUID.randomUUID().toString()
         val d = dir(id).apply { mkdirs() }
         val pdf = File(d, "source.pdf")
@@ -76,7 +86,7 @@ class Store(context: Context) {
             FileOutputStream(pdf).use { inp.copyTo(it, 1 shl 16) }
         }
         val now = System.currentTimeMillis()
-        val nb = Notebook(id, displayName(context, uri) ?: "PDF", now, now, "source.pdf", 0, Template.GRID, false, PageSize.A4_PORTRAIT)
+        val nb = Notebook(id, displayName(context, uri) ?: "PDF", now, now, "source.pdf", 0, Background.Paper(Template.GRID), PageSize.A4_PORTRAIT, folder)
         try {
             ParcelFileDescriptor.open(pdf, ParcelFileDescriptor.MODE_READ_ONLY).use { fd ->
                 PdfRenderer(fd).use { r ->
@@ -137,7 +147,7 @@ class Store(context: Context) {
     /** Defter bilgisini (sayfa listesi dahil) kaydeder. Ana iş parçacığından çağrılır; anlık görüntü alınır. */
     fun saveMeta(nb: Notebook) {
         nb.updated = System.currentTimeMillis()
-        val snap = Notebook(nb.id, nb.name, nb.created, nb.updated, nb.pdfFile, nb.pageOffset, nb.defaultTemplate, nb.defaultDark, nb.defaultSize)
+        val snap = Notebook(nb.id, nb.name, nb.created, nb.updated, nb.pdfFile, nb.pageOffset, nb.defaultPaper, nb.defaultSize, nb.folder)
         for (p in nb.pages) snap.pages += Page(p.id, p.background, p.width, p.height)
         snap.bookmarks += nb.bookmarks
         io.execute { try { writeMetaNow(snap) } catch (_: Exception) {} }
@@ -155,14 +165,42 @@ class Store(context: Context) {
         io.execute { File(dir(nbId), "p_$pageId.bin").delete() }
     }
 
-    fun rename(id: String, name: String) {
+    private fun editMeta(id: String, change: (Notebook) -> Unit) {
         io.execute {
             try {
                 val nb = DataInputStream(BufferedInputStream(FileInputStream(File(dir(id), "notebook.bin")))).use { Codec.readNotebook(it) }
-                nb.name = name
+                change(nb)
                 writeMetaNow(nb)
             } catch (_: Exception) {}
         }
+    }
+
+    fun rename(id: String, name: String) = editMeta(id) { it.name = name }
+    fun setFolder(id: String, folder: String) = editMeta(id) { it.folder = folder }
+
+    /* ---------- klasörler ---------- */
+
+    private val foldersFile = File(root, "folders.txt")
+
+    /** Kullanıcının oluşturduğu klasörler (boş olanlar dahil), sıralı. */
+    fun folders(): List<String> = try {
+        if (foldersFile.exists()) foldersFile.readLines().map { it.trim() }.filter { it.isNotEmpty() }.distinct() else emptyList()
+    } catch (_: Exception) { emptyList() }
+
+    fun saveFolders(list: List<String>) {
+        val copy = list.distinct()
+        io.execute { try { foldersFile.writeText(copy.joinToString("\n")) } catch (_: Exception) {} }
+    }
+
+    /* ---------- kapak ---------- */
+
+    fun writeCover(id: String, bmp: Bitmap) {
+        try {
+            val f = File(dir(id), "cover.png")
+            val tmp = File(dir(id), "cover.tmp")
+            FileOutputStream(tmp).use { bmp.compress(Bitmap.CompressFormat.PNG, 90, it) }
+            tmp.renameTo(f)
+        } catch (_: Exception) {}
     }
 
     fun delete(id: String) { io.execute { dir(id).deleteRecursively() } }

@@ -10,7 +10,11 @@ import android.view.InputDevice
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.core.content.FileProvider
@@ -20,6 +24,8 @@ import com.poyankee.note.core.Background
 import com.poyankee.note.core.Geom
 import com.poyankee.note.core.InkItem
 import com.poyankee.note.core.Item
+import com.poyankee.note.core.PaperColors
+import com.poyankee.note.core.Template
 import com.poyankee.note.core.ShapeItem
 import com.poyankee.note.editor.EditorController
 import com.poyankee.note.editor.Exporter
@@ -127,11 +133,41 @@ class SmokeTest {
         return ink()
     }
 
+    /** Bir alanın ne kadarının saf beyaz olduğu (0..1). */
+    private fun whiteRatio(tag: String): Float {
+        rule.waitForIdle()
+        val bmp = rule.onRoot().captureToImage().asAndroidBitmap()
+        val b = rule.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot
+        var white = 0; var total = 0
+        var y = b.top.toInt() + 2
+        while (y < b.bottom.toInt() - 2 && y < bmp.height) {
+            var x = b.left.toInt() + 2
+            while (x < b.right.toInt() - 2 && x < bmp.width) {
+                if (bmp.getPixel(x, y) == android.graphics.Color.WHITE) white++
+                total++
+                x += 7
+            }
+            y += 5
+        }
+        return if (total == 0) 0f else white.toFloat() / total
+    }
+
     @Test
     fun drawingAndTools() {
         val v = newNotebook()
         val c = v.controller
         val w = v.width.toFloat(); val h = v.height.toFloat()
+
+        // 0) Arayüz görünür olmalı: sayfa çizimi üst çubuğun ve araç menüsünün üzerine taşmamalı
+        val topWhite = whiteRatio("topbar")
+        assertTrue("üst çubuk görünmüyor (beyaz oranı $topWhite)", topWhite > 0.5f)
+        assertTrue("araç menüsü görünmüyor", whiteRatio("dock") > 0.3f)
+
+        // 0b) Sayfa stili: desen, renk, aralık, saydamlık
+        main { c.setPageStyle(0, Background.Paper(Template.ISOMETRIC, PaperColors.CREAM, 14f, 0.3f)) }
+        val st = main { c.nb.pages[0].background as Background.Paper }
+        assertEquals(Template.ISOMETRIC, st.template); assertEquals(0.3f, st.opacity, 0f)
+        main { c.setPageStyle(0, Background.Paper(Template.GRID)) }
 
         // 1) Kalemle yaz
         main { c.selectTool(Tool.PEN) }

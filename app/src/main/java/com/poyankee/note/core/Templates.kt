@@ -24,7 +24,24 @@ object Templates {
         return (cx - floor(cx / s) * s) to (cy - floor(cy / s) * s)
     }
 
-    fun geometry(t: Template, w: Float, h: Float): Geometry {
+    /** Şablonun varsayılan desen aralığı. */
+    fun defaultSpacing(t: Template): Float = when (t) {
+        Template.LINED -> LINE
+        Template.MILLIMETER -> MM
+        else -> GRID
+    }
+
+    /** Ayarlanabilir aralık sınırları (en az, en çok). */
+    fun spacingRange(t: Template): ClosedFloatingPointRange<Float> = when (t) {
+        Template.LINED -> 16f..44f
+        Template.MILLIMETER -> MM..(MM * 2f)
+        else -> 10f..40f
+    }
+
+    fun geometry(t: Template, w: Float, h: Float, spacing: Float = defaultSpacing(t)): Geometry {
+        val GRID = spacing
+        val LINE = spacing
+        val MM = spacing
         val lines = ArrayList<TLine>()
         val labels = ArrayList<TLabel>()
         var dots = FloatArray(0)
@@ -125,10 +142,10 @@ object Templates {
     }
 
     /** Şablonun yapışma kafesi; şablonda kafes yoksa null. Varsayılan [GRID] kafesi kullanılabilir. */
-    fun snapLattice(t: Template?, w: Float, h: Float): Lattice? = when (t) {
-        Template.GRID, Template.DOTS, Template.COORDINATE -> Lattice.Square(gridOrigin(w, h, GRID), GRID)
-        Template.MILLIMETER -> Lattice.Square(0f to 0f, MM * 5f)
-        Template.ISOMETRIC -> Lattice.Iso(w / 2f - floor((w / 2f) / GRID) * GRID, h / 2f, GRID)
+    fun snapLattice(t: Template?, w: Float, h: Float, s: Float = if (t != null) defaultSpacing(t) else GRID): Lattice? = when (t) {
+        Template.GRID, Template.DOTS, Template.COORDINATE -> Lattice.Square(gridOrigin(w, h, s), s)
+        Template.MILLIMETER -> Lattice.Square(0f to 0f, s * 5f)
+        Template.ISOMETRIC -> Lattice.Iso(w / 2f - floor((w / 2f) / s) * s, h / 2f, s)
         else -> null
     }
 

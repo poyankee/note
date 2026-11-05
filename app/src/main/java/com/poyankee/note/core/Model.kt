@@ -194,8 +194,35 @@ enum class Template(val title: String) {
     MILLIMETER("Milimetrik"),
 }
 
+/** Hazır kağıt renkleri. */
+object PaperColors {
+    const val WHITE = 0xFFFFFFFF.toInt()
+    const val CREAM = 0xFFFBF6E9.toInt()
+    const val GRAY = 0xFFEEF1F4.toInt()
+    const val BOARD = 0xFF1F3B32.toInt()   // kara tahta yeşili
+    const val NIGHT = 0xFF1C2230.toInt()   // gece mavisi
+    val all = listOf(WHITE to "Beyaz", CREAM to "Krem", GRAY to "Gri", BOARD to "Kara tahta", NIGHT to "Gece")
+
+    fun isDark(c: Int): Boolean {
+        val r = (c shr 16) and 0xFF; val g = (c shr 8) and 0xFF; val b = c and 0xFF
+        return (0.299 * r + 0.587 * g + 0.114 * b) < 110
+    }
+}
+
 sealed class Background {
-    data class Paper(val template: Template, val dark: Boolean) : Background()
+    /**
+     * Kağıt sayfası.
+     * [spacing] = desen aralığı (nokta), [opacity] = desen (çizgi/nokta) görünürlüğü 0..1.
+     */
+    data class Paper(
+        val template: Template,
+        val color: Int = PaperColors.WHITE,
+        val spacing: Float = Templates.defaultSpacing(template),
+        val opacity: Float = 1f,
+    ) : Background() {
+        constructor(template: Template, dark: Boolean) : this(template, if (dark) PaperColors.BOARD else PaperColors.WHITE)
+        val dark get() = PaperColors.isDark(color)
+    }
     /** Kaynak PDF'in [index]. sayfası (0'dan başlar). */
     data class PdfPage(val index: Int) : Background()
 }
@@ -228,10 +255,11 @@ class Notebook(
     var pdfFile: String?,
     /** Kitaptaki sayfa no = PDF sayfa no - ofset. Ör: kapak+önsöz 8 sayfa ise ofset 8. */
     var pageOffset: Int = 0,
-    var defaultTemplate: Template = Template.GRID,
-    var defaultDark: Boolean = false,
+    var defaultPaper: Background.Paper = Background.Paper(Template.GRID),
     var defaultSize: PageSize = PageSize.A4_PORTRAIT,
+    var folder: String = "",
 ) {
+    val defaultTemplate get() = defaultPaper.template
     val pages: MutableList<Page> = ArrayList()
     val bookmarks: MutableList<Bookmark> = ArrayList()
 

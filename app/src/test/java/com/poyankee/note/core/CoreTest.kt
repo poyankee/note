@@ -195,16 +195,18 @@ class CoreTest {
     }
 
     @Test fun codecRoundTrip() {
-        val nb = Notebook("id1", "Türev — ğüşıöç", 1, 2, "source.pdf", 8, Template.COORDINATE, true, PageSize.WIDE)
+        val nb = Notebook("id1", "Türev — ğüşıöç", 1, 2, "source.pdf", 8, Background.Paper(Template.COORDINATE, true), PageSize.WIDE, "Matematik 9")
         nb.pages += Page(5, Background.PdfPage(3), 595f, 842f)
-        nb.pages += Page(6, Background.Paper(Template.ISOMETRIC, true), 960f, 540f)
+        nb.pages += Page(6, Background.Paper(Template.ISOMETRIC, PaperColors.CREAM, 14f, 0.35f), 960f, 540f)
         nb.bookmarks += Bookmark(6, "Test 3")
         val bo = ByteArrayOutputStream()
         Codec.writeNotebook(nb, DataOutputStream(bo))
         val nb2 = Codec.readNotebook(DataInputStream(ByteArrayInputStream(bo.toByteArray())))
         assertEquals(nb.name, nb2.name); assertEquals(8, nb2.pageOffset); assertEquals("source.pdf", nb2.pdfFile)
         assertEquals(Background.PdfPage(3), nb2.pages[0].background)
-        assertEquals(Background.Paper(Template.ISOMETRIC, true), nb2.pages[1].background)
+        assertEquals(Background.Paper(Template.ISOMETRIC, PaperColors.CREAM, 14f, 0.35f), nb2.pages[1].background)
+        assertEquals("Matematik 9", nb2.folder)
+        assertTrue(nb2.defaultPaper.dark)
         assertEquals("Test 3", nb2.bookmarks[0].title)
 
         val items = listOf(
@@ -224,6 +226,31 @@ class CoreTest {
         assertEquals(-1f, arc.sweep, 0f)
         assertEquals("x² + ğ\nikinci satır", (back[3] as TextItem).text)
         assertEquals("img1.jpg", (back[4] as ImageItem).file)
+    }
+
+    @Test fun readsVersion1Notebook() {
+        // Sürüm 1 dosyası elle yazılır: eski defterler yeni sürümde açılabilmeli
+        val bo = ByteArrayOutputStream()
+        val o = DataOutputStream(bo)
+        o.writeInt(0x4E4F5445); o.writeInt(1)
+        o.writeUTF("old"); o.writeUTF("Eski"); o.writeLong(1); o.writeLong(2)
+        o.writeBoolean(false); o.writeInt(0)
+        o.writeInt(Template.DOTS.ordinal); o.writeBoolean(true); o.writeInt(PageSize.A4_PORTRAIT.ordinal)
+        o.writeInt(1)
+        o.writeLong(9); o.writeFloat(595f); o.writeFloat(842f); o.writeByte(0); o.writeInt(Template.GRID.ordinal); o.writeBoolean(true)
+        o.writeInt(0)
+        val nb = Codec.readNotebook(DataInputStream(ByteArrayInputStream(bo.toByteArray())))
+        assertEquals(Template.DOTS, nb.defaultPaper.template)
+        assertTrue(nb.defaultPaper.dark)
+        val bg = nb.pages[0].background as Background.Paper
+        assertEquals(Template.GRID, bg.template); assertTrue(bg.dark); assertEquals(Templates.GRID, bg.spacing, 0f)
+        assertEquals("", nb.folder)
+    }
+
+    @Test fun spacingChangesGeometry() {
+        val a = Templates.geometry(Template.GRID, 595f, 842f, 20f).lines.size
+        val b = Templates.geometry(Template.GRID, 595f, 842f, 10f).lines.size
+        assertTrue(b > a * 1.8)
     }
 
     @Test fun bookPageNumbers() {
