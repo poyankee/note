@@ -292,6 +292,24 @@ class UndoStack(private val limit: Int = 300) {
         return e
     }
 
+    /**
+     * Sayfa doğrudan değiştirildikten sonra (ör. silgi hareketi boyunca) tek bir geri alma adımı kaydeder.
+     * Koşul: [before]'dan bazı öğeler çıkarılmış, yeni öğeler sona eklenmiş olmalı.
+     */
+    fun record(page: Page, before: List<Item>): Edit? {
+        val nowIds = page.items.map { it.id }.toHashSet()
+        val beforeIds = before.map { it.id }.toHashSet()
+        val removed = ArrayList<Pair<Int, Item>>()
+        before.forEachIndexed { i, it -> if (it.id !in nowIds) removed += i to it }
+        val added = page.items.filter { it.id !in beforeIds }
+        if (removed.isEmpty() && added.isEmpty()) return null
+        val e = Edit(page.id, removed, added)
+        undo.addLast(e)
+        if (undo.size > limit) undo.removeFirst()
+        redo.clear()
+        return e
+    }
+
     fun undo(nb: Notebook): Long? {
         val e = undo.removeLastOrNull() ?: return null
         val page = nb.pages.firstOrNull { it.id == e.pageId } ?: return undo(nb)

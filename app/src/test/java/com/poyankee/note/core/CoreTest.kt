@@ -174,6 +174,26 @@ class CoreTest {
         assertTrue(!u.canUndo)
     }
 
+    @Test fun recordBatchedEdit() {
+        val nb = Notebook("x", "x", 0, 0, null)
+        val p = Page(1, Background.Paper(Template.BLANK, false), 100f, 100f)
+        nb.pages += p
+        val a = ShapeItem(10, Geom.Circle(0f, 0f, 1f), 0, 1f)
+        val b = ShapeItem(11, Geom.Circle(0f, 0f, 2f), 0, 1f)
+        val c = ShapeItem(12, Geom.Circle(0f, 0f, 3f), 0, 1f)
+        p.items += listOf(a, b, c)
+        val before = p.items.toList()
+        p.items.remove(b); p.items.remove(a)
+        val d = ShapeItem(13, Geom.Circle(0f, 0f, 4f), 0, 1f)
+        p.items += d
+        val u = UndoStack()
+        u.record(p, before)
+        u.undo(nb)
+        assertEquals(listOf(10L, 11L, 12L), p.items.map { it.id })
+        u.redo(nb)
+        assertEquals(listOf(12L, 13L), p.items.map { it.id })
+    }
+
     @Test fun codecRoundTrip() {
         val nb = Notebook("id1", "Türev — ğüşıöç", 1, 2, "source.pdf", 8, Template.COORDINATE, true, PageSize.WIDE)
         nb.pages += Page(5, Background.PdfPage(3), 595f, 842f)
