@@ -123,7 +123,7 @@ Kenarda açılır "Kütüphane" paneli, kategorilere ayrılmış, aranabilir; ek
 - **Ayarların yedeğe girmesi** (onaylandı): paletler, kayıtlı kalemler, klasör renkleri, ayarlar.
 - **Veri güvenliği formu**: veri toplanmıyor / paylaşılmıyor.
 - **Telefon ekranlarına uyum**: dar ekranda menülerin sığması.
-- **Erişilebilirlik** (onaylandı): uygulama kendisi sesli okuma yapmaz; Android'in yerleşik ekran okuyucusu **TalkBack** ekrandakini okur. Bizim işimiz her düğmeye anlamlı bir ad vermek ("Kalem", "Geri al"...), dokunma alanlarını yeterince büyük tutmak ve yeterli kontrast. TalkBack açıkken test edilecek.
+- **Erişilebilirlik modu** (onaylandı, Ayarlar'dan açılır): açılınca düğmeler ve dokunma alanları büyür, yazılar büyür, kontrast artar (M5 "arayüz boyutu" ile birlikte tasarlanacak). Ayrıca her düğmeye arka planda anlamlı bir ad verilir; Android'in kendi ekran okuyucusu **TalkBack** açıksa bunları sesli okur (uygulama kendisi ses çıkarmaz).
 - **EN SON yapılacaklar** (özellikler bittikten sonra): **ilk açılış tanıtımı** (kesin yapılacak), **mağaza görselleri** (simge, tanıtım görseli, ekran görüntüleri, TR+EN açıklama).
 - **Kategori**: Eğitim; "çocuklara yönelik" işaretlenmeyecek, herkes için uygun derecelendirme.
 - **Sürüm numaralandırma**: 1.0, 1.1... ve uygulama içinde "Yenilikler" notu.
@@ -134,13 +134,19 @@ Kenarda açılır "Kütüphane" paneli, kategorilere ayrılmış, aranabilir; ek
 - Hiçbiri yoksa: veriler şifrelenmediği için kaybolmaz; "kilidi sıfırla" yalnızca cihaz kilidi doğrulamasıyla mümkün olur (tableti açamayan kişi sıfırlayamaz).
 - Kullanıcıya açıkça söylenecek: kilit, tableti başkasına verdiğinizde meraklı gözlere karşıdır; dosyaları şifrelemez.
 
-## S. Unutulmaması gerekenler (kontrol listesi)
-- **Gerçek cihazda performans**: 300-500 sayfalık PDF'te kaydırma, bellek; uzun ders kaydı (45+ dk) sırasında ısınma/kesilme.
-- **Ekran döndürme ve çoklu pencere**: yatay/dikey geçişte kaybolan çizim olmaması; Android bölünmüş ekranda (başka uygulamayla yan yana) düzgün çalışma.
-- **Klavye kapağı kısayolları**: Ctrl+Z / Ctrl+Y, Ctrl+C / Ctrl+V, sayfa ileri/geri (Xiaomi klavye kapağı için).
-- **Farklı kalemler**: Samsung S Pen, Lenovo vb. kalemlerin basınç ve tuşlarının da çalışması (mağaza için).
-- **Pil**: ekran açık tutma yalnızca defter içinde; arka planda iş yapılmaması.
-- **Format uyumluluğu**: her yeni sürümün eski defterleri açabilmesi (birim testiyle korunuyor, devam edecek).
+## S. Kontrol listesi (onaylandı)
+- **Döndürme ve bölünmüş ekran**: yatay/dikey geçişte ve başka uygulamayla yan yana açıkken hiçbir çizim kaybolmasın, menüler sığsın.
+- **Klavye kısayolları**: Ctrl+Z / Ctrl+Y, Ctrl+C / Ctrl+V / Ctrl+X, Sil, sayfa ileri/geri, Ctrl+S yok (otomatik kayıt).
+- **Pil**: ekran açık tutma yalnızca defter içinde; arka planda iş yok (otomatik yedek uygulama açılışında, kısa sürer).
+- **Eski defterler**: her sürüm eski defterleri açabilmeli; her format değişikliği için birim testi zorunlu.
+- **Gerçek cihazda performans**: 300-500 sayfalık PDF, 45+ dakikalık ders kaydı.
+
+## T. Farklı tabletlerde çalışma (onaylandı)
+- **Kalemler**: kalem desteği Android'in standart kalem olaylarıyla yapılıyor (kalem/parmak ayrımı, basınç, eğim, silgi ucu); marka kütüphanesi kullanılmıyor. Bu yüzden Samsung S Pen, Xiaomi, Lenovo, Huawei, Honor, USI kalemler gibi standart olay gönderen kalemlerin hepsinde yazma çalışır. Farklılık sadece **kalem tuşlarında** olur: bazı markalar tuşu sistem için ayırır. Bunun için "Kalem testi" ekranı ve "Tuşu öğret" var; basınç hissi için "basınç eğrisi" ayarı her kaleme uyarlanabilir.
+- **Ekran boyutları**: arayüz sabit piksel değil, ekrana göre yerleşen (Compose) düzenle yapılıyor. Kontrol için CI'da **birden fazla emülatörde** test ve ekran görüntüsü: 8" küçük tablet, 11" tablet (Pixel Tablet), 12-13" büyük tablet, telefon, katlanabilir; dikey ve yatay. Dar ekranda menüler kaydırılabilir/daraltılabilir olmalı.
+- **Android sürümleri**: en az Android 10 (piyasadaki cihazların büyük çoğunluğu). CI'da Android 10 ve en yeni Android emülatöründe test.
+- **Düşük donanım**: az RAM'li ucuz tabletlerde büyük PDF'te bellek sınırı, ders kaydında düşük çözünürlüğe otomatik geçiş; düşük bellekli emülatör testi.
+- **Ekran yenileme hızları**: 60 / 90 / 120 / 144 Hz ekranlarda kalem gecikmesi kontrolü.
 
 ## L. Kontrol
 - Her değişiklikten sonra emülatör testi ve ekran görüntüsü incelemesi.
