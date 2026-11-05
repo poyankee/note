@@ -98,14 +98,36 @@ Kenarda açılır "Kütüphane" paneli, kategorilere ayrılmış, aranabilir; ek
 
 (N bölümündeki diğer öneriler kullanıcı tarafından istenmedi.)
 
-## O. Bu tür bir uygulamada olması gereken temel eksikler (kullanıcıya listelendi, onay bekliyor)
-- **Yazdır**: Android yazdırma ekranıyla doğrudan yazıcıya gönderme (sayfa aralığı seçerek)
-- **Güncelleme bildirimi**: uygulama mağazadan değil GitHub'dan kurulduğu için açılışta yeni sürüm var mı kontrol edip "Yeni sürüm hazır" deme
-- **Çökme kurtarma**: uygulama beklenmedik kapanırsa son açık defteri ve yarım kalan çizimi koruma; hata kaydını dosyaya yazıp paylaşılabilir yapma (sorun bildirmek için)
-- **Depolama yönetimi**: hangi defter ne kadar yer kaplıyor; kullanılmayan görselleri ve eski yedekleri temizleme
-- **İlk açılış tanıtımı**: 3-4 ekranlık kısa "nasıl kullanılır" (kalem/el ayrımı, araç menüsü, sayfa paneli) ve Ayarlar'dan tekrar açabilme
-- **Defter kapağı rengi/görseli**: kapakta ilk sayfa yerine seçilen renk veya resim
-- **Ayarları yedekle**: ayarlar, paletler ve kayıtlı kalemler de yedeğe dahil edilsin
+## O. Temel eksikler (onaylandı)
+1. **Yazdır**: Android yazdırma ekranıyla doğrudan yazıcıya (sayfa aralığı seçerek).
+2. **Depolama yönetimi**: defter başına kaplanan alan; kullanılmayan görselleri, eski yedekleri, çöp kutusunu temizleme.
+3. **Çökme kurtarma**: beklenmedik kapanmada son açık defter ve yarım kalan çizim korunur; hata kaydı cihazda dosyaya yazılır, kullanıcı isterse paylaşır (sunucu yok).
+
+(Güncelleme bildirimi Play Store'a geçince gereksiz; ilk açılış tanıtımı, kapak ve ayar yedeği P bölümünde mağaza açısından yeniden değerlendirildi.)
+
+## P. Güvenlik gözden geçirmesi (yapılacak)
+- **İmza anahtarı**: depodaki `app.keystore` herkese açık → mağaza için yeni, gizli bir yükleme anahtarı (Play App Signing); depodaki anahtar sadece test sürümleri için kalır.
+- **İnternet izni yok**: uygulama hiçbir sunucuya bağlanmıyor ve INTERNET izni istemiyor; bu korunacak (mağazada "veri toplanmıyor" beyanı bunun üzerine kurulu).
+- **FileProvider yolları** daraltılacak (şu an tüm cache ve files klasörü paylaşılabilir durumda → sadece dışa aktarma ve kamera klasörü).
+- **Dışarıdan gelen dosyalar** (PDF açma, paylaş, yedekten geri yükleme): boyut sınırı, dosya türü kontrolü, zip içinde yol atlama (`..`) ve "zip bombası" koruması, bozuk PDF'te çökmeme.
+- **Defter kilidi**: PIN deneme sınırı / bekleme süresi; kilit sadece uygulama içi olduğu kullanıcıya açıkça söylenecek.
+- **Android otomatik yedekleme kuralları** (`dataExtractionRules`): kilitli defterler ve gereksiz önbellek cihaz dışı yedeğe girmesin.
+- **İzinler**: yalnızca mikrofon (ders kaydı, isteğe bağlı); kamera izin istemeden sistem kamerasıyla.
+- Bağımlılıkların güncel ve bilinen açığı olmayan sürümleri.
+
+## Q. Play Store'a hazırlık (yapılacak)
+- **AAB paketi** (Play'in istediği format) ve CI'da otomatik üretim; güncel `targetSdk` (mağazanın o yılki zorunluluğu).
+- **Gizlilik politikası sayfası** (zorunlu): "Hiçbir veri toplanmaz, her şey cihazda kalır". GitHub Pages'te basit bir sayfa.
+- **Veri güvenliği formu**: veri toplanmıyor / paylaşılmıyor.
+- **İngilizce dil desteği**: tüm metinler `strings.xml`'e taşınır; Türkçe + İngilizce (herkes yararlansın diye). Telefon dili hangisiyse o.
+- **Telefon ekranlarına uyum**: tablet öncelikli ama telefonda da düzgün açılsın (Play büyük/küçük ekran kontrolü yapıyor); dar ekranda menülerin sığması.
+- **İlk açılış tanıtımı**: mağazadan indiren yeni kullanıcı için 3-4 ekranlık kısa rehber (kalem/el ayrımı, menü, sayfa paneli); Ayarlar'dan tekrar açılabilir.
+- **Ayarların da yedeğe girmesi**: yeni cihaza geçince paletler, kayıtlı kalemler ve ayarlar da gelsin.
+- **Açık kaynak lisansları ekranı**: kullanılan kütüphanelerin (PDFBox — Apache 2.0) lisans bildirimi (lisans gereği).
+- **Erişilebilirlik**: düğme açıklamaları (ekran okuyucu), yeterli dokunma alanı, kontrast.
+- **Mağaza görselleri**: 512 px simge, tanıtım görseli, ekran görüntüleri (emülatör ekran görüntüsü altyapısı bunun için kullanılabilir), Türkçe + İngilizce açıklama.
+- **Kategori**: Eğitim (verimlilik); "çocuklara yönelik" olarak işaretlenmeyecek (Aile politikası ek yükümlülükleri yüzünden) ama herkes için uygun içerik derecelendirmesi.
+- **Sürüm numaralandırma**: anlamlı sürüm adları (1.0, 1.1...) ve uygulama içinde "Yenilikler" notu.
 
 ## L. Kontrol
 - Her değişiklikten sonra emülatör testi ve ekran görüntüsü incelemesi.
