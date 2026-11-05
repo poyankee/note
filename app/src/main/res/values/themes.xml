@@ -1,0 +1,7 @@
+<resources>
+    <style name="Theme.Note" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">#FFF5F5F7</item>
+        <item name="android:statusBarColor">#FF1E2A3A</item>
+        <item name="android:navigationBarColor">#FF1E2A3A</item>
+    </style>
+</resources>

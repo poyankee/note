@@ -1,0 +1,13 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- sayfa -->
+    <path android:fillColor="#FFFFFFFF" android:pathData="M34,28h34l8,8v44h-42z"/>
+    <path android:strokeColor="#FFB0BEC5" android:strokeWidth="1.2" android:pathData="M38,44h34M38,52h34M38,60h34M38,68h34"/>
+    <!-- y = x^2 eğrisi -->
+    <path android:strokeColor="#FF1565C0" android:strokeWidth="3" android:strokeLineCap="round"
+        android:pathData="M40,40 Q54,84 68,40"/>
+    <!-- kalem -->
+    <path android:fillColor="#FFFFB300" android:pathData="M70,62l8,8l-18,18l-10,2l2,-10z"/>
+    <path android:fillColor="#FF37474F" android:pathData="M52,80l-2,10l10,-2z"/>
+</vector>
