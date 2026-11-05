@@ -94,18 +94,18 @@ Kenarda açılır "Kütüphane" paneli, kategorilere ayrılmış, aranabilir; ek
 7. **Odak modu (sunum moduyla birleşik)**: tek dokunuşla bütün menüler gizlenir; kenara alınabilen küçük panelde sadece kalem, silgi, geri al (+ lazer, renkler). Mevcut "sunum modu" bu modla değiştirilir; projeksiyonda zaten ikinci ekran temiz görünüyor. (Öneri: birleştirilsin — kullanıcı onayı bekleniyor.)
 8. **Göz dostu ayarlar**: gece kağıdı + sıcak tonlu masa, koyu kağıtta okunaklı kalem renk seti, koyu temayla birlikte otomatik.
 
-## N. Yeni rahatlık önerileri (kullanıcıya listelendi, onay bekliyor)
-- Avuç içi dokunuşunda yanlışlıkla çizgi/kaydırma olduğunda **"son 2 saniyeyi geri al"** kısayolu
-- **Hızlı araç çarkı**: kalemi ekranda bir süre basılı tutunca (çizmeden) kalem/silgi/fosforlu/renk seçen yuvarlak menü
-- **Kalem rengi hafızası araca göre**: kalem, fosforlu ve geometri araçları kendi son rengini ayrı hatırlar
-- **Sayfa küçük resimlerinde sürükle-bırak** ile sıralama ve sayfa çoğaltma
-- **Yazarken otomatik kaydırma**: sağ kenara/alta yaklaşınca sayfa kendiliğinden biraz kayar
-- **Çift parmakla dokunup tutunca** sayfaya sığdır / %100 arasında geçiş
-- **Çizgi düzeltmeyi anlık iptal**: şekle dönüşen çizimi tek dokunuşla eski el yazısına geri çevirme
-- **Kilitli öğeler**: arka plan olarak eklenen görsel/şekil yanlışlıkla seçilip taşınmasın (kilitle)
-- **Defter içinde hızlı sayfa atlama**: sağ kenarda kaydırma çubuğu (sayfa numarası balonuyla)
-- **Otomatik karanlık oda**: sunum/projeksiyonda masa rengi siyah, sayfa kenar gölgesi kapalı
-- **Bildirim sessizliği hatırlatması**: ders kaydı veya odak modu başlarken "Rahatsız etmeyin"i açma kısayolu
+9. **Sağ kenarda sayfa çubuğu (otomatik gizlenen)**: normalde görünmez; sayfa kaydırılmaya başlanınca sağ kenarda belirir, sürüklenerek hızlı gezinilir (sayfa numarası balonuyla), kaydırma bitince birkaç saniyede kaybolur.
+
+(N bölümündeki diğer öneriler kullanıcı tarafından istenmedi.)
+
+## O. Bu tür bir uygulamada olması gereken temel eksikler (kullanıcıya listelendi, onay bekliyor)
+- **Yazdır**: Android yazdırma ekranıyla doğrudan yazıcıya gönderme (sayfa aralığı seçerek)
+- **Güncelleme bildirimi**: uygulama mağazadan değil GitHub'dan kurulduğu için açılışta yeni sürüm var mı kontrol edip "Yeni sürüm hazır" deme
+- **Çökme kurtarma**: uygulama beklenmedik kapanırsa son açık defteri ve yarım kalan çizimi koruma; hata kaydını dosyaya yazıp paylaşılabilir yapma (sorun bildirmek için)
+- **Depolama yönetimi**: hangi defter ne kadar yer kaplıyor; kullanılmayan görselleri ve eski yedekleri temizleme
+- **İlk açılış tanıtımı**: 3-4 ekranlık kısa "nasıl kullanılır" (kalem/el ayrımı, araç menüsü, sayfa paneli) ve Ayarlar'dan tekrar açabilme
+- **Defter kapağı rengi/görseli**: kapakta ilk sayfa yerine seçilen renk veya resim
+- **Ayarları yedekle**: ayarlar, paletler ve kayıtlı kalemler de yedeğe dahil edilsin
 
 ## L. Kontrol
 - Her değişiklikten sonra emülatör testi ve ekran görüntüsü incelemesi.
