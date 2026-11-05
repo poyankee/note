@@ -493,6 +493,7 @@ class SmokeTest {
         for (i in 1..2) {
             val page = doc.startPage(PdfDocument.PageInfo.Builder(595, 842, i).create())
             page.canvas.drawText("Sayfa $i", 100f, 100f, Paint().apply { textSize = 30f })
+            page.canvas.drawRect(80f, 300f, 500f, 700f, Paint().apply { color = android.graphics.Color.BLUE })
             doc.finishPage(page)
         }
         FileOutputStream(src).use { doc.writeTo(it) }
@@ -511,7 +512,22 @@ class SmokeTest {
         assertEquals(842f, main { c.nb.pages[0].width }, 0.5f)
         main { c.setCrop(1, 0.1f, 0f, 0.2f, 0f) }
         assertEquals(842f * 0.7f, main { c.nb.pages[1].height }, 0.5f)
-        Thread.sleep(800)
+        // döndürülmüş / kırpılmış PDF sayfası gerçekten çiziliyor mu (koyu yazı pikseli olmalı)
+        fun darkPixels(bg: Background.PdfPage): Int {
+            val latch = java.util.concurrent.CountDownLatch(1)
+            var bmp: android.graphics.Bitmap? = null
+            c.pdf!!.runOnPdfThread { bmp = c.pdf!!.renderBlocking(bg, 1f); latch.countDown() }
+            latch.await(10, java.util.concurrent.TimeUnit.SECONDS)
+            val b = bmp ?: return -1
+            var n = 0
+            for (y in 0 until b.height step 2) for (x in 0 until b.width step 2) if ((b.getPixel(x, y) and 0xFF) < 100) n++
+            return n
+        }
+        val r0 = main { c.nb.pages[0].background as Background.PdfPage }
+        val r1 = main { c.nb.pages[1].background as Background.PdfPage }
+        assertTrue("döndürülmüş PDF boş çiziliyor", darkPixels(r0) > 20)
+        assertTrue("kırpılmış PDF boş çiziliyor", darkPixels(r1) > 20)
+        Thread.sleep(1500)
         shot("16-pdf-dondur-kirp")
         val out = File(ctx.cacheDir, "dk.pdf")
         Exporter.export(ctx, c.nb, c.store.dir(c.nb.id), main { c.nb.pages.toList() }, out, { null }) { _, _ -> }
