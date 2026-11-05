@@ -35,19 +35,54 @@ Kullanıcı geri bildirimi — sürüm 12 sonrası. Sırayla yapılacak.
 ## E. Temalar
 15. **Hazır temalar**: Varsayılan (indigo), Okyanus (mavi-turkuaz), Orman (yeşil), Gün batımı (turuncu-mor), Kağıt (krem-kahve), Gece (koyu), Yüksek kontrast. Her tema ana renk, yüzeyler, masa rengi ve kapak renklerini değiştirir. Ayarlar › Görünüm'de önizlemeli seçim.
 
-## F. Önerilen ek özellikler (kullanıcıya listelendi, onay bekliyor)
-- Sayfa içi **arama** (metin kutuları, formüller ve PDF metni içinde)
-- **Ders planı / zaman çizelgesi**: haftalık ders programı ve hangi derste hangi defterin açılacağı
-- **Şablon defterler**: sık kullanılan sayfa düzenlerini (ör. "konu anlatımı + 3 soru") şablon olarak kaydedip yeni deftere uygulama
-- **Hazır soru alanı**: sayfaya "Soru 1, 2, 3" kutuları ekleme
-- **Kesir / ondalık sayı doğrusu**, **olasılık ağacı**, **Venn şeması** hazır şekilleri
-- **Sayfa numarası ve tarih**: sayfa köşesine otomatik
-- **Kayıtlı ders videolarının listesi**: uygulama içinden açma, paylaşma
-- **Öğrenci çıktısı**: soruları boş, çözümleri ayrı sayfada PDF olarak dışa aktarma (çözüm katmanını gizleme)
-- **Katmanlar**: "çözüm" katmanını gizle/göster (soruyu boş gösterip sonra çözümü açma)
-- **El yazısını yazıya çevirme** (cihaz üstü, internetsiz; büyük iş)
-- **Kalem basıncı eğrisi** ayarı (hafif / sert yazanlar için)
+## F. Onaylanan ek özellikler (el yazısını yazıya çevirme hariç hepsi)
+- Sayfa içi **arama** (metin kutuları, formüller, PDF metni)
+- **Ders programı**: haftalık program, derse göre defter açma
+- **Şablon defterler**: sık kullanılan sayfa düzenlerini kaydetme
+- **Soru kutuları**: "Soru 1, 2, 3" alanları ekleme
+- **Sayfa numarası ve tarih**: köşeye otomatik
+- **Ders videoları listesi**: uygulama içinden açma, paylaşma
+- **Çözüm katmanı**: çözümü gizle/göster; soruları boş + çözümler ayrı PDF
+- **Kalem basıncı eğrisi** ayarı
 
-## G. Kontrol
+## G. PDF düzenleme
+- **Birleştirme**: birden fazla PDF'i (veya defteri) tek PDF/defter yapma
+- **Ayırma**: sayfa aralığını ayrı PDF/deftere çıkarma ("3-7, 12")
+- **Başka PDF'ten sayfa ekleme** (araya/sona)
+- **Sayfa sırası**: sürükle-bırak ile sıralama (küçük resimlerde)
+- **Toplu işlem**: seçili sayfaları döndür / sil / çoğalt / dışa aktar
+- **Boş sayfa ekleme** seçili desenle (mevcut)
+- **PDF sıkıştırma** (görselleri küçülterek dosya boyutu düşürme)
+- **PDF'te metin vurgulama**: metni seçip vurgulama/altını çizme (PDF metin katmanı varsa)
+- **Görsellerden PDF**: fotoğraflardan (ör. çözülmüş kağıt) PDF oluşturma, kenar kırpma
+
+## H. Hazır kütüphane (tek dokunuşla eklenen hazır çizimler)
+Kenarda açılır "Kütüphane" paneli, kategorilere ayrılmış, aranabilir; eklenen her şey vektör ve düzenlenebilir (taşı, ölçekle, renk).
+- **Trigonometri**: birim çember (açılar + sin/cos değerleri), 30-60-90 ve 45-45-90 üçgenleri (kenar oranlarıyla), trigonometrik oranlar tablosu, sin/cos/tan grafikleri
+- **Geometri**: dik üçgen (Pisagor), ikizkenar/eşkenar üçgen, açıortay/kenarortay/yükseklik gösterimli üçgen, çemberde açılar (merkez/çevre açı), teğet-kiriş, paralel doğrular ve kesen (iç ters/yöndeş açılar), dörtgen çeşitleri, düzgün çokgenler
+- **Analitik**: koordinat ekseni (ayarlanabilir aralık), doğru/parabol/çember denklemleri şablonları, sayı doğrusu (tam sayı / kesir / ondalık), aralık gösterimi
+- **Katı cisimler**: küp, prizma, piramit, silindir, koni, küre (açınımlarıyla birlikte)
+- **Olasılık-istatistik**: olasılık ağacı, Venn şemaları (2-3 küme), zar/para/kart görselleri, normal dağılım eğrisi, kutu grafiği, sütun/pasta grafik şablonu
+- **Genel**: tablo (satır-sütun), ok ve süslü parantez işaretleri, kavram haritası kutuları, zaman çizelgesi
+- **Formül kartları**: sık formüller (alan/hacim, türev/integral kuralları, logaritma özellikleri, özdeşlikler)
+- **Kullanıcı kütüphanesi**: kendi seçtiğin çizimi "Kütüphaneye kaydet" ile ekleme
+
+## I. Öğretmen ve yüksek lisans için ek öneriler (kullanıcıya listelendi, onay bekliyor)
+- **Etiketler** (ör. #türev #sınav) ve tüm defterlerde arama
+- **Sayfalar arası bağlantı**: bir yazıya dokununca başka sayfaya/deftere git
+- **PDF okuma notları özeti**: vurgulanan yerler ve notları tek sayfada/dosyada toplama (tez okuması için)
+- **Kaynakça / alıntı kartları**: makale bilgisi (yazar, yıl, sayfa) ile not; APA formatında dışa aktarma
+- **Bilgi kartları (flash card)**: ön/arka yüzlü kartlar, tekrar modu
+- **Sesli not**: sayfaya bağlı ses kaydı (yazıyla eşzamanlı oynatma)
+- **Yan yana iki defter / PDF + not** (bölünmüş ekran)
+- **Sınıf listesi ve rastgele öğrenci seçici** (derste söz verme)
+- **Yoklama / not çizelgesi** sayfası
+- **Sınav kağıdı oluşturucu**: kütüphane + soru kutularından baskıya hazır PDF
+- **Pomodoro / çalışma süresi takibi** (yüksek lisans çalışması için)
+- **Takvim**: teslim tarihleri, sınav günleri, yapılacaklarla bağlantılı
+- **LaTeX dışa aktarma**: formüllerin LaTeX kodunu kopyalama
+- **Bulutsuz cihazlar arası aktarma**: Wi-Fi ile bilgisayara/telefona defter gönderme
+
+## J. Kontrol
 - Her değişiklikten sonra emülatör testi ve ekran görüntüsü incelemesi.
 - Yeni özellikler için duman testleri.
