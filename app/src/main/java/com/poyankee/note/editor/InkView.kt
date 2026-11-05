@@ -137,7 +137,8 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
         if (i !in tops.indices) return
         sy = tops[i] - 8f / zoom
         scroller.forceFinished(true)
-        clampScroll(); invalidate(); updateCurrentPage(); scheduleSharp()
+        clampScroll(); invalidate(); scheduleSharp()
+        if (ctl.currentPage != i) ctl.currentPage = i
     }
 
     /** Ekranın ortasındaki sayfa ve o sayfadaki nokta. */
@@ -1198,6 +1199,9 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
     }
 
     fun ctlListeners() = ctl.frameListeners
+
+    /** Testler için. */
+    val controller: EditorController get() = ctl
 
     /** İkinci ekran / kayıt için o anki görünüm (belge koordinatlarında). */
     fun viewport(): RectF = RectF(sx, sy, sx + width / zoom, sy + height / zoom)

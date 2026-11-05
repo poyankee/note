@@ -142,7 +142,7 @@ fun EditorScreen(ctl: EditorController, onClose: () -> Unit, onSettings: () -> U
     val scope = rememberCoroutineScope()
 
     var secondActive by remember { mutableStateOf(false) }
-    val second = remember { SecondScreen(activity, ink, { s.secondScreen.value }) { secondActive = it } }
+    val second = remember { SecondScreen(activity, ink, { s.secondScreen.value }) { secondActive = it; ctl.secondScreenActive = it } }
     DisposableEffect(Unit) {
         second.start()
         onDispose { second.stop() }

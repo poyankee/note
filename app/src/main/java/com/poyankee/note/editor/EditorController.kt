@@ -88,6 +88,7 @@ class EditorController(
     var textRequest by mutableStateOf<TextRequest?>(null)
     val history = mutableStateListOf<Int>()
     val instruments = mutableStateListOf<InstrumentKind>()
+    var secondScreenActive by mutableStateOf(false)
     var pagesVersion by mutableIntStateOf(0)
     var bookmarksVersion by mutableIntStateOf(0)
 
