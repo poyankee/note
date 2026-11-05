@@ -707,7 +707,7 @@ private fun PageStylePanel(ctl: EditorController, onClose: () -> Unit) {
     val page = ctl.nb.pages.getOrNull(ctl.currentPage)
     val isPdf = page?.background is Background.PdfPage
     val current = (page?.background as? Background.Paper) ?: ctl.nb.defaultPaper
-    var style by remember(ctl.currentPage, isPdf) { mutableStateOf(current) }
+    var style by remember(ctl.currentPage, isPdf, page?.background, pv) { mutableStateOf(current) }
     var all by remember { mutableStateOf(false) }
     fun apply(p: Background.Paper) {
         style = p

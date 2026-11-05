@@ -8,12 +8,26 @@
 
 > HyperOS ilk kurulumda bir güvenlik taraması yapabilir; "Yine de yükle" deyin.
 
-## Defterler
+## Ana sayfa ve klasörler
 
-- **Yeni defter**: Ad, şablon (boş, çizgili, kareli, noktalı, izometrik, koordinat düzlemi, milimetrik), boyut (A4 dikey/yatay, 16:9) ve "kara tahta" (koyu sayfa) seçilir.
+- **Yeni defter**: sadece ad sorulur. Desen, kağıt rengi ve aralık defterin içinde **Sayfa** panelinden değiştirilir.
 - **PDF aç**: PDF kopyalanıp yeni bir deftere dönüştürülür; orijinal dosyaya dokunulmaz. Başka bir uygulamadan "Paylaş → Note" ile de açılabilir.
-- Deftere uzun basınca: yeniden adlandır, sil.
+- **Klasörler**: soldaki "Klasörler" başlığının yanındaki simgeyle klasör oluşturun. Defter kapağındaki **⋯** menüsünden "Klasöre taşı". Klasöre uzun basınca: yeniden adlandır / sil (içindeki defterler silinmez).
+- Kapaklarda defterin ilk sayfasının önizlemesi görünür.
 - Her çizgi anında kaydedilir; "kaydet" düğmesi yoktur.
+
+## Defterin içi
+
+- **Solda yüzen araç menüsü**: Kalem, Fosforlu, Silgi, Seçim, Geometri, Metin, Lazer, Geçici kalem, Cetvel.
+- **Üstte ortada**: seçili aracın renkleri ve kalınlıkları (renge uzun basınca rengi değiştirebilirsiniz). Silgide tür ve boyut, geometride alt araçlar burada.
+- **Sağ altta**: ‹ önceki · **3 / 12** (dokununca sayfa numarasına git) · sonraki › · tüm sayfalar · **+ Sayfa** (bulunduğunuz sayfanın arkasına yeni sayfa).
+- **Üst çubuktaki "Sayfa" düğmesi** sağdan bir panel açar:
+  - **Desen**: boş, çizgili, kareli, noktalı, izometrik, koordinat, milimetrik
+  - **Kağıt rengi**: beyaz, krem, gri, kara tahta, gece
+  - **Desen görünürlüğü**: noktaları/çizgileri daha saydam yapın
+  - **Aralık**: kareler/noktalar arası mesafe (mm)
+  - "Tüm sayfalara uygula" ve "Bu desenle yeni sayfa ekle"
+- Defter adına dokunarak adını değiştirebilirsiniz.
 
 ## Kalem ve el
 
@@ -24,7 +38,7 @@
 | İki parmakla dokun | Geri al. Üç parmakla dokun: Yinele. |
 | Kalem tuşu | Yan tuşa basılıyken: silgi / kement seçim / lazer (Ayarlar'dan seçilir). |
 
-## Araç çubuğu (solda; solak modunda sağda)
+## Araçlar (solda; solak modunda sağda)
 
 - **Kalem**: basınca duyarlı. Tekrar dokununca: basınç ve şekil ayarları.
 - **Fosforlu kalem**: yarı saydam, her zaman yazının altında kalır.
@@ -53,10 +67,9 @@ Kalemle bir çizgi/çember/üçgen çizip kalemi kaldırmadan bir an bekleyin: d
 - Üstteki **`12 / 87`** göstergesine dokunun → sayfa numarasını yazın → **Git**.
 - **Kitap sayfa numarası**: PDF'in 1. sayfası kitabın 1. sayfası değilse (kapak, önsöz), aynı pencerede "Kitap sayfa numarasını ayarla" → "Şu an açık sayfa kitapta kaçıncı sayfa?" sorusunu bir kez cevaplayın. Sonra "Kitap sayfası" seçeneğiyle öğrencinin söylediği sayfaya doğrudan gidersiniz.
 - Bir sayfaya atladıktan sonra üstteki **‹ Geri dön** ile önceki sayfaya dönersiniz.
-- **+**: bulunduğunuz sayfanın arkasına boş sayfa ekler (PDF'in arasına soru çözmek için).
+- **+ Sayfa**: bulunduğunuz sayfanın arkasına boş sayfa ekler (PDF'in arasına soru çözmek için).
 - **Sayfalar** (ızgara simgesi): küçük resimler. Uzun bas: ekle, çoğalt, yukarı/aşağı taşı, sil.
 - **Yer imleri**: sayfalara ad verin ("Türev", "Test 3"). PDF'in kendi içindekiler listesi de buradadır.
-- **Diğer (⋮) → Sayfa şablonu**: sayfanın şablonunu değiştirin veya farklı şablonla yeni sayfa ekleyin.
 
 ## Ders anlatımı
 
@@ -71,6 +84,6 @@ Yazılar PDF'e vektör olarak eklenir; yakınlaştırınca bulanıklaşmaz.
 
 ## Bilinen sınırlar (şimdilik)
 
-- Klasörler ve tüm verinin yedeğini alma Aşama 5'te.
+- Tüm verinin yedeğini alma Aşama 5'te.
 - Kalem tuşlarının Xiaomi kalemde nasıl bildirildiği cihazda denenmeli; çalışmazsa Ayarlar'dan değiştirilebilir veya bildirin.
 - Koordinat düzlemi şablonundaki sayılar PDF dışa aktarmada yer almaz (ızgara ve eksenler yer alır).
