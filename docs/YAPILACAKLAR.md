@@ -84,17 +84,28 @@ Kenarda açılır "Kütüphane" paneli, kategorilere ayrılmış, aranabilir; ek
 - **Yapay zeka desteği yok.** Uygulama sade kalacak; öğrenci ve öğretmen dikkat dağıtmayan, temiz bir alanda çalışacak.
 - Kullanıcının onaylamadığı öneriler listeden çıkarıldı (sınav kağıdı oluşturucu, adım adım çözüm, kaydırıcılı grafik, bölünmüş ekran, hesap makinesi, sınıf listesi, takvim, bilgi kartları, pomodoro, örnekten alıştırma, adım kontrolü, animasyonlar vb.). "F. Onaylanan ek özellikler" bölümündekiler (arama, ders programı, şablon defterler, soru kutuları, sayfa no/tarih, video listesi, çözüm katmanı, basınç eğrisi) ile G (PDF düzenleme) ve H (hazır kütüphane) geçerli.
 
-## M. Rahat çalışma ortamı önerileri (kullanıcıya listelendi, onay bekliyor)
-- **Kaldığın yerden devam**: defter açılınca son bakılan sayfa ve yakınlaştırmada açılsın; uygulama açılınca son defter (isteğe bağlı)
-- **Çöp kutusu**: silinen defterler ve sayfalar 30 gün geri getirilebilsin
-- **Sayfa çevirme düzeni**: dikey kaydırma yerine kitap gibi yatay sayfa çevirme seçeneği
-- **Yazarken otomatik yeni sayfa**: son sayfanın altına gelince yeni sayfa eklensin
-- **Yakınlaştırma kilidi ve "sayfaya sığdır" düğmesi**: yanlışlıkla yakınlaşma/kayma olmasın, tek dokunuşla düzelsin
-- **Arayüz boyutu**: düğme ve yazı büyüklüğü ayarı (küçük / normal / büyük)
-- **Silgiden otomatik dönüş**: silgiyle sildikten sonra kaleme kendiliğinden dönme (isteğe bağlı)
-- **Son kullanılan renkler**: paletin yanında son 3 renk
-- **Sade çalışma modu**: tek dokunuşla bütün menüler gizlenir, sadece kalem/silgi/geri al kalır (sunum modunun öğrenci versiyonu)
-- **Göz dostu ayarlar**: gece kağıdı + sıcak renk masa, düşük parlaklıkta kontrastı koruyan kalem renkleri
+## M. Rahat çalışma ortamı (onaylandı)
+1. **Kaldığın yerden devam**: defter son bakılan sayfa ve yakınlaştırmada açılır (defter başına kaydedilir).
+2. **Çöp kutusu**: silinen defterler ve sayfalar 30 gün boyunca geri getirilebilir; ana sayfada "Çöp kutusu" bölümü, kalıcı silme ve boşaltma.
+3. **Yazarken otomatik yeni sayfa**: son sayfanın alt kısmına yazınca yeni (düz beyaz) sayfa eklenir. Ayarlardan kapatılabilir.
+4. **Yakınlaştırma kilidi + "sayfaya sığdır"**: kilitliyken parmak hareketi yakınlaştırmaz (sadece kaydırır); tek dokunuşla sayfa genişliğine dönme.
+5. **Arayüz boyutu**: küçük / normal / büyük (düğmeler, yazılar, menüler).
+6. **Silgiden otomatik dönüş**: silgiyle sildikten sonra kaleme kendiliğinden döner; Ayarlar'dan kapatılabilir.
+7. **Odak modu (sunum moduyla birleşik)**: tek dokunuşla bütün menüler gizlenir; kenara alınabilen küçük panelde sadece kalem, silgi, geri al (+ lazer, renkler). Mevcut "sunum modu" bu modla değiştirilir; projeksiyonda zaten ikinci ekran temiz görünüyor. (Öneri: birleştirilsin — kullanıcı onayı bekleniyor.)
+8. **Göz dostu ayarlar**: gece kağıdı + sıcak tonlu masa, koyu kağıtta okunaklı kalem renk seti, koyu temayla birlikte otomatik.
+
+## N. Yeni rahatlık önerileri (kullanıcıya listelendi, onay bekliyor)
+- Avuç içi dokunuşunda yanlışlıkla çizgi/kaydırma olduğunda **"son 2 saniyeyi geri al"** kısayolu
+- **Hızlı araç çarkı**: kalemi ekranda bir süre basılı tutunca (çizmeden) kalem/silgi/fosforlu/renk seçen yuvarlak menü
+- **Kalem rengi hafızası araca göre**: kalem, fosforlu ve geometri araçları kendi son rengini ayrı hatırlar
+- **Sayfa küçük resimlerinde sürükle-bırak** ile sıralama ve sayfa çoğaltma
+- **Yazarken otomatik kaydırma**: sağ kenara/alta yaklaşınca sayfa kendiliğinden biraz kayar
+- **Çift parmakla dokunup tutunca** sayfaya sığdır / %100 arasında geçiş
+- **Çizgi düzeltmeyi anlık iptal**: şekle dönüşen çizimi tek dokunuşla eski el yazısına geri çevirme
+- **Kilitli öğeler**: arka plan olarak eklenen görsel/şekil yanlışlıkla seçilip taşınmasın (kilitle)
+- **Defter içinde hızlı sayfa atlama**: sağ kenarda kaydırma çubuğu (sayfa numarası balonuyla)
+- **Otomatik karanlık oda**: sunum/projeksiyonda masa rengi siyah, sayfa kenar gölgesi kapalı
+- **Bildirim sessizliği hatırlatması**: ders kaydı veya odak modu başlarken "Rahatsız etmeyin"i açma kısayolu
 
 ## L. Kontrol
 - Her değişiklikten sonra emülatör testi ve ekran görüntüsü incelemesi.
