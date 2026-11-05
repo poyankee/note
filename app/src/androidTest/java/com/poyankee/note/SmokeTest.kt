@@ -13,6 +13,7 @@ import android.view.ViewGroup
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.onNodeWithText
@@ -127,8 +128,22 @@ class SmokeTest {
         Thread.sleep(100)
     }
 
+    /** Gerçek ekran görüntüsü (diyaloglar ve menüler dahil). CI bunları "screenshots" dalına yükler. */
+    private fun shot(name: String) {
+        rule.waitForIdle()
+        Thread.sleep(400)
+        fun sh(cmd: String) {
+            val pfd = inst.uiAutomation.executeShellCommand(cmd)
+            android.os.ParcelFileDescriptor.AutoCloseInputStream(pfd).use { it.readBytes() }
+        }
+        sh("mkdir -p /data/local/tmp/shots")
+        sh("screencap -p /data/local/tmp/shots/$name.png")
+    }
+
     private fun newNotebook(): InkView {
+        shot("01-ana-sayfa")
         rule.onNodeWithText("Yeni defter").performClick()
+        shot("02-yeni-defter")
         rule.onNodeWithText("Oluştur").performClick()
         return ink()
     }
@@ -167,6 +182,13 @@ class SmokeTest {
         main { c.setPageStyle(0, Background.Paper(Template.ISOMETRIC, PaperColors.CREAM, 14f, 0.3f)) }
         val st = main { c.nb.pages[0].background as Background.Paper }
         assertEquals(Template.ISOMETRIC, st.template); assertEquals(0.3f, st.opacity, 0f)
+        main { c.setPageStyle(0, Background.Paper(Template.GRID)) }
+        shot("03-bos-defter")
+        rule.onAllNodesWithText("Sayfa")[0].performClick()
+        shot("04-sayfa-paneli")
+        main { c.setPageStyle(0, Background.Paper(Template.ISOMETRIC, PaperColors.CREAM, 20f, 0.4f)) }
+        shot("05-izometrik-krem")
+        rule.onAllNodesWithText("Sayfa")[0].performClick()
         main { c.setPageStyle(0, Background.Paper(Template.GRID)) }
 
         // 1) Kalemle yaz
@@ -263,6 +285,13 @@ class SmokeTest {
         assertTrue(req != null)
         main { c.finishText(req!!, "x² + 2x + 1 = 0  ğüşıöç", 18f) }
 
+        shot("06-cizimler")
+        main { c.selectTool(Tool.LINE) }
+        shot("07-geometri-araclari")
+        main { c.selectTool(Tool.ERASER) }
+        shot("08-silgi")
+        main { c.selectTool(Tool.PEN) }
+
         // 14) Sayfa ekle, git, geri dön
         main { c.insertPageAfter(0) }
         assertEquals(2, main { c.nb.pages.size })
@@ -346,6 +375,10 @@ class SmokeTest {
         Exporter.export(ctx, c.nb, c.store.dir(c.nb.id), pages, out, { null }) { _, _ -> }
         ParcelFileDescriptor.open(out, ParcelFileDescriptor.MODE_READ_ONLY).use { fd -> PdfRenderer(fd).use { assertEquals(4, it.pageCount) } }
 
+        shot("09-pdf")
+        main { ink.controller.presentation = true }
+        shot("10-sunum")
+        main { ink.controller.presentation = false }
         // ikinci ekran (CI'da sanal ekran açılırsa)
         Thread.sleep(1500)
         android.util.Log.i("SmokeTest", "secondScreenActive=" + main { c.secondScreenActive })
