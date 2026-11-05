@@ -82,8 +82,50 @@ Kalemle bir çizgi/çember/üçgen çizip kalemi kaldırmadan bir an bekleyin: d
 **Paylaş** simgesi → Tüm defter (PDF) / Bu sayfa (PDF) / Bu sayfa (PNG) → **Paylaş** (WhatsApp, Drive...) veya **Dosyaya kaydet**.
 Yazılar PDF'e vektör olarak eklenir; yakınlaştırınca bulanıklaşmaz.
 
+
+## Yeni eklenenler (sürüm 10+)
+
+### Paneller
+- **Araç menüsünü taşıma:** menünün üstündeki ⠿ tutamaktan sürükleyin. Sayfa gezgini ve sunum modundaki panel de soldaki ⠿ tutamaktan taşınır. Konumlar hatırlanır (Ayarlar › Görünüm › Sıfırla ile eski yerine döner).
+- **Menüyü daraltma:** menünün altındaki ˄ ile daraltın; sadece seçili araç görünür, ˅ ile açın.
+- **Renkleri değiştirme:** üstteki renk sırasının sonundaki ✎ düğmesi (veya renge uzun basma) → bir yuvaya dokunun → hazır renklerden ya da ton/doygunluk/parlaklık kaydırıcılarından yeni rengi seçin. Fosforlu kalem renkleri de ayrıca düzenlenir.
+- **Kalem hazır ayarları:** kalemde "+ Kalemi kaydet" ile renk+kalınlık kaydedilir; tek dokunuşla geri seçilir, uzun basınca silinir.
+- **Sekmeler:** birden fazla defter açınca en üstte sekmeler belirir.
+- **Koyu tema:** Ayarlar › Görünüm › Tema (Sistem / Açık / Koyu).
+
+### Sayfalar
+- **Yeni sayfalar düz beyaz** gelir (Ayarlar › Sayfalar ile "önceki sayfa gibi" yapılabilir). "Sayfa" panelindeki "Bu desenle yeni sayfa ekle" seçili desenle ekler.
+- Sayfa silme, ekleme, taşıma ve döndürme artık **Geri al** ile geri alınır.
+- **Yeni desenler:** sayı doğrusu, birim çember, kutupsal, Cornell not, çift sütun.
+- **Resimden desen:** "Sayfa" paneli › "Resim / PDF'ten desen": kendi çalışma kağıdınızı zemin yapın.
+- **PDF sayfa işlemleri:** Sayfalar paneli › sayfaya uzun bas › "90° döndür" / "Kırp". Yazılar sayfayla birlikte döner/kayar. Dışa aktarılan PDF de döndürülmüş/kırpılmış olur.
+
+### Düzenleme
+- **Kopyala / Kes / Yapıştır:** seçim çubuğunda. Yapıştır: Seçim aracı seçiliyken üstte ya da ⋮ menüsünde. Başka deftere de yapıştırılabilir.
+- **Şekli sonradan düzenleme:** tek bir şekli seçince köşelerinde kareler çıkar; sürükleyerek köşeyi taşıyın (çember için yarıçap).
+- **Doldur:** seçili şeklin içini kalem renginin açık tonuyla boyar (tekrar basınca kaldırır). Geometri seçeneklerinde "İçini doldur" açıksa yeni şekiller dolu çizilir.
+- **Köşe harfleri ve ölçüler:** Geometri seçenekleri (veya Ayarlar) › "Köşelere harf", "Ölçüleri yaz".
+
+### Ekle (üst çubuktaki ⊕)
+- **Formül:** `\frac{a}{b}`, `x^{2}`, `\sqrt{x}`, `\sum`, `\pi`… düğmelerle de eklenir; canlı önizlemeli. Formüle Metin aracıyla dokununca düzenlenir.
+- **Fonksiyon grafiği:** `x^2-4`, `2x+1`, `sin(x)`, `1/x`… En fazla 3 fonksiyon, renkli. Koordinat düzlemi deseninde eksenlere oturur.
+- **Yapışkan not** ve **damgalar** (✓ ✗ ★ Dikkat! Önemli Formül Ödev Sınavda çıkar…).
+- **3B şekiller:** Geometri › 3B (küp, prizma, silindir, koni, piramit, küre); arkadaki kenarlar kesikli.
+
+### Ders araçları (menüdeki "Ders")
+- **Spot ışığı:** ekran kararır, kalemin gösterdiği daire aydınlık kalır.
+- **Perde:** sayfanın altını kapatır; perdenin kenarını kalem veya parmakla aşağı çekerek adım adım açın.
+- **Sayaç:** sağ üstte geri sayım; projeksiyonda ve ders kaydında da görünür.
+
+### Ana sayfa
+- **Favoriler** (kapaktaki ⋯ › Favorilere ekle), **sıralama** (son düzenlenen / ad / oluşturma), **defter kilidi** (⋯ › Kilitle, PIN ile).
+- **Hızlı not:** sol paneldeki düğme veya ana ekranda uygulama simgesine uzun basıp "Hızlı not".
+- **Yedekleme:** Ayarlar › Yedekleme. "Şimdi yedekle" tek bir .zip dosyası oluşturur (Drive'a kaydedebilirsiniz). "Otomatik yedek" için bir klasör seçin; uygulama açılınca günde bir yedek alır, son 5'ini tutar.
+
+### Kalem çift dokunuşu
+Ayarlar › Kalem ve el › "Tuşu öğret" → kalemde çift dokunun. Algılanırsa seçtiğiniz işi yapar (Silgi ↔ kalem, Geri al, Lazer…). Algılanmazsa kalem bu hareketi uygulamalara iletmiyordur.
+
 ## Bilinen sınırlar (şimdilik)
 
-- Tüm verinin yedeğini alma Aşama 5'te.
 - Kalem tuşlarının Xiaomi kalemde nasıl bildirildiği cihazda denenmeli; çalışmazsa Ayarlar'dan değiştirilebilir veya bildirin.
-- Koordinat düzlemi şablonundaki sayılar PDF dışa aktarmada yer almaz (ızgara ve eksenler yer alır).
+- Defter kilidi uygulama içi bir kilittir; dosyalar şifrelenmez.
