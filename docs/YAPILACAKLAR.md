@@ -67,41 +67,35 @@ Kenarda açılır "Kütüphane" paneli, kategorilere ayrılmış, aranabilir; ek
 - **Formül kartları**: sık formüller (alan/hacim, türev/integral kuralları, logaritma özellikleri, özdeşlikler)
 - **Kullanıcı kütüphanesi**: kendi seçtiğin çizimi "Kütüphaneye kaydet" ile ekleme
 
-## I. Sınav kağıdı oluşturucu (onaylandı)
-- Başlık alanı: okul, ders, sınıf, tarih, ad-soyad-numara satırları, puan tablosu
-- Soru ekleme: soru kutuları (metin, formül, kütüphane çizimi, görsel veya PDF'ten kırpılmış soru), soru başına puan
-- Soru tipleri: klasik (boşluklu cevap alanı), çoktan seçmeli (A-E şıkları), doğru/yanlış, boşluk doldurma, eşleştirme
-- Düzen: tek/çift sütun, otomatik sayfa bölme, soru numaralandırma
-- Soru bankası: soruları konu ve zorluk etiketleriyle saklama, bankadan seçerek sınav kurma
-- A/B grupları: soru ve şık sırasını karıştırarak farklı kitapçıklar
-- Cevap anahtarı: ayrı sayfa olarak otomatik
-- Çıktı: baskıya hazır A4 PDF (kalem çizimleri vektör)
+## I. Onaylanan ders/çalışma özellikleri
+1. **Hareketli geometri**: köşeleri sürüklenebilen şekiller; açı ölçüleri, kenar uzunlukları, alan/çevre canlı güncellenir. Noktalar arası bağlar korunur (ör. üçgenin köşesini çekince açıortay da güncellenir). Önce üçgen, dörtgen, çember + açı/uzunluk/alan etiketleri; sonra paralel, dik, orta nokta, açıortay gibi bağlı yapılar.
+2. **Bilgi kutuları (Markdown benzeri bloklar)**: kement ile bir bölgeyi seçip "Kutuya çevir" → Kural / Tanım / Örnek / Dikkat / Formül / Özet başlıklı, renkli çerçeveli bir blok olur (el yazısı aynen kalır, düzenli bir kutuya alınır). Bloklar taşınabilir, daraltılabilir.
+   - **Konu özeti**: defterdeki bütün kutular tek tıkla bir "Özet" sayfasında toplanır (kaynak sayfaya bağlantılı); PDF olarak paylaşılabilir.
+   - El yazısını yazıya çevirme istenmediği için kutu içeriği el yazısı olarak kalır; istenirse kutuya klavyeyle başlık/alt yazı eklenir.
+3. **Yanlış defteri**: soruyu PDF'ten/fotoğraftan/sayfadan kırp → "Yanlış defteri"ne ekle (konu etiketi, kaynak, tarih). Defterde her soru için "çözüldü / tekrar" işareti, tekrar modu (cevap gizli).
+4. **Kişisel formül kağıdı**: kütüphanedeki formül kartlarından seçerek düzenli bir formül sayfası oluşturma; kendi formüllerini ekleme; tek sayfa PDF.
 
-## J. Öğretmenin ders anlatımı için öneriler (kullanıcıya listelendi, onay bekliyor)
-- Sınıf listesi ve rastgele öğrenci seçici
-- Yoklama ve not çizelgesi sayfası
-- Takvim: sınav ve ödev tarihleri, yapılacaklarla bağlantılı
-- Ders planı sayfası: kazanım, süre, etkinlik başlıkları (şablon)
-- Adım adım çözüm modu: çözüm satırlarını tek tek açma (perdeye ek, satır bazlı)
-- Etkileşimli geometri: sürüklenince açı ölçüleri ve uzunluklar canlı güncellenen şekiller (dinamik geometri)
-- Fonksiyon kaydırıcıları: y = a·x² + b gibi grafiklerde a, b değerlerini kaydırıcıyla değiştirip grafiğin değişimini canlı gösterme
-- Hesap makinesi paneli (bilimsel), sonucu sayfaya yapıştırma
-- Ekran bölme: solda soru PDF'i, sağda boş çözüm sayfası
-- Ders sonu özeti: dersin sayfalarını tek PDF yapıp öğrencilere paylaşma (QR kod ile)
-- Ödev sayfası: seçilen soruları ödev olarak PDF'e çıkarma
-- Sesli ders notu: anlatırken sesi kaydedip sayfayla eşleştirme (videosuz, hafif)
+(Sınav kağıdı oluşturucu kullanıcı tarafından iptal edildi.)
 
-## K. Öğrencinin ders çalışması için öneriler (kullanıcıya listelendi, onay bekliyor)
-- Bilgi kartları (ön/arka) ve aralıklı tekrar
-- Pomodoro / çalışma süresi takibi ve günlük çalışma istatistiği
-- Konu takip listesi: ünite/konu bazında "çalışıldı, tekrar edilecek" işaretleme
-- Yanlış defteri: yanlış yapılan soruyu fotoğraftan/PDF'ten kırpıp tek deftere toplama, sonra tekrar çözme
-- Deneme sınavı takibi: net/puan girişi ve gelişim grafiği
-- Formül defteri: kütüphaneden formül kartlarını kişisel deftere toplama
-- Etiketler (#türev #yanlış) ve tüm defterlerde arama
-- Sayfalar arası bağlantı (konu özetinden ilgili soruya git)
-- Çalışma planı: haftalık plan, yapılacaklarla bağlantılı
-- Soruyu çözmeden önce cevabı gizleme (çözüm katmanının öğrenci kullanımı)
+## J. Bekleyen öneriler (öğretmen)
+- Adım adım çözüm (satır satır açma), kaydırıcılı grafik (a, b değerleri canlı)
+- Bölünmüş ekran (solda soru PDF'i, sağda çözüm)
+- Bilimsel hesap makinesi, sonucu sayfaya yapıştırma
+- Sınıf listesi ve rastgele öğrenci seçici; yoklama/not çizelgesi
+- Ders planı şablonu, ödev PDF'i, ders sonu QR paylaşımı, takvim, sesli ders notu
+
+## K. Bekleyen öneriler (öğrenci ve aynı tarzda yeni fikirler)
+- Cevabı gizleme, konu takibi, deneme sınavı takibi, bilgi kartları, pomodoro, çalışma planı, etiket/arama, sayfa bağlantıları
+- **Örnekten alıştırmaya**: anlatılan örnek sorunun sayılarını değiştirip benzer alıştırma üretme (ör. 2³·2⁴ → 3²·3⁵); cevap otomatik hesaplanır (üslü, köklü, rasyonel sayılar, denklemler gibi hesaplanabilir konular)
+- **Adım kontrolü**: öğrencinin yazdığı ara sonuçları klavye/formül alanıyla girip doğru mu kontrol etme
+- **Kavram haritası**: kutuları oklarla bağlayıp konular arası ilişki gösterme (kutular taşınınca oklar takip eder)
+- **Görsel ispatlar / animasyonlu gösterimler**: Pisagor alan ispatı, üçgen iç açılar toplamı, birim çemberde açı dönerken sin/cos'un değişmesi gibi hazır animasyonlar
+- **Kesir ve oran görselleri**: pasta/çubuk kesir modelleri, sayı doğrusunda kesir gösterimi, sürüklenerek değişen
+- **Cebir karoları**: x², x, 1 karolarıyla çarpanlara ayırma / özdeşlik gösterimi
+- **Tablo ve grafik**: değer tablosu girip noktaları koordinat düzlemine işleme, doğruya uydurma
+- **Ezber / tekrar kartı oluşturma**: bilgi kutularından otomatik kart üretme
+- **Zamanlı soru çözme modu**: soru başına sayaç, süre istatistiği
+- **Sesli anlatım ekleme**: bir kutuya veya soruya kısa sesli açıklama iliştirme
 
 ## L. Kontrol
 - Her değişiklikten sonra emülatör testi ve ekran görüntüsü incelemesi.
