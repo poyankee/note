@@ -11,14 +11,14 @@ Kullanıcı geri bildirimi — sürüm 12 sonrası. Sırayla yapılacak.
 3. **Yeni sayfa ve hızlı not kara tahta açılıyor.** Yeni defter, hızlı not ve yeni sayfa her zaman **düz beyaz** olmalı. Eski `newDark` / `newTemplate` ayarları yok sayılmalı.
 
 ## B. Ana sayfa
-4. Yeni defter oluştururken **ad sorulmasın**: hemen "Adsız defter" açılsın, ad defterin içinde değiştirilsin.
+4. Yeni defter (ve yeni sayfa) oluştururken **ad sorulmasın**: hemen "Adsız defter" açılsın, ad defterin içinde değiştirilsin.
 5. **Toplu seçim**: uzun bas → seçim modu → çoklu seçip toplu sil, toplu klasöre taşı, toplu favori.
 6. **Görünüm seçenekleri**: üstte küçük bir simge ile küçük ızgara, orta ızgara, büyük ızgara ve liste görünümü. Varsayılan kapaklar şimdikinden daha küçük olmalı.
 7. **Klasör renkleri**: her klasöre kullanıcının seçtiği renk (simge renklendirilir).
 8. Editörden ana sayfaya dönünce **"Kaydedildi" bildirimi** (kısa toast).
 
 ## C. Editör
-9. **Üstteki renk/kalınlık çubuğunu kaldır.** Kalem seçenekleri, seçili araca tekrar dokununca açılan küçük bir açılır pencerede olsun. Ekranda yer kaplamasın.
+9. **Üstteki renk/kalınlık çubuğunu kaldır.** Ekranda yer kaplamasın. Araç menüsünde **kaleme (veya başka bir araca) çift dokununca** o araca ait seçenekler (renk, kalınlık, kayıtlı kalemler, palet düzenleme) küçük bir açılır pencerede çıksın.
 10. **Menü küçültülünce** kalem ve silgi görünsün (ikisi arasında hızlı geçiş), sadece seçili araç değil.
 11. **Sunum panelini dikey yapabilme**: panel ekranın sol veya sağ kenarına taşınınca otomatik olarak dikey dursun, alt veya üst kenarda yatay.
 12. **Sayfa boyutu seçeneği** ("Sayfa" panelinde): A4 dikey, A4 yatay, 16:9 ve **"Tam ekran"** (tabletin ekran oranında sayfa). Mevcut sayfaya ve yeni sayfalara uygulanabilsin.
@@ -83,6 +83,18 @@ Kenarda açılır "Kütüphane" paneli, kategorilere ayrılmış, aranabilir; ek
 ## İlke
 - **Yapay zeka desteği yok.** Uygulama sade kalacak; öğrenci ve öğretmen dikkat dağıtmayan, temiz bir alanda çalışacak.
 - Kullanıcının onaylamadığı öneriler listeden çıkarıldı (sınav kağıdı oluşturucu, adım adım çözüm, kaydırıcılı grafik, bölünmüş ekran, hesap makinesi, sınıf listesi, takvim, bilgi kartları, pomodoro, örnekten alıştırma, adım kontrolü, animasyonlar vb.). "F. Onaylanan ek özellikler" bölümündekiler (arama, ders programı, şablon defterler, soru kutuları, sayfa no/tarih, video listesi, çözüm katmanı, basınç eğrisi) ile G (PDF düzenleme) ve H (hazır kütüphane) geçerli.
+
+## M. Rahat çalışma ortamı önerileri (kullanıcıya listelendi, onay bekliyor)
+- **Kaldığın yerden devam**: defter açılınca son bakılan sayfa ve yakınlaştırmada açılsın; uygulama açılınca son defter (isteğe bağlı)
+- **Çöp kutusu**: silinen defterler ve sayfalar 30 gün geri getirilebilsin
+- **Sayfa çevirme düzeni**: dikey kaydırma yerine kitap gibi yatay sayfa çevirme seçeneği
+- **Yazarken otomatik yeni sayfa**: son sayfanın altına gelince yeni sayfa eklensin
+- **Yakınlaştırma kilidi ve "sayfaya sığdır" düğmesi**: yanlışlıkla yakınlaşma/kayma olmasın, tek dokunuşla düzelsin
+- **Arayüz boyutu**: düğme ve yazı büyüklüğü ayarı (küçük / normal / büyük)
+- **Silgiden otomatik dönüş**: silgiyle sildikten sonra kaleme kendiliğinden dönme (isteğe bağlı)
+- **Son kullanılan renkler**: paletin yanında son 3 renk
+- **Sade çalışma modu**: tek dokunuşla bütün menüler gizlenir, sadece kalem/silgi/geri al kalır (sunum modunun öğrenci versiyonu)
+- **Göz dostu ayarlar**: gece kağıdı + sıcak renk masa, düşük parlaklıkta kontrastı koruyan kalem renkleri
 
 ## L. Kontrol
 - Her değişiklikten sonra emülatör testi ve ekran görüntüsü incelemesi.
