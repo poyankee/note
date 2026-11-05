@@ -359,13 +359,13 @@ class EditorController(
         if (cached != null && thumbKeys[page.id] == key) return cached
         val snapshot = Page(page.id, page.background, page.width, page.height).also { it.items.addAll(page.items) }
         val scale = widthPx / page.width
-        val job = {
+        val job: () -> Unit = {
             val bg = (snapshot.background as? Background.PdfPage)?.let { pdf?.renderBlocking(it.index, scale) }
             val bmp = try { thumbRenderer.renderPage(snapshot, scale, bg) } catch (_: Throwable) { null }
             bg?.recycle()
             main.post { if (bmp != null) { thumbs.put(snapshot.id, bmp); thumbKeys[snapshot.id] = key; done() } }
         }
-        if (pdf != null) pdf.runOnPdfThread(job) else thumbExec.execute(job)
+        if (pdf != null) pdf.runOnPdfThread(job) else thumbExec.execute { job() }
         return cached
     }
 

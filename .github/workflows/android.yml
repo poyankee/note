@@ -4,6 +4,9 @@ on:
   push:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -27,3 +30,14 @@ jobs:
         with:
           name: Note-apk-${{ github.run_number }}
           path: out/*.apk
+      - name: Tablete kolay indirme için sürüm yayınla
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: surum-${{ github.run_number }}
+          name: Note sürüm ${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          prerelease: true
+          body: |
+            Tablete kurmak için **Note-${{ github.run_number }}.apk** dosyasını indirip açın.
+            Önceki sürümün üzerine kurulur, defterleriniz silinmez.
+          files: out/Note-${{ github.run_number }}.apk
