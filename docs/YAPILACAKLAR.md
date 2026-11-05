@@ -67,22 +67,42 @@ Kenarda açılır "Kütüphane" paneli, kategorilere ayrılmış, aranabilir; ek
 - **Formül kartları**: sık formüller (alan/hacim, türev/integral kuralları, logaritma özellikleri, özdeşlikler)
 - **Kullanıcı kütüphanesi**: kendi seçtiğin çizimi "Kütüphaneye kaydet" ile ekleme
 
-## I. Öğretmen ve yüksek lisans için ek öneriler (kullanıcıya listelendi, onay bekliyor)
-- **Etiketler** (ör. #türev #sınav) ve tüm defterlerde arama
-- **Sayfalar arası bağlantı**: bir yazıya dokununca başka sayfaya/deftere git
-- **PDF okuma notları özeti**: vurgulanan yerler ve notları tek sayfada/dosyada toplama (tez okuması için)
-- **Kaynakça / alıntı kartları**: makale bilgisi (yazar, yıl, sayfa) ile not; APA formatında dışa aktarma
-- **Bilgi kartları (flash card)**: ön/arka yüzlü kartlar, tekrar modu
-- **Sesli not**: sayfaya bağlı ses kaydı (yazıyla eşzamanlı oynatma)
-- **Yan yana iki defter / PDF + not** (bölünmüş ekran)
-- **Sınıf listesi ve rastgele öğrenci seçici** (derste söz verme)
-- **Yoklama / not çizelgesi** sayfası
-- **Sınav kağıdı oluşturucu**: kütüphane + soru kutularından baskıya hazır PDF
-- **Pomodoro / çalışma süresi takibi** (yüksek lisans çalışması için)
-- **Takvim**: teslim tarihleri, sınav günleri, yapılacaklarla bağlantılı
-- **LaTeX dışa aktarma**: formüllerin LaTeX kodunu kopyalama
-- **Bulutsuz cihazlar arası aktarma**: Wi-Fi ile bilgisayara/telefona defter gönderme
+## I. Sınav kağıdı oluşturucu (onaylandı)
+- Başlık alanı: okul, ders, sınıf, tarih, ad-soyad-numara satırları, puan tablosu
+- Soru ekleme: soru kutuları (metin, formül, kütüphane çizimi, görsel veya PDF'ten kırpılmış soru), soru başına puan
+- Soru tipleri: klasik (boşluklu cevap alanı), çoktan seçmeli (A-E şıkları), doğru/yanlış, boşluk doldurma, eşleştirme
+- Düzen: tek/çift sütun, otomatik sayfa bölme, soru numaralandırma
+- Soru bankası: soruları konu ve zorluk etiketleriyle saklama, bankadan seçerek sınav kurma
+- A/B grupları: soru ve şık sırasını karıştırarak farklı kitapçıklar
+- Cevap anahtarı: ayrı sayfa olarak otomatik
+- Çıktı: baskıya hazır A4 PDF (kalem çizimleri vektör)
 
-## J. Kontrol
+## J. Öğretmenin ders anlatımı için öneriler (kullanıcıya listelendi, onay bekliyor)
+- Sınıf listesi ve rastgele öğrenci seçici
+- Yoklama ve not çizelgesi sayfası
+- Takvim: sınav ve ödev tarihleri, yapılacaklarla bağlantılı
+- Ders planı sayfası: kazanım, süre, etkinlik başlıkları (şablon)
+- Adım adım çözüm modu: çözüm satırlarını tek tek açma (perdeye ek, satır bazlı)
+- Etkileşimli geometri: sürüklenince açı ölçüleri ve uzunluklar canlı güncellenen şekiller (dinamik geometri)
+- Fonksiyon kaydırıcıları: y = a·x² + b gibi grafiklerde a, b değerlerini kaydırıcıyla değiştirip grafiğin değişimini canlı gösterme
+- Hesap makinesi paneli (bilimsel), sonucu sayfaya yapıştırma
+- Ekran bölme: solda soru PDF'i, sağda boş çözüm sayfası
+- Ders sonu özeti: dersin sayfalarını tek PDF yapıp öğrencilere paylaşma (QR kod ile)
+- Ödev sayfası: seçilen soruları ödev olarak PDF'e çıkarma
+- Sesli ders notu: anlatırken sesi kaydedip sayfayla eşleştirme (videosuz, hafif)
+
+## K. Öğrencinin ders çalışması için öneriler (kullanıcıya listelendi, onay bekliyor)
+- Bilgi kartları (ön/arka) ve aralıklı tekrar
+- Pomodoro / çalışma süresi takibi ve günlük çalışma istatistiği
+- Konu takip listesi: ünite/konu bazında "çalışıldı, tekrar edilecek" işaretleme
+- Yanlış defteri: yanlış yapılan soruyu fotoğraftan/PDF'ten kırpıp tek deftere toplama, sonra tekrar çözme
+- Deneme sınavı takibi: net/puan girişi ve gelişim grafiği
+- Formül defteri: kütüphaneden formül kartlarını kişisel deftere toplama
+- Etiketler (#türev #yanlış) ve tüm defterlerde arama
+- Sayfalar arası bağlantı (konu özetinden ilgili soruya git)
+- Çalışma planı: haftalık plan, yapılacaklarla bağlantılı
+- Soruyu çözmeden önce cevabı gizleme (çözüm katmanının öğrenci kullanımı)
+
+## L. Kontrol
 - Her değişiklikten sonra emülatör testi ve ekran görüntüsü incelemesi.
 - Yeni özellikler için duman testleri.
