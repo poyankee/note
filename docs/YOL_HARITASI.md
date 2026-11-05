@@ -150,6 +150,12 @@ Defter { id, ad, klasör, oluşturma/güncelleme tarihi, kaynakPdf?, sayfaNoFark
 
 ## 4. Yol haritası
 
+> **Durum (5 Kasım 2026):** Aşama 0–4 kodlandı. Her push'ta GitHub Actions APK üretir (Releases sayfası) ve bir tablet emülatöründe uçtan uca duman testi çalıştırır. Gerçek cihazda (Xiaomi Pad 7) toplu kontrol bekleniyor. Kullanım: [KULLANIM.md](KULLANIM.md)
+>
+> Plandan sapmalar:
+> - Çizimde Jetpack Ink yerine kendi çizim motorumuz kullanıldı (RenderNode + tamponsuz kalem olayları). Gecikme cihazda yetersiz görülürse ön tampon (front-buffer) çizimi eklenecek.
+> - Room yerine sade, sürümlü ikili dosya formatı kullanıldı (ek derleme bağımlılığı yok, birim testli).
+
 Her aşamanın sonunda tablette gerçekten **derste kullanılabilir** bir APK olması hedeflenir.
 
 ### Aşama 0 — Hazırlık ve cihaz testi (2–3 gün)

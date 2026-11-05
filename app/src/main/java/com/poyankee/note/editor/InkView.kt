@@ -519,6 +519,8 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
                         cancelGesture()
                         penId = e.getPointerId(idx)
                         requestUnbufferedDispatch(e)
+                        // Android 15+: kalem yazarken ekran yenileme hızını yüksek tut (144 Hz)
+                        if (Build.VERSION.SDK_INT >= 35) requestedFrameRate = View.REQUESTED_FRAME_RATE_CATEGORY_HIGH
                         parent?.requestDisallowInterceptTouchEvent(true)
                         penDown(e, idx)
                     }
@@ -539,6 +541,7 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
                     if (canceled) penCancel() else penUp(e, idx)
                     penId = -1
                     penUpTime = SystemClock.uptimeMillis()
+                    if (Build.VERSION.SDK_INT >= 35) requestedFrameRate = View.REQUESTED_FRAME_RATE_CATEGORY_DEFAULT
                     if (action == MotionEvent.ACTION_CANCEL) cancelGesture()
                 } else {
                     fingerUp(e, idx, canceled)
@@ -572,7 +575,8 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
     private fun fingerDown(e: MotionEvent, idx: Int) {
         val id = e.getPointerId(idx)
         val palmPx = 70f * density
-        if (palmBlocked() || e.getTouchMajor(idx) > palmPx || !settings.fingerGestures.value && settings.penOnly.value) {
+        val blocked = if (fingerDrawing) false else palmBlocked()
+        if (blocked || e.getTouchMajor(idx) > palmPx || !settings.fingerGestures.value && settings.penOnly.value) {
             ignored += id; return
         }
         if (!settings.penOnly.value && fingers.isEmpty() && !gestureActive && penId == -1) {

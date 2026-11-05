@@ -270,7 +270,11 @@ class SmokeTest {
 
         val uri = FileProvider.getUriForFile(ctx, ctx.packageName + ".files", src)
         main {
-            ctx.startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(uri, "application/pdf").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))
+            ctx.startActivity(
+                Intent(Intent.ACTION_VIEW).setDataAndType(uri, "application/pdf")
+                    .setClass(ctx, MainActivity::class.java)
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),
+            )
         }
         var v: InkView? = null
         rule.waitUntil(20_000) {
