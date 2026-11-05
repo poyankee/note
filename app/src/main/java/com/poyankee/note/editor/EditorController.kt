@@ -110,7 +110,7 @@ class EditorController(
 
     var canUndo by mutableStateOf(false)
     var canRedo by mutableStateOf(false)
-    var currentPage by mutableIntStateOf(0)
+    var currentPage by mutableIntStateOf(settings.lastPage(nb.id).coerceIn(0, maxOf(0, nb.pages.size - 1)))
     var pageCount by mutableIntStateOf(nb.pages.size)
     var hasSelection by mutableStateOf(false)
     var selectionHasShapes by mutableStateOf(false)
@@ -734,7 +734,13 @@ class EditorController(
         return cached
     }
 
+    /** Silgiden önceki araca dön (silgi otomatik dönüşü). */
+    fun returnFromEraser() {
+        selectTool(if (previousTool == Tool.ERASER) Tool.PEN else previousTool)
+    }
+
     fun close() {
+        settings.setLastPage(nb.id, currentPage)
         view?.clearSelection()
         saveCover()
         store.saveMeta(nb)

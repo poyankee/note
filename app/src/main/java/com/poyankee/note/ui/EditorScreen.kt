@@ -28,6 +28,8 @@ import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import com.poyankee.note.core.Solids
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -332,18 +334,37 @@ private fun Draggable(
     var x by remember { mutableStateOf(px.value) }
     var y by remember { mutableStateOf(py.value) }
     val density = androidx.compose.ui.platform.LocalDensity.current.density
-    val limX = areaW.value; val limY = areaH.value
+    // Panelin ofsetsiz konumu ve boyutu (dp): ekran dışına çıkmasın diye sınır hesabında kullanılır
+    var baseX by remember { mutableStateOf(Float.NaN) }
+    var baseY by remember { mutableStateOf(0f) }
+    var w by remember { mutableStateOf(0f) }
+    var h by remember { mutableStateOf(0f) }
+    fun clampX(v: Float) = if (baseX.isNaN()) v else v.coerceIn(-baseX, (areaW.value - w - baseX).coerceAtLeast(-baseX))
+    fun clampY(v: Float) = if (baseX.isNaN()) v else v.coerceIn(-baseY, (areaH.value - h - baseY).coerceAtLeast(-baseY))
     val handle = Modifier.pointerInput(Unit) {
         detectDragGestures(
             onDragEnd = { px.value = x; py.value = y },
             onDragCancel = { px.value = x; py.value = y },
         ) { change, drag ->
             change.consume()
-            x = (x + drag.x / density).coerceIn(-limX, limX)
-            y = (y + drag.y / density).coerceIn(-limY, limY)
+            x = clampX(x + drag.x / density)
+            y = clampY(y + drag.y / density)
         }
     }
-    Box(modifier.offset { androidx.compose.ui.unit.IntOffset((x * density).roundToInt(), (y * density).roundToInt()) }) {
+    // ekran döndüğünde veya eski kayıtlı konum ekran dışındaysa içeri çek
+    LaunchedEffect(areaW, areaH, w, h, baseX) {
+        val cx = clampX(x); val cy = clampY(y)
+        if (cx != x || cy != y) { x = cx; y = cy; px.value = x; py.value = y }
+    }
+    Box(
+        modifier
+            .onGloballyPositioned { c ->
+                val pos = c.positionInParent()
+                baseX = pos.x / density - x; baseY = pos.y / density - y
+                w = c.size.width / density; h = c.size.height / density
+            }
+            .offset { androidx.compose.ui.unit.IntOffset((x * density).roundToInt(), (y * density).roundToInt()) },
+    ) {
         content(handle)
     }
 }
@@ -507,7 +528,10 @@ private fun ToolDock(ctl: EditorController, handle: Modifier, onTimer: () -> Uni
             // tutamak + daralt
             Grip(handle)
             if (collapsed) {
-                DockButton(ctl, ctl.tool, selectedOverride = true, label = shortName(ctl.tool))
+                // küçükken kalem ve silgi her zaman görünür; başka bir araç seçiliyse o da görünür
+                DockButton(ctl, Tool.PEN)
+                DockButton(ctl, Tool.ERASER)
+                if (ctl.tool != Tool.PEN && ctl.tool != Tool.ERASER) DockButton(ctl, ctl.tool, selectedOverride = true, label = shortName(ctl.tool))
                 Box(Modifier.size(40.dp).clip(CircleShape).clickable { ctl.settings.dockCollapsed.value = false }, contentAlignment = Alignment.Center) {
                     Icon(Icons.Rounded.KeyboardArrowDown, "Menüyü aç", tint = UI.TextSoft)
                 }

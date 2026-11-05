@@ -1307,6 +1307,8 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
                 val before = st.before ?: return
                 ctl.undoStack.record(page, before)
                 ctl.pageChanged(page)
+                // silgi menüden seçildiyse sildikten sonra kaleme dön (ayarlardan kapatılabilir)
+                if (settings.eraserReturn.value && ctl.tool == Tool.ERASER && penTool == Tool.ERASER) ctl.returnFromEraser()
             }
             Tool.LASSO -> {
                 if (st.n >= 3) {

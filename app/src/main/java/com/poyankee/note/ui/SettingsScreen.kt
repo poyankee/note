@@ -129,6 +129,7 @@ fun SettingsScreen(
                 }
                 Group("Yazı") {
                     Toggle("Basınç duyarlılığı", "Kalemi bastırdıkça çizgi kalınlaşır", s.pressure.value) { s.pressure.value = it }
+                    Toggle("Silgiden kaleme otomatik dön", "Silgiyle sildikten sonra önceki araca geri geçer", s.eraserReturn.value) { s.eraserReturn.value = it }
                     Toggle("Gecikme azaltma (tahmin)", "Çizgi kalemin ucunu daha yakından takip eder", s.prediction.value) { s.prediction.value = it }
                     SliderRow("Çizgi yumuşatma", listOf("Kapalı", "Az", "Orta", "Çok", "En çok")[s.smoothing.value.coerceIn(0, 4)],
                         s.smoothing.value.toFloat(), 0f..4f, 3) { s.smoothing.value = it.roundToInt() }

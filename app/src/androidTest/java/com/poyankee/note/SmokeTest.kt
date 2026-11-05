@@ -142,9 +142,9 @@ class SmokeTest {
 
     private fun newNotebook(): InkView {
         shot("01-ana-sayfa")
+        // testlerde silgi sildikten sonra kaleme dönmesin (adımlar silgiyle devam ediyor)
+        main { com.poyankee.note.data.Settings.get(rule.activity).eraserReturn.value = false }
         rule.onNodeWithText("Yeni defter").performClick()
-        shot("02-yeni-defter")
-        rule.onNodeWithText("Oluştur").performClick()
         return ink()
     }
 

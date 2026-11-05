@@ -146,7 +146,7 @@ fun LibraryScreen(
                     Text("Note", style = TextStyle(fontSize = 22.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.5).sp), color = UI.Text)
                 }
                 Button(
-                    onClick = { showNew = true }, modifier = Modifier.fillMaxWidth().height(46.dp),
+                    onClick = { onCreate("") }, modifier = Modifier.fillMaxWidth().height(46.dp),
                     shape = RoundedCornerShape(12.dp),
                 ) { Icon(Icons.Rounded.Add, null); Spacer(Modifier.width(6.dp)); Text("Yeni defter", fontWeight = FontWeight.SemiBold) }
                 Spacer(Modifier.height(8.dp))
@@ -224,10 +224,10 @@ fun LibraryScreen(
                     )
                 } else {
                     LazyVerticalGrid(
-                        columns = GridCells.Adaptive(if (wide) 168.dp else 140.dp),
+                        columns = GridCells.Adaptive(if (wide) 128.dp else 112.dp),
                         contentPadding = PaddingValues(start = 32.dp, end = 32.dp, top = 12.dp, bottom = 32.dp),
-                        horizontalArrangement = Arrangement.spacedBy(26.dp),
-                        verticalArrangement = Arrangement.spacedBy(26.dp),
+                        horizontalArrangement = Arrangement.spacedBy(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(20.dp),
                         modifier = Modifier.fillMaxSize(),
                     ) {
                         items(list, key = { it.id }) { nb ->

@@ -62,6 +62,8 @@ class Settings(context: Context) {
     val pressure = bool("pressure", true)
     val smoothing = int("smoothing", 2)
     val prediction = bool("prediction", true)
+    /** Silgiyle sildikten sonra önceki araca (kaleme) kendiliğinden dön. */
+    val eraserReturn = bool("eraserReturn", true)
 
     // Geometri
     val shapeHold = bool("shapeHold", true)
@@ -136,6 +138,10 @@ class Settings(context: Context) {
         palette.value = "FF1A1A1A,FF1565C0,FFD32F2F,FF2E7D32,FFF57C00,FF6A1B9A"
         hlPalette.value = "FFFFEB3B,FF7CF29A,FFFF9EC7,FF8EC5FF,FFFFB74D"
     }
+
+    /** Defterin en son bakılan sayfası (kaldığın yerden devam). */
+    fun lastPage(id: String) = sp.getInt("lastPage_$id", 0)
+    fun setLastPage(id: String, page: Int) = sp.edit().putInt("lastPage_$id", page).apply()
 
     fun presetList(): List<PenPreset> = presets.value.split(';').mapNotNull { if (it.isBlank()) null else PenPreset.decode(it) }
     fun addPreset(p: PenPreset) { presets.value = (presetList().filter { it != p } + p).takeLast(8).joinToString(";") { it.encode() } }

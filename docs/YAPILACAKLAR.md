@@ -148,6 +148,19 @@ Kenarda açılır "Kütüphane" paneli, kategorilere ayrılmış, aranabilir; ek
 - **Düşük donanım**: az RAM'li ucuz tabletlerde büyük PDF'te bellek sınırı, ders kaydında düşük çözünürlüğe otomatik geçiş; düşük bellekli emülatör testi.
 - **Ekran yenileme hızları**: 60 / 90 / 120 / 144 Hz ekranlarda kalem gecikmesi kontrolü.
 
+## U. Beklemede
+- **Ders kaydı (video)**: geliştirilmeyecek; ileride tamamen kaldırılabilir (Android'in kendi ekran kaydı aracı kullanılabilir). Karar sonra.
+
+## Bu oturumda yapılanlar (sürüm 13+)
+- A1 panellerin ekran dışına kaçması düzeltildi (gerçek boyuta göre sınır; eski kayıtlı konum ekran dışındaysa içeri çekilir)
+- A3 yeni defter / hızlı not / yeni sayfa her zaman düz beyaz
+- B4 yeni defter ad sormadan açılır
+- B8 "Kaydedildi" bildirimi
+- B6'nın bir kısmı: kapaklar küçültüldü (görünüm seçenekleri hâlâ yapılacak)
+- C10 küçük menüde kalem + silgi
+- M1 kaldığın sayfadan açılma
+- M6 silgiden otomatik dönüş (Ayarlar'dan kapatılabilir)
+
 ## L. Kontrol
 - Her değişiklikten sonra emülatör testi ve ekran görüntüsü incelemesi.
 - Yeni özellikler için duman testleri.

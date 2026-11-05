@@ -288,9 +288,9 @@ class MainActivity : ComponentActivity() {
 
     private fun create(name: String, inFolder: String? = null) {
         val title = name.ifBlank { "Adsız defter" }
-        val t = runCatching { Template.valueOf(settings.newTemplate.value) }.getOrDefault(Template.BLANK)
+        // yeni defter ve hızlı not her zaman düz beyaz açılır (desen defter içinden değiştirilir)
         val size = runCatching { PageSize.valueOf(settings.newSize.value) }.getOrDefault(PageSize.A4_PORTRAIT)
-        val paper = Background.Paper(t, settings.newDark.value)
+        val paper = Background.Paper(Template.BLANK, com.poyankee.note.core.PaperColors.WHITE)
         val f = inFolder ?: folder?.takeIf { it != com.poyankee.note.ui.FAVORITES } ?: ""
         bg.execute {
             val nb = store.create(title, paper, size, f)
@@ -348,6 +348,7 @@ class MainActivity : ComponentActivity() {
         if (!keepTab) tabs = tabs.filter { it.first != ed.nb.id }
         tabs = tabs.map { if (it.first == ed.nb.id) it.first to ed.nb.name else it }
         ed.close()
+        android.widget.Toast.makeText(this, "Kaydedildi", android.widget.Toast.LENGTH_SHORT).show()
         refresh()
         bg.execute { Thread.sleep(800); runOnUiThread { refresh() } }
     }
