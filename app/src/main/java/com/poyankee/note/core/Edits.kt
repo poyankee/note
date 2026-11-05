@@ -271,11 +271,40 @@ object Shapes {
 
 class Edit(val pageId: Long, val removed: List<Pair<Int, Item>>, val added: List<Item>)
 
+/** Sayfanın bir anlık görüntüsü (döndürme, kırpma, stil değişikliği geri alınabilsin diye). */
+class PageState(val background: Background, val width: Float, val height: Float, val items: List<Item>) {
+    companion object {
+        fun of(p: Page) = PageState(p.background, p.width, p.height, ArrayList(p.items))
+    }
+    fun applyTo(p: Page) {
+        p.background = background; p.width = width; p.height = height
+        p.items.clear(); p.items.addAll(items)
+    }
+}
+
+/** Geri alınabilir işlemler: öğe değişiklikleri ve sayfa işlemleri. */
+sealed class UndoEntry {
+    class Items(val edit: Edit) : UndoEntry()
+    class PageAdd(val page: Page, val index: Int) : UndoEntry()
+    class PageRemove(val page: Page, val index: Int) : UndoEntry()
+    class PageMove(val from: Int, val to: Int) : UndoEntry()
+    class PageChange(val pageId: Long, val before: PageState, val after: PageState) : UndoEntry()
+}
+
+/** Geri al / yinele sonucu: değişen sayfa ve sayfa listesinin değişip değişmediği. */
+class UndoResult(val pageId: Long?, val pagesChanged: Boolean)
+
 class UndoStack(private val limit: Int = 300) {
-    private val undo = ArrayDeque<Edit>()
-    private val redo = ArrayDeque<Edit>()
+    private val undo = ArrayDeque<UndoEntry>()
+    private val redo = ArrayDeque<UndoEntry>()
     val canUndo get() = undo.isNotEmpty()
     val canRedo get() = redo.isNotEmpty()
+
+    private fun push(e: UndoEntry) {
+        undo.addLast(e)
+        if (undo.size > limit) undo.removeFirst()
+        redo.clear()
+    }
 
     /** Sayfaya değişikliği uygular ve geri alma listesine kaydeder. */
     fun apply(page: Page, remove: Collection<Item>, add: List<Item>): Edit? {
@@ -286,9 +315,7 @@ class UndoStack(private val limit: Int = 300) {
         for (k in removed.indices.reversed()) page.items.removeAt(removed[k].first)
         page.items.addAll(add)
         val e = Edit(page.id, removed, add)
-        undo.addLast(e)
-        if (undo.size > limit) undo.removeFirst()
-        redo.clear()
+        push(UndoEntry.Items(e))
         return e
     }
 
@@ -304,30 +331,78 @@ class UndoStack(private val limit: Int = 300) {
         val added = page.items.filter { it.id !in beforeIds }
         if (removed.isEmpty() && added.isEmpty()) return null
         val e = Edit(page.id, removed, added)
-        undo.addLast(e)
-        if (undo.size > limit) undo.removeFirst()
-        redo.clear()
+        push(UndoEntry.Items(e))
         return e
     }
 
-    fun undo(nb: Notebook): Long? {
+    /* ---- sayfa işlemleri (işlem yapıldıktan sonra kaydedilir) ---- */
+    fun pageAdded(page: Page, index: Int) = push(UndoEntry.PageAdd(page, index))
+    fun pageRemoved(page: Page, index: Int) = push(UndoEntry.PageRemove(page, index))
+    fun pageMoved(from: Int, to: Int) = push(UndoEntry.PageMove(from, to))
+    fun pageChanged(page: Page, before: PageState) = push(UndoEntry.PageChange(page.id, before, PageState.of(page)))
+
+    fun undo(nb: Notebook): UndoResult? {
         val e = undo.removeLastOrNull() ?: return null
-        val page = nb.pages.firstOrNull { it.id == e.pageId } ?: return undo(nb)
-        val ids = e.added.map { it.id }.toHashSet()
-        page.items.removeAll { it.id in ids }
-        for ((i, item) in e.removed) page.items.add(i.coerceAtMost(page.items.size), item)
+        val r = revert(nb, e) ?: return undo(nb)
         redo.addLast(e)
-        return page.id
+        return r
     }
 
-    fun redo(nb: Notebook): Long? {
+    fun redo(nb: Notebook): UndoResult? {
         val e = redo.removeLastOrNull() ?: return null
-        val page = nb.pages.firstOrNull { it.id == e.pageId } ?: return redo(nb)
-        val ids = e.removed.map { it.second.id }.toHashSet()
-        page.items.removeAll { it.id in ids }
-        page.items.addAll(e.added)
+        val r = reapply(nb, e) ?: return redo(nb)
         undo.addLast(e)
-        return page.id
+        return r
+    }
+
+    private fun revert(nb: Notebook, e: UndoEntry): UndoResult? = when (e) {
+        is UndoEntry.Items -> {
+            val page = nb.pages.firstOrNull { it.id == e.edit.pageId }
+            if (page == null) null else {
+                val ids = e.edit.added.map { it.id }.toHashSet()
+                page.items.removeAll { it.id in ids }
+                for ((i, item) in e.edit.removed) page.items.add(i.coerceAtMost(page.items.size), item)
+                UndoResult(page.id, false)
+            }
+        }
+        is UndoEntry.PageAdd -> {
+            if (nb.pages.size <= 1 || !nb.pages.remove(e.page)) null else UndoResult(null, true)
+        }
+        is UndoEntry.PageRemove -> {
+            nb.pages.add(e.index.coerceIn(0, nb.pages.size), e.page); UndoResult(e.page.id, true)
+        }
+        is UndoEntry.PageMove -> {
+            if (e.to !in nb.pages.indices || e.from !in 0..nb.pages.size) null else {
+                val p = nb.pages.removeAt(e.to); nb.pages.add(e.from.coerceAtMost(nb.pages.size), p); UndoResult(p.id, true)
+            }
+        }
+        is UndoEntry.PageChange -> {
+            val page = nb.pages.firstOrNull { it.id == e.pageId }
+            if (page == null) null else { e.before.applyTo(page); UndoResult(page.id, true) }
+        }
+    }
+
+    private fun reapply(nb: Notebook, e: UndoEntry): UndoResult? = when (e) {
+        is UndoEntry.Items -> {
+            val page = nb.pages.firstOrNull { it.id == e.edit.pageId }
+            if (page == null) null else {
+                val ids = e.edit.removed.map { it.second.id }.toHashSet()
+                page.items.removeAll { it.id in ids }
+                page.items.addAll(e.edit.added)
+                UndoResult(page.id, false)
+            }
+        }
+        is UndoEntry.PageAdd -> { nb.pages.add(e.index.coerceIn(0, nb.pages.size), e.page); UndoResult(e.page.id, true) }
+        is UndoEntry.PageRemove -> { if (nb.pages.size <= 1 || !nb.pages.remove(e.page)) null else UndoResult(null, true) }
+        is UndoEntry.PageMove -> {
+            if (e.from !in nb.pages.indices) null else {
+                val p = nb.pages.removeAt(e.from); nb.pages.add(e.to.coerceAtMost(nb.pages.size), p); UndoResult(p.id, true)
+            }
+        }
+        is UndoEntry.PageChange -> {
+            val page = nb.pages.firstOrNull { it.id == e.pageId }
+            if (page == null) null else { e.after.applyTo(page); UndoResult(page.id, true) }
+        }
     }
 
     fun clear() { undo.clear(); redo.clear() }

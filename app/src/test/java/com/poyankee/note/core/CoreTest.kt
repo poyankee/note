@@ -295,4 +295,136 @@ class CoreTest {
         val p = iso.nearest(300f, 421f)
         assertTrue(abs(p.first - 300f) < 20f)
     }
+
+    /* ---------------- sürüm 3 ---------------- */
+
+    @Test fun mathExpressions() {
+        fun v(e: String, x: Double) = MathExpr.parse(e).eval(x)
+        assertEquals(9.0, v("x^2", 3.0), 1e-9)
+        assertEquals(9.0, v("y = x²", 3.0), 1e-9)
+        assertEquals(7.0, v("2x+1", 3.0), 1e-9)
+        assertEquals(-9.0, v("-x^2", 3.0), 1e-9)
+        assertEquals(12.0, v("x(x+1)", 3.0), 1e-9)
+        assertEquals(1.0, v("sin(pi/2)", 0.0), 1e-9)
+        assertEquals(2.0, v("3sin(x)+2", 0.0), 1e-9)
+        assertEquals(2.5, v("2,5", 0.0), 1e-9)
+        assertEquals(-2.0, v("x^(1/3)", -8.0), 1e-6)
+        assertEquals(3.0, v("√(x)", 9.0), 1e-9)
+        assertEquals(6.0, v("2·3", 0.0), 1e-9)
+        assertEquals(Math.E, v("e", 0.0), 1e-9)
+        assertEquals(2.0, v("abs(x)", -2.0), 1e-9)
+        try { MathExpr.parse("2+*"); assertTrue(false) } catch (_: IllegalArgumentException) {}
+        try { MathExpr.parse("foo(x)"); assertTrue(false) } catch (_: IllegalArgumentException) {}
+    }
+
+    @Test fun plotBreaksAtAsymptote() {
+        val f = MathExpr.parse("1/x")
+        val parts = Plot.polylines(f, 300f, 400f, 20f, 600f, 800f)
+        assertEquals(2, parts.size)
+        val line = Plot.polylines(MathExpr.parse("2x+1"), 300f, 400f, 20f, 600f, 800f)
+        assertEquals(1, line.size)
+        assertEquals(2, line[0].size / 2) // doğru: sadeleşince 2 nokta
+    }
+
+    @Test fun solidsHaveHiddenEdges() {
+        for (k in Solids.Kind.entries) {
+            val parts = Solids.create(k, 0f, 0f, 200f, 160f)
+            assertTrue(k.name, parts.isNotEmpty())
+            if (k != Solids.Kind.SPHERE || true) assertTrue(k.name, parts.any { it.hidden })
+        }
+        assertTrue(Solids.create(Solids.Kind.CUBE, 0f, 0f, 3f, 3f).isEmpty())
+    }
+
+    @Test fun vertexLetters() {
+        val items = listOf<Item>(TextItem(1, 0f, 0f, "A", 12f, 0))
+        assertEquals(listOf("B", "C", "D"), VertexLabels.nextLetters(items, 3))
+        val pos = VertexLabels.positions(floatArrayOf(0f, 0f, 100f, 0f, 0f, 100f), 12f)
+        assertEquals(3, pos.size)
+        assertTrue(pos[0].first < 0f && pos[0].second < 0f) // köşeden dışarı
+    }
+
+    @Test fun pageUndoOperations() {
+        val nb = Notebook("x", "x", 0, 0, null)
+        val a = Page(1, Background.Paper(Template.BLANK), 100f, 100f)
+        val b = Page(2, Background.Paper(Template.GRID), 100f, 100f)
+        nb.pages += a; nb.pages += b
+        val u = UndoStack()
+        // sil → geri al
+        nb.pages.remove(b); u.pageRemoved(b, 1)
+        assertEquals(1, nb.pages.size)
+        val r = u.undo(nb)!!
+        assertTrue(r.pagesChanged); assertEquals(listOf(1L, 2L), nb.pages.map { it.id })
+        u.redo(nb); assertEquals(listOf(1L), nb.pages.map { it.id })
+        u.undo(nb)
+        // taşı
+        nb.pages.removeAt(0); nb.pages.add(1, a); u.pageMoved(0, 1)
+        assertEquals(listOf(2L, 1L), nb.pages.map { it.id })
+        u.undo(nb); assertEquals(listOf(1L, 2L), nb.pages.map { it.id })
+        // stil değişimi
+        val before = PageState.of(a)
+        a.background = Background.Paper(Template.DOTS); a.width = 50f
+        u.pageChanged(a, before)
+        u.undo(nb); assertEquals(Template.BLANK, (a.background as Background.Paper).template); assertEquals(100f, a.width, 0f)
+        u.redo(nb); assertEquals(50f, a.width, 0f)
+        // ekle → geri al
+        val c = Page(3, Background.Paper(Template.BLANK), 100f, 100f)
+        nb.pages.add(c); u.pageAdded(c, 2)
+        u.undo(nb); assertEquals(2, nb.pages.size)
+    }
+
+    @Test fun pdfRotateCropGeometry() {
+        // 100x200 sayfa, 90° döndür: 200x100
+        assertEquals(200f to 100f, PdfGeom.displaySize(100f, 200f, 90, Crop.NONE))
+        val m = PdfGeom.fullToDisplay(100f, 200f, 90, Crop.NONE)
+        // tam sayfanın sol üst köşesi, döndürülünce sağ üstte olur
+        assertEquals(200f, m.mapX(0f, 0f), 1e-4f); assertEquals(0f, m.mapY(0f, 0f), 1e-4f)
+        // kırpma: soldan %10
+        val c = Crop(0.1f, 0f, 0f, 0f)
+        assertEquals(90f to 200f, PdfGeom.displaySize(100f, 200f, 0, c))
+        // yazı taşıma: 0°'de (50,50) noktası, 90°'ye geçince (150,50)
+        val t = PdfGeom.itemTransform(100f, 200f, 0, Crop.NONE, 90, Crop.NONE)
+        assertEquals(150f, t.mapX(50f, 50f), 1e-3f); assertEquals(50f, t.mapY(50f, 50f), 1e-3f)
+        // görünen paylar ↔ kırpma
+        for (rot in intArrayOf(0, 90, 180, 270)) {
+            val cr = PdfGeom.cropFromDisplayMargins(rot, 0.1f, 0.2f, 0.3f, 0.05f)
+            val back = PdfGeom.displayMargins(rot, cr)
+            assertEquals(0.1f, back[0], 0f); assertEquals(0.2f, back[1], 0f); assertEquals(0.3f, back[2], 0f); assertEquals(0.05f, back[3], 0f)
+        }
+        // 90° döndürülmüş sayfada "üst" pay, ekranda gerçekten üstten keser
+        val cr = PdfGeom.cropFromDisplayMargins(90, 0.25f, 0f, 0f, 0f)
+        val (w, h) = PdfGeom.displaySize(100f, 200f, 90, cr)
+        assertEquals(200f, w, 1e-3f); assertEquals(75f, h, 1e-3f)
+    }
+
+    @Test fun codecVersion3Fields() {
+        val nb = Notebook("n", "N", 1, 2, "source.pdf", favorite = true, lockHash = "abc")
+        nb.pages += Page(1, Background.PdfPage(2, 90, Crop(0.1f, 0.2f, 0f, 0f), 595f, 842f), 600f, 500f)
+        nb.pages += Page(2, Background.Paper(Template.POLAR, image = "bg_1.png"), 595f, 842f)
+        val bo = ByteArrayOutputStream()
+        Codec.writeNotebook(nb, DataOutputStream(bo))
+        val r = Codec.readNotebook(DataInputStream(ByteArrayInputStream(bo.toByteArray())))
+        assertTrue(r.favorite); assertEquals("abc", r.lockHash)
+        assertEquals(Background.PdfPage(2, 90, Crop(0.1f, 0.2f, 0f, 0f), 595f, 842f), r.pages[0].background)
+        assertEquals("bg_1.png", (r.pages[1].background as Background.Paper).image)
+        val items = listOf(
+            ShapeItem(1, Geom.Circle(0f, 0f, 5f), 7, 1f, false, 0x40FF0000),
+            TextItem(2, 0f, 0f, "Not", 12f, 0, 0f, 0xFFFFF59D.toInt()),
+            ImageItem(3, 0f, 0f, 10f, 10f, "f.png", 0f, "\\frac{1}{2}"),
+        )
+        val io = ByteArrayOutputStream()
+        Codec.writeItems(items, DataOutputStream(io))
+        val back = Codec.readItems(DataInputStream(ByteArrayInputStream(io.toByteArray())))
+        assertEquals(0x40FF0000, (back[0] as ShapeItem).fill)
+        assertEquals(0xFFFFF59D.toInt(), (back[1] as TextItem).bg)
+        assertEquals("\\frac{1}{2}", (back[2] as ImageItem).source)
+    }
+
+    @Test fun newTemplates() {
+        for (t in listOf(Template.NUMBER_LINE, Template.UNIT_CIRCLE, Template.POLAR, Template.CORNELL, Template.TWO_COLUMN)) {
+            val g = Templates.geometry(t, 595f, 842f)
+            assertTrue(t.name, g.lines.isNotEmpty())
+        }
+        assertTrue(Templates.geometry(Template.POLAR, 595f, 842f).circles.size > 5)
+        assertEquals(1, Templates.geometry(Template.UNIT_CIRCLE, 595f, 842f).circles.size)
+    }
 }

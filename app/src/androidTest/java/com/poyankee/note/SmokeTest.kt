@@ -383,4 +383,144 @@ class SmokeTest {
         Thread.sleep(1500)
         android.util.Log.i("SmokeTest", "secondScreenActive=" + main { c.secondScreenActive })
     }
+
+    @Test
+    fun newFeatures() {
+        val v = newNotebook()
+        val c = v.controller
+        val w = v.width.toFloat(); val h = v.height.toFloat()
+
+        // yeni sayfa düz beyaz
+        main { c.insertPageAfter(0) }
+        val np = main { c.nb.pages[1].background as Background.Paper }
+        assertEquals(Template.BLANK, np.template)
+        // sayfa silme geri alınabilir
+        main { c.deletePage(1) }
+        assertEquals(1, main { c.nb.pages.size })
+        main { c.undo() }
+        assertEquals(2, main { c.nb.pages.size })
+        main { c.goToPage(0, false) }
+
+        // koordinat deseni + fonksiyon grafiği
+        main { c.setPageStyle(0, Background.Paper(Template.COORDINATE)) }
+        val err = main { c.plotFunctions(listOf("x^2-4" to 0xFF1565C0.toInt(), "2x+1" to 0xFFD32F2F.toInt())) }
+        assertEquals(null, err)
+        assertTrue(main { c.nb.pages[0].items.count { it is ShapeItem } } >= 2)
+        val bad = main { c.plotFunctions(listOf("x^^2" to 0)) }
+        assertTrue(bad != null)
+        shot("11-grafik")
+
+        // formül
+        val fr = com.poyankee.note.editor.FormulaRequest(0, null)
+        main { c.finishFormula(fr, "x = \\frac{-b \\pm \\sqrt{b^{2}-4ac}}{2a}", 22f) }
+        rule.waitUntil(5000) { main { c.nb.pages[0].items.any { it is com.poyankee.note.core.ImageItem && it.source.isNotEmpty() } } }
+        main { v.clearSelection(); c.selectTool(Tool.PEN) }
+
+        // damga ve yapışkan not
+        main { c.insertStamp("Dikkat!", 0xFFB91C1C.toInt(), 0xFFFEE2E2.toInt()) }
+        main { v.clearSelection() }
+        main { c.requestStickyNote() }
+        val req = main { c.textRequest }!!
+        main { c.finishText(req, "Sınavda çıkar:\nkök formülü", 14f) }
+        assertTrue(main { c.nb.pages[0].items.any { it is com.poyankee.note.core.TextItem && it.bg != 0 } })
+
+        // 3B şekil
+        main { c.selectTool(Tool.SOLID); c.solidKind = com.poyankee.note.core.Solids.Kind.CYLINDER }
+        val before = items(c).size
+        penLine(v, w * 0.6f, h * 0.55f, w * 0.8f, h * 0.8f)
+        assertTrue(items(c).size >= before + 4)
+        assertTrue(items(c).any { it is ShapeItem && it.dashed })
+
+        // kopyala / yapıştır
+        main { c.selectTool(Tool.LASSO) }
+        penPath(v, listOf(w * 0.55f to h * 0.5f, w * 0.9f to h * 0.5f, w * 0.9f to h * 0.85f, w * 0.55f to h * 0.85f, w * 0.55f to h * 0.51f))
+        assertTrue(main { c.hasSelection })
+        main { v.selectionCopy() }
+        val n0 = items(c).size
+        main { v.clearSelection(); c.paste() }
+        assertTrue(items(c).size > n0)
+        main { v.clearSelection() }
+
+        // şekil köşesi sürükleme: üçgen çiz, seç, köşeyi taşı
+        main { c.selectTool(Tool.POLYGON); c.polygonSides = 3 }
+        penLine(v, w * 0.25f, h * 0.6f, w * 0.25f, h * 0.5f)
+        val tri = items(c).last() as ShapeItem
+        main { c.selectTool(Tool.LASSO); v.select(0, listOf(tri)) }
+        shot("12-sekil-duzenleme")
+        main { v.clearSelection() }
+
+        // ders araçları
+        main { c.curtain = true; c.startTimer(90); c.selectTool(Tool.SPOT) }
+        penLine(v, w * 0.4f, h * 0.3f, w * 0.45f, h * 0.32f)
+        shot("13-perde-spot-sayac")
+        main { c.curtain = false; c.stopTimer(); c.selectTool(Tool.PEN) }
+
+        // sayfa döndürme (geri alınabilir)
+        val pw = main { c.nb.pages[0].width }
+        main { c.rotatePage(0) }
+        assertEquals(pw, main { c.nb.pages[0].height }, 0.01f)
+        main { c.undo() }
+        assertEquals(pw, main { c.nb.pages[0].width }, 0.01f)
+
+        // yedekle ve geri yükle
+        val zip = File(rule.activity.cacheDir, "yedek.zip")
+        FileOutputStream(zip).use { c.store.backupTo(it) }
+        assertTrue(zip.length() > 500)
+        val restored = java.io.FileInputStream(zip).use { c.store.restoreFrom(it) }
+        assertTrue(restored >= 1)
+
+        // dışa aktar (dolgu, not, formül, grafik dahil)
+        val out = File(rule.activity.cacheDir, "yeni.pdf")
+        val pages = main { c.nb.pages.toList() }
+        Exporter.export(rule.activity, c.nb, c.store.dir(c.nb.id), pages, out, { c.loadImageBlocking(it) }) { _, _ -> }
+        assertTrue(out.length() > 1000)
+
+        // koyu tema görünümü
+        main { com.poyankee.note.data.Settings.get(rule.activity).theme.value = "DARK" }
+        shot("14-koyu-tema")
+        main { com.poyankee.note.data.Settings.get(rule.activity).theme.value = "SYSTEM" }
+        // menü daraltma
+        main { com.poyankee.note.data.Settings.get(rule.activity).dockCollapsed.value = true }
+        shot("15-menu-daraltilmis")
+        main { com.poyankee.note.data.Settings.get(rule.activity).dockCollapsed.value = false }
+    }
+
+    @Test
+    fun pdfRotateCrop() {
+        val ctx = rule.activity
+        val src = File(ctx.cacheDir, "ornek2.pdf")
+        val doc = PdfDocument()
+        for (i in 1..2) {
+            val page = doc.startPage(PdfDocument.PageInfo.Builder(595, 842, i).create())
+            page.canvas.drawText("Sayfa $i", 100f, 100f, Paint().apply { textSize = 30f })
+            doc.finishPage(page)
+        }
+        FileOutputStream(src).use { doc.writeTo(it) }
+        doc.close()
+        val uri = FileProvider.getUriForFile(ctx, ctx.packageName + ".files", src)
+        main {
+            ctx.startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(uri, "application/pdf").setClass(ctx, MainActivity::class.java).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))
+        }
+        var v: InkView? = null
+        rule.waitUntil(20_000) {
+            v = main { findInk(rule.activity.window.decorView) }
+            v != null && main { v!!.width > 0 && v!!.controller.nb.pages.size == 2 }
+        }
+        val c = v!!.controller
+        main { c.rotatePage(0) }
+        assertEquals(842f, main { c.nb.pages[0].width }, 0.5f)
+        main { c.setCrop(1, 0.1f, 0f, 0.2f, 0f) }
+        assertEquals(842f * 0.7f, main { c.nb.pages[1].height }, 0.5f)
+        Thread.sleep(800)
+        shot("16-pdf-dondur-kirp")
+        val out = File(ctx.cacheDir, "dk.pdf")
+        Exporter.export(ctx, c.nb, c.store.dir(c.nb.id), main { c.nb.pages.toList() }, out, { null }) { _, _ -> }
+        ParcelFileDescriptor.open(out, ParcelFileDescriptor.MODE_READ_ONLY).use { fd ->
+            PdfRenderer(fd).use { r ->
+                assertEquals(2, r.pageCount)
+                r.openPage(0).use { p -> assertTrue("döndürülmüş sayfa yatay olmalı", p.width > p.height) }
+                r.openPage(1).use { p -> assertEquals(842f * 0.7f, p.height.toFloat(), 3f) }
+            }
+        }
+    }
 }

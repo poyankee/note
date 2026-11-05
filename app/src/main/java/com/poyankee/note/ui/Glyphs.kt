@@ -93,6 +93,19 @@ fun ToolGlyph(tool: Tool, tint: Color, accent: Color = tint, size: Dp = 26.dp) {
                 drawCircle(tint, 1.8f * u, p(12f, 4f))
                 drawArc(accent, 20f, 140f, false, p(3f, 9f), Size(18f * u, 18f * u), style = Stroke(1.4f * u, pathEffect = PathEffect.dashPathEffect(floatArrayOf(2f * u, 2f * u))))
             }
+            Tool.SPOT -> {
+                drawCircle(tint.copy(alpha = 0.18f), 10f * u, p(12f, 12f))
+                drawCircle(tint, 5.5f * u, p(12f, 12f), style = st)
+                for (k in 0 until 8) {
+                    val a = Math.PI / 4 * k
+                    drawLine(tint, p(12f + 7.5f * cos(a).toFloat(), 12f + 7.5f * sin(a).toFloat()), p(12f + 10.5f * cos(a).toFloat(), 12f + 10.5f * sin(a).toFloat()), 1.4f * u, StrokeCap.Round)
+                }
+            }
+            Tool.SOLID -> {
+                drawPath(path(4f, 9f, 14f, 9f, 14f, 20f, 4f, 20f, close = true), tint, style = st)
+                drawPath(path(4f, 9f, 9f, 4f, 19f, 4f, 14f, 9f), tint, style = st)
+                drawPath(path(19f, 4f, 19f, 15f, 14f, 20f), tint, style = st)
+            }
             Tool.MARK -> {
                 drawLine(tint, p(4f, 20f), p(20f, 20f), 1.8f * u, StrokeCap.Round)
                 drawLine(tint, p(4f, 20f), p(4f, 4f), 1.8f * u, StrokeCap.Round)

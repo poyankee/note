@@ -127,11 +127,15 @@ class ShapeItem(
     val color: Int,
     val width: Float,
     val dashed: Boolean = false,
+    /** İç dolgu rengi (0 = dolgu yok). */
+    val fill: Int = 0,
 ) : Item() {
     private val box by lazy { Box.ofPoints(geom.sample(6f)).inflate(width) }
     override fun bounds() = box
-    override fun transformed(t: Similarity, newId: Long) = ShapeItem(newId, geom.transformed(t), color, width * t.scale, dashed)
-    fun withColor(c: Int, newId: Long = id) = ShapeItem(newId, geom, c, width, dashed)
+    override fun transformed(t: Similarity, newId: Long) = ShapeItem(newId, geom.transformed(t), color, width * t.scale, dashed, fill)
+    fun withColor(c: Int, newId: Long = id) = ShapeItem(newId, geom, c, width, dashed, fill)
+    fun withFill(f: Int, newId: Long = id) = ShapeItem(newId, geom, color, width, dashed, f)
+    fun withGeom(g: Geom, newId: Long = id) = ShapeItem(newId, g, color, width, dashed, fill)
 }
 
 /** Metin kutusu. (x, y) = metnin sol üst köşesi; [size] = yazı boyutu (nokta). */
@@ -143,16 +147,20 @@ class TextItem(
     val size: Float,
     val color: Int,
     val rotation: Float = 0f,
+    /** Arka plan rengi (0 = yok). Yapışkan not ve damgalar için. */
+    val bg: Int = 0,
 ) : Item() {
     override fun bounds(): Box {
         val lines = text.split('\n')
         val w = (lines.maxOfOrNull { it.length } ?: 1) * size * 0.6f
         val h = lines.size * size * 1.25f
-        return rotatedBox(x, y, w, h, rotation)
+        val pad = if (bg != 0) padding() else 0f
+        return rotatedBox(x - pad, y - pad, w + 2 * pad, h + 2 * pad, rotation)
     }
+    fun padding() = size * 0.6f
     override fun transformed(t: Similarity, newId: Long) =
-        TextItem(newId, t.mapX(x, y), t.mapY(x, y), text, size * t.scale, color, rotation + t.angle)
-    fun withColor(c: Int, newId: Long = id) = TextItem(newId, x, y, text, size, c, rotation)
+        TextItem(newId, t.mapX(x, y), t.mapY(x, y), text, size * t.scale, color, rotation + t.angle, bg)
+    fun withColor(c: Int, newId: Long = id) = TextItem(newId, x, y, text, size, c, rotation, bg)
 }
 
 /** Görsel. [file] = defter klasöründeki dosya adı. (x,y) sol üst köşe, döndürme bu köşe etrafında. */
@@ -164,10 +172,12 @@ class ImageItem(
     val h: Float,
     val file: String,
     val rotation: Float = 0f,
+    /** Formül görseli ise kaynağı (düzenlemek için); normal görselde boş. */
+    val source: String = "",
 ) : Item() {
     override fun bounds() = rotatedBox(x, y, w, h, rotation)
     override fun transformed(t: Similarity, newId: Long) =
-        ImageItem(newId, t.mapX(x, y), t.mapY(x, y), w * t.scale, h * t.scale, file, rotation + t.angle)
+        ImageItem(newId, t.mapX(x, y), t.mapY(x, y), w * t.scale, h * t.scale, file, rotation + t.angle, source)
 }
 
 internal fun rotatedBox(x: Float, y: Float, w: Float, h: Float, rot: Float): Box {
@@ -192,6 +202,11 @@ enum class Template(val title: String) {
     ISOMETRIC("İzometrik"),
     COORDINATE("Koordinat düzlemi"),
     MILLIMETER("Milimetrik"),
+    NUMBER_LINE("Sayı doğrusu"),
+    UNIT_CIRCLE("Birim çember"),
+    POLAR("Kutupsal"),
+    CORNELL("Cornell not"),
+    TWO_COLUMN("Çift sütun"),
 }
 
 /** Hazır kağıt renkleri. */
@@ -219,19 +234,37 @@ sealed class Background {
         val color: Int = PaperColors.WHITE,
         val spacing: Float = Templates.defaultSpacing(template),
         val opacity: Float = 1f,
+        /** Kendi deseniniz: defter klasöründeki resim dosyası (boş = yok). */
+        val image: String = "",
     ) : Background() {
         constructor(template: Template, dark: Boolean) : this(template, if (dark) PaperColors.BOARD else PaperColors.WHITE)
         val dark get() = PaperColors.isDark(color)
     }
-    /** Kaynak PDF'in [index]. sayfası (0'dan başlar). */
-    data class PdfPage(val index: Int) : Background()
+    /**
+     * Kaynak PDF'in [index]. sayfası (0'dan başlar).
+     * [rotation] = ek döndürme (0/90/180/270, saat yönünde), [crop] = kırpma payları,
+     * [fullW]/[fullH] = PDF sayfasının döndürme/kırpma öncesi boyutu (0 = sayfa boyutuyla aynı).
+     */
+    data class PdfPage(
+        val index: Int,
+        val rotation: Int = 0,
+        val crop: Crop = Crop.NONE,
+        val fullW: Float = 0f,
+        val fullH: Float = 0f,
+    ) : Background()
+}
+
+/** Kırpma payları: sayfanın (döndürme öncesi) sol/üst/sağ/alt kenarından kesilen oran (0..1). */
+data class Crop(val l: Float, val t: Float, val r: Float, val b: Float) {
+    val isNone get() = l == 0f && t == 0f && r == 0f && b == 0f
+    companion object { val NONE = Crop(0f, 0f, 0f, 0f) }
 }
 
 class Page(
     val id: Long,
     var background: Background,
-    val width: Float,
-    val height: Float,
+    var width: Float,
+    var height: Float,
 ) {
     val items: MutableList<Item> = ArrayList()
     /** Sayfanın koyu (kara tahta) olup olmadığı. */
@@ -258,6 +291,9 @@ class Notebook(
     var defaultPaper: Background.Paper = Background.Paper(Template.GRID),
     var defaultSize: PageSize = PageSize.A4_PORTRAIT,
     var folder: String = "",
+    var favorite: Boolean = false,
+    /** Defter kilidi: PIN'in özeti (boş = kilitsiz). */
+    var lockHash: String = "",
 ) {
     val defaultTemplate get() = defaultPaper.template
     val pages: MutableList<Page> = ArrayList()

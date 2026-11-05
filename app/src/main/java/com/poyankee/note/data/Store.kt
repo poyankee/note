@@ -36,7 +36,12 @@ data class NotebookInfo(
     val folder: String,
     val cover: File?,
     val coverStamp: Long,
-)
+    val created: Long = 0L,
+    val favorite: Boolean = false,
+    val lockHash: String = "",
+) {
+    val locked get() = lockHash.isNotEmpty()
+}
 
 /**
  * Defterleri cihazın uygulama klasöründe saklar:
@@ -58,7 +63,7 @@ class Store(context: Context) {
                 DataInputStream(BufferedInputStream(FileInputStream(f))).use { inp ->
                     val nb = Codec.readNotebook(inp)
                     val cover = File(d, "cover.png").takeIf { it.exists() }
-                    out += NotebookInfo(nb.id, nb.name, nb.updated, nb.pages.size, nb.pdfFile != null, nb.folder, cover, cover?.lastModified() ?: 0L)
+                    out += NotebookInfo(nb.id, nb.name, nb.updated, nb.pages.size, nb.pdfFile != null, nb.folder, cover, cover?.lastModified() ?: 0L, nb.created, nb.favorite, nb.lockHash)
                 }
             } catch (_: Exception) {
             }
@@ -114,6 +119,9 @@ class Store(context: Context) {
     fun load(id: String): Notebook {
         val d = dir(id)
         val nb = DataInputStream(BufferedInputStream(FileInputStream(File(d, "notebook.bin")))).use { Codec.readNotebook(it) }
+        // silinmiş sayfaların artık dosyalarını temizle (geri alma süresi defter kapanınca biter)
+        val live = nb.pages.map { "p_${it.id}.bin" }.toHashSet()
+        d.listFiles()?.forEach { f -> if (f.name.startsWith("p_") && f.name.endsWith(".bin") && f.name !in live) f.delete() }
         for (p in nb.pages) {
             val f = File(d, "p_${p.id}.bin")
             if (f.exists()) {
@@ -147,7 +155,7 @@ class Store(context: Context) {
     /** Defter bilgisini (sayfa listesi dahil) kaydeder. Ana iş parçacığından çağrılır; anlık görüntü alınır. */
     fun saveMeta(nb: Notebook) {
         nb.updated = System.currentTimeMillis()
-        val snap = Notebook(nb.id, nb.name, nb.created, nb.updated, nb.pdfFile, nb.pageOffset, nb.defaultPaper, nb.defaultSize, nb.folder)
+        val snap = Notebook(nb.id, nb.name, nb.created, nb.updated, nb.pdfFile, nb.pageOffset, nb.defaultPaper, nb.defaultSize, nb.folder, nb.favorite, nb.lockHash)
         for (p in nb.pages) snap.pages += Page(p.id, p.background, p.width, p.height)
         snap.bookmarks += nb.bookmarks
         io.execute { try { writeMetaNow(snap) } catch (_: Exception) {} }
@@ -177,6 +185,8 @@ class Store(context: Context) {
 
     fun rename(id: String, name: String) = editMeta(id) { it.name = name }
     fun setFolder(id: String, folder: String) = editMeta(id) { it.folder = folder }
+    fun setFavorite(id: String, fav: Boolean) = editMeta(id) { it.favorite = fav }
+    fun setLock(id: String, hash: String) = editMeta(id) { it.lockHash = hash }
 
     /* ---------- klasörler ---------- */
 
@@ -190,6 +200,61 @@ class Store(context: Context) {
     fun saveFolders(list: List<String>) {
         val copy = list.distinct()
         io.execute { try { foldersFile.writeText(copy.joinToString("\n")) } catch (_: Exception) {} }
+    }
+
+    /* ---------- yedekleme ---------- */
+
+    /** Tüm defterleri ve klasör listesini tek bir zip dosyasına yazar. Arka planda çağrılmalı. */
+    fun backupTo(out: java.io.OutputStream) {
+        flush()
+        java.util.zip.ZipOutputStream(java.io.BufferedOutputStream(out, 1 shl 16)).use { zip ->
+            zip.putNextEntry(java.util.zip.ZipEntry("note-yedek.txt"))
+            zip.write("Note yedeği\nsürüm=1\n".toByteArray())
+            zip.closeEntry()
+            root.walkTopDown().filter { it.isFile && !it.name.endsWith(".tmp") }.forEach { f ->
+                val rel = f.relativeTo(root).path.replace(File.separatorChar, '/')
+                zip.putNextEntry(java.util.zip.ZipEntry("notebooks/$rel"))
+                FileInputStream(f).use { it.copyTo(zip, 1 shl 16) }
+                zip.closeEntry()
+            }
+        }
+    }
+
+    /**
+     * Yedekten geri yükler: yedekteki defterler eklenir, aynı kimlikli defterler yedektekiyle değiştirilir.
+     * Geri yüklenen defter sayısını döndürür. Arka planda çağrılmalı.
+     */
+    fun restoreFrom(inp: java.io.InputStream): Int {
+        flush()
+        val tmp = File(root.parentFile, "restore_tmp").apply { deleteRecursively(); mkdirs() }
+        var valid = false
+        java.util.zip.ZipInputStream(java.io.BufferedInputStream(inp, 1 shl 16)).use { zip ->
+            while (true) {
+                val e = zip.nextEntry ?: break
+                if (e.name == "note-yedek.txt") valid = true
+                if (e.isDirectory || !e.name.startsWith("notebooks/") || e.name.contains("..")) continue
+                val f = File(tmp, e.name.removePrefix("notebooks/"))
+                f.parentFile?.mkdirs()
+                FileOutputStream(f).use { zip.copyTo(it, 1 shl 16) }
+            }
+        }
+        if (!valid) { tmp.deleteRecursively(); throw IllegalStateException("Bu dosya bir Note yedeği değil") }
+        var count = 0
+        tmp.listFiles()?.forEach { d ->
+            if (d.isDirectory && File(d, "notebook.bin").exists()) {
+                val target = File(root, d.name)
+                target.deleteRecursively()
+                if (!d.renameTo(target)) { d.copyRecursively(target, overwrite = true) }
+                count++
+            }
+        }
+        // klasör listesini birleştir
+        File(tmp, "folders.txt").takeIf { it.exists() }?.let { f ->
+            val merged = (folders() + f.readLines().map { it.trim() }.filter { it.isNotEmpty() }).distinct()
+            foldersFile.writeText(merged.joinToString("\n"))
+        }
+        tmp.deleteRecursively()
+        return count
     }
 
     /* ---------- kapak ---------- */

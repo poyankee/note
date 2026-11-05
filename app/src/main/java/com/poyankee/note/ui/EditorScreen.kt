@@ -15,6 +15,20 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.offset
+import androidx.compose.material.icons.rounded.AddCircleOutline
+import androidx.compose.material.icons.rounded.ContentCut
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.FormatColorFill
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.Description
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.pointer.pointerInput
+import com.poyankee.note.core.Solids
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -128,11 +142,20 @@ import kotlin.math.roundToInt
 private enum class Panel { NONE, PAGE, PAGES }
 
 @Composable
-fun EditorScreen(ctl: EditorController, onClose: () -> Unit, onSettings: () -> Unit) {
+fun EditorScreen(
+    ctl: EditorController,
+    onClose: () -> Unit,
+    onSettings: () -> Unit,
+    tabs: List<Pair<String, String>> = emptyList(),
+    onTab: (String) -> Unit = {},
+    onCloseTab: (String) -> Unit = {},
+) {
     val context = LocalContext.current
     val activity = context as Activity
     val s = ctl.settings
     val ink = remember { InkView(context, ctl).also { ctl.view = it; it.keepScreenOn = true } }
+    val dark = UI.dark
+    LaunchedEffect(dark) { ink.deskColor = UI.Desk.toArgb(); ink.invalidate() }
 
     // ikinci ekran
     var secondActive by remember { mutableStateOf(false) }
@@ -200,6 +223,11 @@ fun EditorScreen(ctl: EditorController, onClose: () -> Unit, onSettings: () -> U
     var showExport by remember { mutableStateOf(false) }
     var showClear by remember { mutableStateOf(false) }
     var showRename by remember { mutableStateOf(false) }
+    var showPlot by remember { mutableStateOf(false) }
+    var showStamp by remember { mutableStateOf(false) }
+    var showTimer by remember { mutableStateOf(false) }
+    var cropIndex by remember { mutableIntStateOf(-1) }
+    var paletteFor by remember { mutableStateOf<Boolean?>(null) }
 
     BackHandler {
         when {
@@ -211,6 +239,7 @@ fun EditorScreen(ctl: EditorController, onClose: () -> Unit, onSettings: () -> U
 
     val dockLeft = !s.leftHanded.value
     Column(Modifier.fillMaxSize().background(UI.Desk)) {
+        if (!ctl.presentation && tabs.size > 1) TabsRow(tabs, ctl.nb.id, onTab, onCloseTab)
         if (!ctl.presentation) {
             EditorTopBar(
                 ctl, secondActive, recState, recTime, panel,
@@ -219,20 +248,26 @@ fun EditorScreen(ctl: EditorController, onClose: () -> Unit, onSettings: () -> U
                 onPages = { panel = if (panel == Panel.PAGES) Panel.NONE else Panel.PAGES },
                 onBookmarks = { showBookmarks = true }, onExport = { showExport = true }, onClear = { showClear = true },
                 onImage = { pickImage.launch("image/*") }, onCamera = { openCamera() }, onSettings = onSettings,
+                onFormula = { ctl.requestFormula(ctl.view?.visibleCenter()?.first ?: ctl.currentPage, null) },
+                onPlot = { showPlot = true }, onSticky = { ctl.requestStickyNote() }, onStamp = { showStamp = true },
+                onTimer = { showTimer = true },
                 onRecord = { toggleRecord() },
                 onPauseResume = { if (recState == 1) { recorder.pause(); recState = 2 } else if (recState == 2) { recorder.resume(); recState = 1 } },
                 onStopRecord = { stopRecording() },
             )
         }
-        Box(Modifier.weight(1f).fillMaxWidth().clipToBounds()) {
+        BoxWithConstraints(Modifier.weight(1f).fillMaxWidth().clipToBounds()) {
+            val areaW = maxWidth; val areaH = maxHeight
             AndroidView(factory = { ink }, modifier = Modifier.fillMaxSize().clipToBounds())
 
             if (!ctl.presentation) {
-                // yüzen araç menüsü
-                ToolDock(ctl, Modifier.align(if (dockLeft) Alignment.CenterStart else Alignment.CenterEnd).padding(horizontal = 14.dp))
+                // yüzen araç menüsü (tutamaktan sürüklenip taşınabilir, daraltılabilir)
+                Draggable(s.dockX, s.dockY, areaW, areaH, Modifier.align(if (dockLeft) Alignment.CenterStart else Alignment.CenterEnd).padding(horizontal = 14.dp)) { handle ->
+                    ToolDock(ctl, handle, onTimer = { showTimer = true })
+                }
                 // seçili araca göre seçenekler
                 Column(Modifier.align(Alignment.TopCenter).padding(top = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    ContextBar(ctl, onClear = { showClear = true })
+                    ContextBar(ctl, onClear = { showClear = true }, onEditPalette = { paletteFor = it })
                     ctl.hint?.let { h ->
                         if (ctl.tool.isGeometry) {
                             Spacer(Modifier.height(8.dp))
@@ -243,18 +278,20 @@ fun EditorScreen(ctl: EditorController, onClose: () -> Unit, onSettings: () -> U
                     }
                 }
                 // sayfa gezgini
-                PageNavigator(ctl, onGoto = { showGoto = true }, onPages = { panel = Panel.PAGES },
-                    modifier = Modifier.align(if (dockLeft) Alignment.BottomEnd else Alignment.BottomStart).padding(16.dp))
+                Draggable(s.navX, s.navY, areaW, areaH, Modifier.align(if (dockLeft) Alignment.BottomEnd else Alignment.BottomStart).padding(16.dp)) { handle ->
+                    PageNavigator(ctl, handle, onGoto = { showGoto = true }, onPages = { panel = Panel.PAGES })
+                }
             } else {
-                PresentationBar(ctl, recState, recTime, onStopRecord = { stopRecording() },
-                    modifier = Modifier.align(if (dockLeft) Alignment.BottomStart else Alignment.BottomEnd).padding(14.dp))
+                Draggable(s.presX, s.presY, areaW, areaH, Modifier.align(if (dockLeft) Alignment.BottomStart else Alignment.BottomEnd).padding(14.dp)) { handle ->
+                    PresentationBar(ctl, handle, recState, recTime, onStopRecord = { stopRecording() })
+                }
             }
 
             if (ctl.hasSelection) SelectionBar(ctl, Modifier.align(Alignment.BottomCenter).padding(bottom = 22.dp))
 
             // sağdan açılan paneller
             SidePanel(panel == Panel.PAGE) { PageStylePanel(ctl) { panel = Panel.NONE } }
-            SidePanel(panel == Panel.PAGES) { PagesPanel(ctl) { panel = Panel.NONE } }
+            SidePanel(panel == Panel.PAGES) { PagesPanel(ctl, onCrop = { cropIndex = it }) { panel = Panel.NONE } }
 
             ctl.message?.let { m ->
                 LaunchedEffect(m) { delay(3500); if (ctl.message == m) ctl.message = null }
@@ -272,6 +309,84 @@ fun EditorScreen(ctl: EditorController, onClose: () -> Unit, onSettings: () -> U
     if (showRename) NameDialog("Defteri yeniden adlandır", "Defter adı", ctl.nb.name, "Kaydet", onDismiss = { showRename = false }) { showRename = false; ctl.rename(it) }
     if (showClear) ConfirmDialog("Sayfayı temizle", "Bu sayfadaki tüm yazılar silinecek. (Geri al ile geri getirebilirsiniz.)", "Temizle", { ctl.clearPage() }, { showClear = false })
     ctl.textRequest?.let { TextDialog(ctl, it) }
+    ctl.formulaRequest?.let { FormulaDialog(ctl, it) }
+    if (showPlot) PlotDialog(ctl) { showPlot = false }
+    if (showStamp) StampDialog(ctl) { showStamp = false }
+    if (showTimer) TimerDialog(ctl) { showTimer = false }
+    if (cropIndex >= 0) CropDialog(ctl, cropIndex) { cropIndex = -1 }
+    paletteFor?.let { hl -> PaletteDialog(ctl, hl) { paletteFor = null } }
+}
+
+/* ======================= sürüklenebilir panel ======================= */
+
+/**
+ * İçeriği tutamağından sürüklenerek taşınabilen panel. Konum ayarlarda saklanır (uygulama kapansa da kalır).
+ * [content] tutamak için verilecek Modifier'ı alır.
+ */
+@Composable
+private fun Draggable(
+    px: com.poyankee.note.data.Settings.Pref<Float>, py: com.poyankee.note.data.Settings.Pref<Float>,
+    areaW: androidx.compose.ui.unit.Dp, areaH: androidx.compose.ui.unit.Dp,
+    modifier: Modifier, content: @Composable (Modifier) -> Unit,
+) {
+    var x by remember { mutableStateOf(px.value) }
+    var y by remember { mutableStateOf(py.value) }
+    val density = androidx.compose.ui.platform.LocalDensity.current.density
+    val limX = areaW.value; val limY = areaH.value
+    val handle = Modifier.pointerInput(Unit) {
+        detectDragGestures(
+            onDragEnd = { px.value = x; py.value = y },
+            onDragCancel = { px.value = x; py.value = y },
+        ) { change, drag ->
+            change.consume()
+            x = (x + drag.x / density).coerceIn(-limX, limX)
+            y = (y + drag.y / density).coerceIn(-limY, limY)
+        }
+    }
+    Box(modifier.offset { androidx.compose.ui.unit.IntOffset((x * density).roundToInt(), (y * density).roundToInt()) }) {
+        content(handle)
+    }
+}
+
+/** Sürükleme tutamağı (altı nokta). */
+@Composable
+private fun Grip(modifier: Modifier, vertical: Boolean = false) {
+    Box(modifier.size(if (vertical) 22.dp else 30.dp, if (vertical) 30.dp else 22.dp), contentAlignment = Alignment.Center) {
+        androidx.compose.foundation.Canvas(Modifier.size(14.dp)) {
+            val r = size.width / 14f
+            for (i in 0..2) for (j in 0..1) {
+                val (cx, cy) = if (vertical) (4f + j * 6f) to (2f + i * 5f) else (2f + i * 5f) to (4f + j * 6f)
+                drawCircle(UI.TextFaint, 1.4f * r, androidx.compose.ui.geometry.Offset(cx * r, cy * r))
+            }
+        }
+    }
+}
+
+/* ======================= sekmeler ======================= */
+
+@Composable
+private fun TabsRow(tabs: List<Pair<String, String>>, current: String, onTab: (String) -> Unit, onClose: (String) -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().background(UI.SurfaceAlt).padding(horizontal = 8.dp, vertical = 4.dp)
+            .horizontalScroll(rememberScrollState()),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        for ((id, name) in tabs) {
+            val sel = id == current
+            Row(
+                Modifier.clip(RoundedCornerShape(10.dp)).background(if (sel) UI.Surface else Color.Transparent)
+                    .clickable(enabled = !sel) { onTab(id) }.padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(name, fontSize = 13.sp, color = if (sel) UI.Text else UI.TextSoft, fontWeight = if (sel) FontWeight.SemiBold else FontWeight.Normal,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 180.dp))
+                Box(Modifier.size(26.dp).clip(CircleShape).clickable { onClose(id) }, contentAlignment = Alignment.Center) {
+                    Icon(Icons.Rounded.Close, "Sekmeyi kapat", tint = UI.TextFaint, modifier = Modifier.size(16.dp))
+                }
+            }
+        }
+    }
 }
 
 /* ======================= üst çubuk ======================= */
@@ -282,6 +397,7 @@ private fun EditorTopBar(
     ctl: EditorController, secondActive: Boolean, recState: Int, recTime: String, panel: Panel,
     onClose: () -> Unit, onRename: () -> Unit, onPagePanel: () -> Unit, onPages: () -> Unit, onBookmarks: () -> Unit,
     onExport: () -> Unit, onClear: () -> Unit, onImage: () -> Unit, onCamera: () -> Unit, onSettings: () -> Unit,
+    onFormula: () -> Unit, onPlot: () -> Unit, onSticky: () -> Unit, onStamp: () -> Unit, onTimer: () -> Unit,
     onRecord: () -> Unit, onPauseResume: () -> Unit, onStopRecord: () -> Unit,
 ) {
     var more by remember { mutableStateOf(false) }
@@ -289,20 +405,17 @@ private fun EditorTopBar(
     val pv = ctl.pagesVersion
     Column(Modifier.fillMaxWidth().testTag("topbar").background(UI.Surface)) {
         Box(Modifier.fillMaxWidth().height(58.dp).padding(horizontal = 8.dp)) {
-            // sol: geri + başlık
             Row(Modifier.align(Alignment.CenterStart), verticalAlignment = Alignment.CenterVertically) {
                 BarIcon(Icons.Rounded.ArrowBack, "Defterlere dön", onClick = onClose)
-                Column(Modifier.widthIn(max = 260.dp).clip(RoundedCornerShape(8.dp)).clickable(onClick = onRename).padding(horizontal = 8.dp, vertical = 4.dp)) {
+                Column(Modifier.widthIn(max = 240.dp).clip(RoundedCornerShape(8.dp)).clickable(onClick = onRename).padding(horizontal = 8.dp, vertical = 4.dp)) {
                     Text(ctl.nb.name + (if (pv < 0) "" else ""), fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = UI.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(if (ctl.nb.folder.isNotEmpty()) ctl.nb.folder else "Defter", fontSize = 12.sp, color = UI.TextSoft, maxLines = 1)
                 }
             }
-            // orta: geri al / yinele
             Row(Modifier.align(Alignment.Center), verticalAlignment = Alignment.CenterVertically) {
                 BarIcon(Icons.Rounded.Undo, "Geri al", enabled = ctl.canUndo) { ctl.undo() }
                 BarIcon(Icons.Rounded.Redo, "Yinele", enabled = ctl.canRedo) { ctl.redo() }
             }
-            // sağ
             Row(Modifier.align(Alignment.CenterEnd), verticalAlignment = Alignment.CenterVertically) {
                 if (secondActive) Icon(Icons.Rounded.Cast, "Projeksiyon bağlı", tint = Color(0xFF0E9384), modifier = Modifier.padding(horizontal = 8.dp))
                 if (recState != 0) {
@@ -321,10 +434,14 @@ private fun EditorTopBar(
                 BarIcon(Icons.Rounded.ViewModule, "Sayfalar", selected = panel == Panel.PAGES, onClick = onPages)
                 BarIcon(Icons.Rounded.Bookmark, "Yer imleri", onClick = onBookmarks)
                 Box {
-                    BarIcon(Icons.Rounded.Image, "Görsel ekle") { insert = true }
+                    BarIcon(Icons.Rounded.AddCircleOutline, "Ekle") { insert = true }
                     DropdownMenu(insert, { insert = false }) {
-                        DropdownMenuItem(text = { Text("Galeriden görsel") }, leadingIcon = { Icon(Icons.Rounded.Image, null) }, onClick = { insert = false; onImage() })
-                        DropdownMenuItem(text = { Text("Kameradan fotoğraf") }, leadingIcon = { Icon(Icons.Rounded.CameraAlt, null) }, onClick = { insert = false; onCamera() })
+                        DropdownMenuItem(text = { Text("Görsel (galeri)") }, leadingIcon = { Icon(Icons.Rounded.Image, null) }, onClick = { insert = false; onImage() })
+                        DropdownMenuItem(text = { Text("Fotoğraf çek") }, leadingIcon = { Icon(Icons.Rounded.CameraAlt, null) }, onClick = { insert = false; onCamera() })
+                        DropdownMenuItem(text = { Text("Formül") }, leadingIcon = { Text("∑", fontSize = 20.sp, color = UI.Text) }, onClick = { insert = false; onFormula() })
+                        DropdownMenuItem(text = { Text("Fonksiyon grafiği") }, leadingIcon = { Text("ƒ", fontSize = 20.sp, color = UI.Text) }, onClick = { insert = false; onPlot() })
+                        DropdownMenuItem(text = { Text("Yapışkan not") }, leadingIcon = { Icon(Icons.Rounded.Description, null) }, onClick = { insert = false; onSticky() })
+                        DropdownMenuItem(text = { Text("Damga (✓ ✗ ★ Dikkat!)") }, leadingIcon = { Text("✓", fontSize = 20.sp, color = Color(0xFF16A34A)) }, onClick = { insert = false; onStamp() })
                     }
                 }
                 if (recState == 0) BarIcon(Icons.Rounded.FiberManualRecord, "Ders kaydı", tint = UI.Danger, onClick = onRecord)
@@ -333,6 +450,10 @@ private fun EditorTopBar(
                 Box {
                     BarIcon(Icons.Rounded.MoreVert, "Diğer") { more = true }
                     DropdownMenu(more, { more = false }) {
+                        if (ctl.clipboardCount > 0) DropdownMenuItem(text = { Text("Yapıştır (${ctl.clipboardCount})") }, onClick = { more = false; ctl.paste() })
+                        DropdownMenuItem(text = { Text(if (ctl.curtain) "Perdeyi kaldır" else "Perde") }, onClick = { more = false; ctl.curtain = !ctl.curtain; ctl.view?.invalidate() })
+                        DropdownMenuItem(text = { Text("Sayaç") }, onClick = { more = false; onTimer() })
+                        DropdownMenuItem(text = { Text("Sayfayı döndür") }, onClick = { more = false; ctl.rotatePage(ctl.currentPage) })
                         DropdownMenuItem(text = { Text("Sayfayı temizle") }, onClick = { more = false; onClear() })
                         DropdownMenuItem(text = { Text("Ayarlar") }, onClick = { more = false; onSettings() })
                     }
@@ -359,7 +480,7 @@ private fun BarIcon(icon: ImageVector, desc: String, enabled: Boolean = true, se
 private fun LabeledBarButton(text: String, selected: Boolean, onClick: () -> Unit, icon: @Composable () -> Unit) {
     Row(
         Modifier.height(40.dp).clip(RoundedCornerShape(12.dp))
-            .background(if (selected) UI.PrimarySoft else Color(0xFFF2F4F7))
+            .background(if (selected) UI.PrimarySoft else UI.SurfaceAlt)
             .clickable(onClick = onClick).padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -373,14 +494,25 @@ private fun LabeledBarButton(text: String, selected: Boolean, onClick: () -> Uni
 /* ======================= araç menüsü ======================= */
 
 @Composable
-private fun ToolDock(ctl: EditorController, modifier: Modifier) {
+private fun ToolDock(ctl: EditorController, handle: Modifier, onTimer: () -> Unit) {
     var instMenu by remember { mutableStateOf(false) }
-    FloatingCard(modifier.testTag("dock"), radius = 22) {
+    var lessonMenu by remember { mutableStateOf(false) }
+    val collapsed = ctl.settings.dockCollapsed.value
+    FloatingCard(Modifier.testTag("dock"), radius = 22) {
         Column(
-            Modifier.verticalScroll(rememberScrollState()).padding(vertical = 8.dp, horizontal = 6.dp),
+            Modifier.verticalScroll(rememberScrollState()).padding(vertical = 4.dp, horizontal = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
+            // tutamak + daralt
+            Grip(handle)
+            if (collapsed) {
+                DockButton(ctl, ctl.tool, selectedOverride = true, label = shortName(ctl.tool))
+                Box(Modifier.size(40.dp).clip(CircleShape).clickable { ctl.settings.dockCollapsed.value = false }, contentAlignment = Alignment.Center) {
+                    Icon(Icons.Rounded.KeyboardArrowDown, "Menüyü aç", tint = UI.TextSoft)
+                }
+                return@Column
+            }
             for (t in listOf(Tool.PEN, Tool.HIGHLIGHTER, Tool.ERASER, Tool.LASSO)) DockButton(ctl, t)
             val gt = if (ctl.tool.isGeometry) ctl.tool else ctl.lastGeometryTool
             DockButton(ctl, gt, selectedOverride = ctl.tool.isGeometry, label = "Geometri")
@@ -405,6 +537,27 @@ private fun ToolDock(ctl: EditorController, modifier: Modifier) {
                         fontSize = 12.sp, color = UI.TextSoft, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
                     )
                 }
+            }
+            Box {
+                val lessonOn = ctl.tool == Tool.SPOT || ctl.curtain || ctl.timerEnd > 0L
+                DockItem(selected = lessonOn, label = "Ders", onClick = { lessonMenu = true }) {
+                    ToolGlyph(Tool.SPOT, if (lessonOn) UI.Primary else UI.Text, size = 26.dp)
+                }
+                DropdownMenu(lessonMenu, { lessonMenu = false }) {
+                    Text("Ders araçları", fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
+                    DropdownMenuItem(
+                        text = { Text("Spot ışığı" + if (ctl.tool == Tool.SPOT) "  ✓" else "") },
+                        onClick = { lessonMenu = false; ctl.selectTool(if (ctl.tool == Tool.SPOT) Tool.PEN else Tool.SPOT) },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(if (ctl.curtain) "Perdeyi kaldır" else "Perde (sayfanın altını kapat)") },
+                        onClick = { lessonMenu = false; ctl.curtain = !ctl.curtain; ctl.view?.invalidate() },
+                    )
+                    DropdownMenuItem(text = { Text(if (ctl.timerEnd > 0L) "Sayaç (çalışıyor)" else "Sayaç") }, onClick = { lessonMenu = false; onTimer() })
+                }
+            }
+            Box(Modifier.size(40.dp).clip(CircleShape).clickable { ctl.settings.dockCollapsed.value = true }, contentAlignment = Alignment.Center) {
+                Icon(Icons.Rounded.KeyboardArrowUp, "Menüyü daralt", tint = UI.TextSoft)
             }
         }
     }
@@ -440,18 +593,16 @@ private fun DockItem(selected: Boolean, label: String, onClick: () -> Unit, cont
 
 private fun shortName(t: Tool) = when (t) {
     Tool.PEN -> "Kalem"; Tool.HIGHLIGHTER -> "Fosforlu"; Tool.ERASER -> "Silgi"; Tool.LASSO -> "Seçim"
-    Tool.TEXT -> "Metin"; Tool.LASER -> "Lazer"; Tool.TEMP -> "Geçici"; Tool.SHAPE -> "Şekil"
+    Tool.TEXT -> "Metin"; Tool.LASER -> "Lazer"; Tool.TEMP -> "Geçici"; Tool.SPOT -> "Spot"; Tool.SHAPE -> "Şekil"
     Tool.LINE -> "Doğru"; Tool.ARROW -> "Ok"; Tool.POLYGON -> "Çokgen"; Tool.COMPASS -> "Pergel"; Tool.MARK -> "İşaret"
+    Tool.SOLID -> "3B"
 }
 
 /* ======================= bağlam çubuğu (renk, kalınlık, seçenekler) ======================= */
 
-private val HighlighterColors = listOf(0xFFFFEB3B, 0xFF7CF29A, 0xFFFF9EC7, 0xFF8EC5FF, 0xFFFFB74D).map { it.toInt() }
-
 @Composable
-private fun ContextBar(ctl: EditorController, onClear: () -> Unit) {
+private fun ContextBar(ctl: EditorController, onClear: () -> Unit, onEditPalette: (Boolean) -> Unit) {
     val t = ctl.tool
-    var pickIndex by remember { mutableIntStateOf(-1) }
     FloatingCard(radius = 26) {
         Row(Modifier.padding(horizontal = 12.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
             when {
@@ -467,38 +618,68 @@ private fun ContextBar(ctl: EditorController, onClear: () -> Unit) {
                     BarDivider()
                     Pill("Sayfayı temizle", false, onClick = onClear)
                 }
-                t == Tool.LASSO -> Hint("Seçmek istediğiniz yazının etrafını çizin")
+                t == Tool.LASSO -> {
+                    Hint("Seçmek istediğiniz yazının etrafını çizin")
+                    if (ctl.clipboardCount > 0) { BarDivider(); Pill("Yapıştır (${ctl.clipboardCount})", false) { ctl.paste() } }
+                }
                 t == Tool.LASER -> Hint("Kalemle gösterin; iz birkaç saniyede kaybolur")
+                t == Tool.SPOT -> Hint("Spot ışığı: kalemi gösterdiğiniz yer aydınlanır")
                 else -> {
                     if (t.isGeometry) {
                         GeometryChooser(ctl)
                         BarDivider()
                     }
-                    val colors = if (t == Tool.HIGHLIGHTER) HighlighterColors else ctl.settings.paletteColors()
+                    val hl = t == Tool.HIGHLIGHTER
+                    val colors = if (hl) ctl.settings.highlighterColors() else ctl.settings.paletteColors()
                     val active = ctl.activeColor or 0xFF000000.toInt()
-                    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                        colors.forEachIndexed { i, c ->
-                            ColorDot(
-                                c, (c or 0xFF000000.toInt()) == active, 32,
-                                onLongClick = if (t != Tool.HIGHLIGHTER) ({ pickIndex = i }) else null,
-                            ) { ctl.setColor(c) }
+                    Row(horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
+                        colors.forEach { c ->
+                            ColorDot(c, (c or 0xFF000000.toInt()) == active, 32, onLongClick = { onEditPalette(hl) }) { ctl.setColor(c) }
                         }
+                        Box(
+                            Modifier.size(32.dp).clip(CircleShape).background(UI.SurfaceAlt).clickable { onEditPalette(hl) },
+                            contentAlignment = Alignment.Center,
+                        ) { Icon(Icons.Rounded.Edit, "Renkleri düzenle", tint = UI.TextSoft, modifier = Modifier.size(16.dp)) }
                     }
                     if (t != Tool.TEXT) {
                         BarDivider()
-                        val widths = if (t == Tool.HIGHLIGHTER) listOf(8f, 14f, 22f) else listOf(1.0f, 2.0f, 3.6f)
+                        val widths = if (hl) listOf(8f, 14f, 22f) else listOf(1.0f, 2.0f, 3.6f)
                         widths.forEachIndexed { i, w ->
                             SizeDot(6 + i * 5, abs(ctl.activeWidth - w) < 0.05f, Color(ctl.activeColor or 0xFF000000.toInt())) { ctl.setWidth(w) }
                         }
+                    }
+                    if (t == Tool.PEN || t == Tool.HIGHLIGHTER) {
+                        BarDivider()
+                        PresetRow(ctl)
                     }
                 }
             }
         }
     }
-    if (pickIndex >= 0) {
-        ColorPickerDialog(ctl.settings.paletteColors().getOrElse(pickIndex) { 0 }, onPick = { c ->
-            ctl.settings.setPaletteColor(pickIndex, c); ctl.setColor(c); pickIndex = -1
-        }, onDismiss = { pickIndex = -1 })
+}
+
+/** Kayıtlı kalemler: dokun = seç, uzun bas = sil, + = şu anki kalemi kaydet. */
+@Composable
+private fun PresetRow(ctl: EditorController) {
+    val list = ctl.settings.presetList()
+    var menuFor by remember { mutableStateOf<com.poyankee.note.data.PenPreset?>(null) }
+    Row(horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
+        list.forEach { p ->
+            Box {
+                Box(
+                    Modifier.size(36.dp).clip(RoundedCornerShape(10.dp))
+                        .combinedClickable(onClick = { ctl.applyPreset(p) }, onLongClick = { menuFor = p }),
+                    contentAlignment = Alignment.Center,
+                ) { ToolGlyph(if (p.highlighter) Tool.HIGHLIGHTER else Tool.PEN, Color(p.color or 0xFF000000.toInt()), Color(p.color or 0xFF000000.toInt()), 24.dp) }
+                DropdownMenu(menuFor == p, { menuFor = null }) {
+                    DropdownMenuItem(text = { Text("Kayıtlı kalemi sil") }, onClick = { ctl.settings.removePreset(p); menuFor = null })
+                }
+            }
+        }
+        Box(
+            Modifier.height(32.dp).clip(RoundedCornerShape(16.dp)).background(UI.SurfaceAlt).clickable { ctl.saveCurrentAsPreset() }.padding(horizontal = 10.dp),
+            contentAlignment = Alignment.Center,
+        ) { Text(if (list.isEmpty()) "+ Kalemi kaydet" else "+", fontSize = 13.sp, color = UI.TextSoft) }
     }
 }
 
@@ -506,7 +687,7 @@ private fun ContextBar(ctl: EditorController, onClear: () -> Unit) {
 private fun GeometryChooser(ctl: EditorController) {
     var opts by remember { mutableStateOf(false) }
     Row(verticalAlignment = Alignment.CenterVertically) {
-        for (g in listOf(Tool.SHAPE, Tool.LINE, Tool.ARROW, Tool.POLYGON, Tool.COMPASS, Tool.MARK)) {
+        for (g in listOf(Tool.SHAPE, Tool.LINE, Tool.ARROW, Tool.POLYGON, Tool.COMPASS, Tool.MARK, Tool.SOLID)) {
             val sel = ctl.tool == g
             Box(
                 Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)).background(if (sel) UI.PrimarySoft else Color.Transparent)
@@ -520,11 +701,12 @@ private fun GeometryChooser(ctl: EditorController) {
                 when (ctl.tool) {
                     Tool.POLYGON -> "${ctl.polygonSides} kenar"
                     Tool.MARK -> ctl.markKind.title.substringBefore(" ")
-                    else -> if (ctl.shapeDashed) "Kesikli" else "Düz"
+                    Tool.SOLID -> ctl.solidKind.title.substringBefore(" ")
+                    else -> "Seçenekler"
                 }, opts,
             ) { opts = !opts }
             DropdownMenu(opts, { opts = false }) {
-                Column(Modifier.padding(horizontal = 14.dp, vertical = 6.dp).width(280.dp)) {
+                Column(Modifier.padding(horizontal = 14.dp, vertical = 6.dp).width(300.dp)) {
                     Text(ctl.tool.title, fontWeight = FontWeight.SemiBold)
                     Text(
                         when (ctl.tool) {
@@ -533,6 +715,7 @@ private fun GeometryChooser(ctl: EditorController) {
                             Tool.ARROW -> "Vektör / ok çizer."
                             Tool.POLYGON -> "Merkezden bir köşeye doğru çekin."
                             Tool.COMPASS -> "Merkezi seçip yarıçap kadar çekin, sonra yayı çizin."
+                            Tool.SOLID -> "Kutu çizer gibi çapraz çekin; arkadaki kenarlar kesikli çizilir."
                             else -> "Köşeye dokunun: açı / dik açı. Kenara dokunun: çentik / paralel."
                         }, fontSize = 12.sp, color = UI.TextSoft, modifier = Modifier.padding(bottom = 8.dp),
                     )
@@ -548,7 +731,15 @@ private fun GeometryChooser(ctl: EditorController) {
                         }
                         PillRow { for (n in 1..3) Pill("$n adet", ctl.markCount == n) { ctl.markCount = n } }
                     }
+                    if (ctl.tool == Tool.SOLID) {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(vertical = 6.dp)) {
+                            Solids.Kind.entries.forEach { k -> Pill(k.title, ctl.solidKind == k) { ctl.solidKind = k } }
+                        }
+                    }
                     LabeledRow("Kesikli çizgi") { Switch(ctl.shapeDashed, { ctl.shapeDashed = it }) }
+                    LabeledRow("İçini doldur", "Kalem renginin açık tonuyla") { Switch(ctl.shapeFill, { ctl.shapeFill = it }) }
+                    LabeledRow("Köşelere harf (A, B, C)") { Switch(ctl.settings.autoLetters.value, { ctl.settings.autoLetters.value = it }) }
+                    LabeledRow("Ölçüleri yaz (cm, °)") { Switch(ctl.settings.autoMeasures.value, { ctl.settings.autoMeasures.value = it }) }
                 }
             }
         }
@@ -576,9 +767,9 @@ private fun Hint(text: String) {
 /* ======================= sayfa gezgini ======================= */
 
 @Composable
-private fun PageNavigator(ctl: EditorController, onGoto: () -> Unit, onPages: () -> Unit, modifier: Modifier) {
+private fun PageNavigator(ctl: EditorController, handle: Modifier, onGoto: () -> Unit, onPages: () -> Unit) {
     val pv = ctl.pagesVersion
-    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
         if (ctl.history.isNotEmpty()) {
             FloatingCard(radius = 26) {
                 Text(
@@ -590,6 +781,7 @@ private fun PageNavigator(ctl: EditorController, onGoto: () -> Unit, onPages: ()
         }
         FloatingCard(radius = 26) {
             Row(Modifier.padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Grip(handle, vertical = true)
                 SmallRound(Icons.Rounded.ChevronLeft, "Önceki sayfa", ctl.currentPage > 0) { ctl.goToPage(ctl.currentPage - 1, false) }
                 Column(
                     Modifier.clip(RoundedCornerShape(14.dp)).clickable(onClick = onGoto).padding(horizontal = 12.dp, vertical = 4.dp),
@@ -630,9 +822,12 @@ private fun SmallRound(icon: ImageVector, desc: String, enabled: Boolean, onClic
 private fun SelectionBar(ctl: EditorController, modifier: Modifier) {
     FloatingCard(modifier, radius = 26) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
+            SelAction(Icons.Rounded.ContentCopy, "Kopyala", UI.Text) { ctl.view?.selectionCopy() }
+            SelAction(Icons.Rounded.ContentCut, "Kes", UI.Text) { ctl.view?.selectionCut() }
+            SelAction(Icons.Rounded.AddCircleOutline, "Çoğalt", UI.Text) { ctl.view?.selectionDuplicate() }
+            if (ctl.selectionHasShapes) SelAction(Icons.Rounded.FormatColorFill, "Doldur", UI.Text) { ctl.view?.selectionFill() }
             SelAction(Icons.Rounded.Delete, "Sil", UI.Danger) { ctl.view?.selectionDelete() }
-            SelAction(Icons.Rounded.ContentCopy, "Çoğalt", UI.Text) { ctl.view?.selectionDuplicate() }
-            Text("Renk için üstteki renge dokunun", fontSize = 12.sp, color = UI.TextSoft, modifier = Modifier.padding(horizontal = 10.dp))
+            Text("Renk: üstten seçin", fontSize = 12.sp, color = UI.TextSoft, modifier = Modifier.padding(horizontal = 8.dp))
             SmallRound(Icons.Rounded.Close, "Seçimi kaldır", true) { ctl.view?.clearSelection() }
         }
     }
@@ -641,21 +836,22 @@ private fun SelectionBar(ctl: EditorController, modifier: Modifier) {
 @Composable
 private fun SelAction(icon: ImageVector, text: String, tint: Color, onClick: () -> Unit) {
     Row(
-        Modifier.clip(RoundedCornerShape(20.dp)).clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 10.dp),
+        Modifier.clip(RoundedCornerShape(20.dp)).clickable(onClick = onClick).padding(horizontal = 10.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(icon, null, tint = tint, modifier = Modifier.size(20.dp)); Spacer(Modifier.width(6.dp)); Text(text, color = tint, fontWeight = FontWeight.SemiBold)
+        Icon(icon, null, tint = tint, modifier = Modifier.size(20.dp)); Spacer(Modifier.width(5.dp)); Text(text, color = tint, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
     }
 }
 
 @Suppress("DEPRECATION")
 @Composable
-private fun PresentationBar(ctl: EditorController, recState: Int, recTime: String, onStopRecord: () -> Unit, modifier: Modifier) {
+private fun PresentationBar(ctl: EditorController, handle: Modifier, recState: Int, recTime: String, onStopRecord: () -> Unit) {
     var expanded by remember { mutableStateOf(true) }
-    FloatingCard(modifier, radius = 28) {
+    FloatingCard(radius = 28) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)) {
+            Grip(handle, vertical = true)
             if (expanded) {
-                for (t in listOf(Tool.PEN, Tool.HIGHLIGHTER, Tool.ERASER, Tool.LASER, Tool.TEMP)) {
+                for (t in listOf(Tool.PEN, Tool.HIGHLIGHTER, Tool.ERASER, Tool.LASER, Tool.TEMP, Tool.SPOT)) {
                     Box(
                         Modifier.size(44.dp).clip(CircleShape).background(if (ctl.tool == t) UI.PrimarySoft else Color.Transparent).clickable { ctl.selectTool(t) },
                         contentAlignment = Alignment.Center,
@@ -709,6 +905,7 @@ private fun PageStylePanel(ctl: EditorController, onClose: () -> Unit) {
     val current = (page?.background as? Background.Paper) ?: ctl.nb.defaultPaper
     var style by remember(ctl.currentPage, isPdf, page?.background, pv) { mutableStateOf(current) }
     var all by remember { mutableStateOf(false) }
+    val pickPaper = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) ctl.setPaperImage(uri, all) }
     fun apply(p: Background.Paper) {
         style = p
         if (!isPdf) ctl.setPageStyle(ctl.currentPage, p, all) else ctl.nb.defaultPaper = p
@@ -783,6 +980,12 @@ private fun PageStylePanel(ctl: EditorController, onClose: () -> Unit) {
             }
 
             if (!isPdf) {
+                SectionTitle("Kendi deseniniz")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Pill(if (style.image.isEmpty()) "Resim / PDF'ten desen" else "Deseni değiştir", false) { pickPaper.launch(arrayOf("image/*", "application/pdf")) }
+                    if (style.image.isNotEmpty()) Pill("Kaldır", false) { apply(style.copy(image = "")) }
+                }
+                Text("Çalışma kağıdınızı ya da özel bir deseni sayfa zemini yapın.", fontSize = 12.sp, color = UI.TextSoft, modifier = Modifier.padding(top = 4.dp))
                 LabeledRow("Tüm sayfalara uygula", "Kapalıyken yalnızca bu sayfa değişir") {
                     Switch(all, { all = it; if (it) ctl.setPageStyle(ctl.currentPage, style, true) })
                 }
@@ -799,7 +1002,7 @@ private fun PageStylePanel(ctl: EditorController, onClose: () -> Unit) {
 
 /** Sayfa küçük resimleri: dokun = git, uzun bas = sayfa işlemleri. */
 @Composable
-private fun PagesPanel(ctl: EditorController, onClose: () -> Unit) {
+private fun PagesPanel(ctl: EditorController, onCrop: (Int) -> Unit, onClose: () -> Unit) {
     val pv = ctl.pagesVersion
     var tick by remember { mutableIntStateOf(0) }
     val state = rememberLazyGridState(initialFirstVisibleItemIndex = ctl.currentPage)
@@ -832,6 +1035,8 @@ private fun PagesPanel(ctl: EditorController, onClose: () -> Unit) {
                             DropdownMenuItem(text = { Text("Çoğalt") }, onClick = { menu = false; ctl.duplicatePage(i) })
                             DropdownMenuItem(text = { Text("Yukarı taşı") }, onClick = { menu = false; ctl.movePage(i, -1) })
                             DropdownMenuItem(text = { Text("Aşağı taşı") }, onClick = { menu = false; ctl.movePage(i, 1) })
+                            DropdownMenuItem(text = { Text("90° döndür") }, onClick = { menu = false; ctl.rotatePage(i) })
+                            if (page.background is Background.PdfPage) DropdownMenuItem(text = { Text("Kırp") }, onClick = { menu = false; onCrop(i) })
                             DropdownMenuItem(text = { Text("Sil", color = UI.Danger) }, onClick = { menu = false; ctl.deletePage(i) })
                         }
                     }

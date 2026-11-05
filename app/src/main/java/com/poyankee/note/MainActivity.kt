@@ -1,8 +1,10 @@
 package com.poyankee.note
 
 import android.content.Intent
+import android.content.res.Configuration
 import android.net.Uri
 import android.os.Bundle
+import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
@@ -14,23 +16,31 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.core.content.IntentCompat
+import androidx.core.view.WindowCompat
 import com.poyankee.note.core.Background
 import com.poyankee.note.core.PageSize
 import com.poyankee.note.core.Template
+import com.poyankee.note.data.AutoBackup
+import com.poyankee.note.data.Lock
 import com.poyankee.note.data.NotebookInfo
+import com.poyankee.note.data.PenKeys
 import com.poyankee.note.data.Settings
+import com.poyankee.note.data.SortMode
 import com.poyankee.note.data.Store
+import com.poyankee.note.data.ThemeMode
 import com.poyankee.note.editor.EditorController
 import com.poyankee.note.editor.Exporter
 import com.poyankee.note.ui.EditorScreen
 import com.poyankee.note.ui.LibraryScreen
 import com.poyankee.note.ui.NoteTheme
+import com.poyankee.note.ui.PinDialog
 import com.poyankee.note.ui.SettingsScreen
 import com.poyankee.note.ui.UI
 import java.util.concurrent.Executors
@@ -48,13 +58,17 @@ class MainActivity : ComponentActivity() {
     private var editor by mutableStateOf<EditorController?>(null)
     private var showSettings by mutableStateOf(false)
     private var loading by mutableStateOf(false)
+    /** Açık defter sekmeleri (kimlik, ad). */
+    private var tabs by mutableStateOf<List<Pair<String, String>>>(emptyList())
+    /** Kilitli defter açılırken PIN sorulacak defter. */
+    private var pinFor by mutableStateOf<NotebookInfo?>(null)
 
     private val openPdf = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) importPdf(uri) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.light(android.graphics.Color.WHITE, android.graphics.Color.WHITE),
-            navigationBarStyle = SystemBarStyle.light(android.graphics.Color.WHITE, android.graphics.Color.WHITE),
+            statusBarStyle = SystemBarStyle.auto(android.graphics.Color.WHITE, android.graphics.Color.BLACK),
+            navigationBarStyle = SystemBarStyle.auto(android.graphics.Color.WHITE, android.graphics.Color.BLACK),
         )
         super.onCreate(savedInstanceState)
         store = Store(applicationContext)
@@ -63,8 +77,28 @@ class MainActivity : ComponentActivity() {
         folders = store.folders()
         refresh()
         handleIntent(intent)
+        // ana ekranda uygulama simgesine uzun basınca "Hızlı not" kısayolu
+        try {
+            val sc = androidx.core.content.pm.ShortcutInfoCompat.Builder(this, "quick_note")
+                .setShortLabel("Hızlı not")
+                .setIcon(androidx.core.graphics.drawable.IconCompat.createWithResource(this, R.mipmap.ic_launcher))
+                .setIntent(Intent(this, MainActivity::class.java).setAction(ACTION_QUICK_NOTE))
+                .build()
+            androidx.core.content.pm.ShortcutManagerCompat.pushDynamicShortcut(this, sc)
+        } catch (_: Exception) {}
+        // otomatik yedek (günde bir, ayarlıysa)
+        bg.execute { try { AutoBackup.runIfDue(applicationContext, store, settings) } catch (_: Exception) {} }
 
         setContent {
+            val systemDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+            val wantDark = when (settings.themeValue) { ThemeMode.DARK -> true; ThemeMode.LIGHT -> false; ThemeMode.SYSTEM -> systemDark }
+            if (UI.dark != wantDark) UI.dark = wantDark
+            LaunchedEffect(UI.dark) {
+                WindowCompat.getInsetsController(window, window.decorView).apply {
+                    isAppearanceLightStatusBars = !UI.dark
+                    isAppearanceLightNavigationBars = !UI.dark
+                }
+            }
             NoteTheme {
                 val ed = editor
                 val presenting = ed?.presentation == true
@@ -72,9 +106,18 @@ class MainActivity : ComponentActivity() {
                     when {
                         showSettings -> {
                             BackHandler { showSettings = false }
-                            SettingsScreen(settings) { showSettings = false }
+                            SettingsScreen(
+                                settings, onBack = { showSettings = false },
+                                onBackupNow = { uri -> backupTo(uri) },
+                                onRestore = { uri -> restoreFrom(uri) },
+                                onBackupFolder = { uri -> setBackupFolder(uri) },
+                            )
                         }
-                        ed != null -> EditorScreen(ed, onClose = { closeEditor() }, onSettings = { showSettings = true })
+                        ed != null -> EditorScreen(
+                            ed, onClose = { closeEditor() }, onSettings = { showSettings = true },
+                            tabs = tabs, onTab = { id -> if (id != ed.nb.id) { closeEditor(keepTab = true); openById(id) } },
+                            onCloseTab = { id -> closeTab(id) },
+                        )
                         loading -> Box(Modifier.fillMaxSize().background(UI.Bg), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                         else -> LibraryScreen(
                             notebooks = notebooks,
@@ -82,21 +125,48 @@ class MainActivity : ComponentActivity() {
                             folder = folder,
                             busy = busy,
                             onSelectFolder = { folder = it },
-                            onOpen = { open(it) },
+                            onOpen = { openById(it) },
                             onCreate = { create(it) },
                             onImportPdf = { openPdf.launch(arrayOf("application/pdf")) },
                             onRename = { id, name -> if (name.isNotBlank()) { store.rename(id, name); notebooks = notebooks.map { if (it.id == id) it.copy(name = name) else it } } },
-                            onDelete = { id -> store.delete(id); notebooks = notebooks.filter { it.id != id } },
+                            onDelete = { id -> store.delete(id); notebooks = notebooks.filter { it.id != id }; tabs = tabs.filter { it.first != id } },
                             onMove = { id, f -> store.setFolder(id, f); notebooks = notebooks.map { if (it.id == id) it.copy(folder = f) else it } },
                             onCreateFolder = { name -> addFolder(name) },
                             onRenameFolder = { old, new -> renameFolder(old, new) },
                             onDeleteFolder = { name -> deleteFolder(name) },
                             onSettings = { showSettings = true },
+                            sort = settings.sortValue,
+                            onSort = { settings.sortMode.value = it.name },
+                            onFavorite = { id, fav -> store.setFavorite(id, fav); notebooks = notebooks.map { if (it.id == id) it.copy(favorite = fav) else it } },
+                            onLock = { id, hash -> store.setLock(id, hash); notebooks = notebooks.map { if (it.id == id) it.copy(lockHash = hash) else it } },
+                            onQuickNote = { quickNote() },
                         )
+                    }
+                    pinFor?.let { nb ->
+                        PinDialog("Kilitli defter", "\"${nb.name}\" defterini açmak için PIN girin", onDismiss = { pinFor = null }) { pin ->
+                            if (Lock.check(nb.id, pin, nb.lockHash)) { pinFor = null; open(nb.id); true } else false
+                        }
                     }
                 }
             }
         }
+    }
+
+    /* ---------- kalem tuşu (çift dokunuş) ---------- */
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val code = event.keyCode
+        val learner = PenKeys.learner
+        if (learner != null && PenKeys.canLearn(code)) {
+            if (event.action == KeyEvent.ACTION_UP) learner(code)
+            return true
+        }
+        val ed = editor
+        if (ed != null && PenKeys.isPenKey(code, settings.penKeyCodeSet())) {
+            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) ed.onPenKey()
+            return true
+        }
+        return super.dispatchKeyEvent(event)
     }
 
     /* ---------- klasörler ---------- */
@@ -126,6 +196,45 @@ class MainActivity : ComponentActivity() {
         if (folder == name) folder = null
     }
 
+    /* ---------- yedekleme ---------- */
+
+    private fun toast(msg: String) = runOnUiThread { android.widget.Toast.makeText(this, msg, android.widget.Toast.LENGTH_LONG).show() }
+
+    private fun backupTo(uri: Uri) {
+        busy = "Yedekleniyor..."
+        bg.execute {
+            try {
+                contentResolver.openOutputStream(uri)?.use { store.backupTo(it) }
+                toast("Yedek kaydedildi")
+            } catch (e: Exception) { toast("Yedeklenemedi: ${e.message}") }
+            runOnUiThread { busy = null }
+        }
+    }
+
+    private fun restoreFrom(uri: Uri) {
+        closeEditor()
+        busy = "Geri yükleniyor..."
+        bg.execute {
+            try {
+                val n = contentResolver.openInputStream(uri)?.use { store.restoreFrom(it) } ?: 0
+                toast("$n defter geri yüklendi")
+            } catch (e: Exception) { toast("Geri yüklenemedi: ${e.message}") }
+            runOnUiThread { busy = null; folders = store.folders(); refresh() }
+        }
+    }
+
+    private fun setBackupFolder(uri: Uri) {
+        try {
+            contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+        } catch (_: Exception) {}
+        settings.backupTree.value = uri.toString()
+        settings.autoBackup.value = true
+        bg.execute {
+            val ok = try { AutoBackup.runIfDue(applicationContext, store, settings, force = true) } catch (_: Exception) { false }
+            toast(if (ok) "Yedek klasörü ayarlandı, ilk yedek alındı" else "Bu klasöre yazılamadı; başka bir klasör seçin")
+        }
+    }
+
     /* ---------- defterler ---------- */
 
     override fun onNewIntent(intent: Intent) {
@@ -135,6 +244,11 @@ class MainActivity : ComponentActivity() {
 
     private fun handleIntent(intent: Intent?) {
         intent ?: return
+        if (intent.action == ACTION_QUICK_NOTE) {
+            intent.action = null
+            quickNote()
+            return
+        }
         val uri: Uri? = when (intent.action) {
             Intent.ACTION_VIEW -> intent.data
             Intent.ACTION_SEND -> IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)
@@ -152,7 +266,6 @@ class MainActivity : ComponentActivity() {
             val known = store.folders()
             runOnUiThread {
                 notebooks = l
-                // defterlerde geçen ama listede olmayan klasörleri ekle
                 val extra = l.map { it.folder }.filter { it.isNotEmpty() && it !in known }.distinct()
                 folders = known + extra
             }
@@ -162,27 +275,41 @@ class MainActivity : ComponentActivity() {
     private fun importPdf(uri: Uri) {
         closeEditor()
         busy = "PDF açılıyor..."
-        val f = folder ?: ""
+        val f = folder?.takeIf { it != com.poyankee.note.ui.FAVORITES } ?: ""
         bg.execute {
             try {
                 val nb = store.importPdf(applicationContext, uri, f)
-                runOnUiThread { busy = null; editor = EditorController(this, store, settings, nb); refresh() }
+                runOnUiThread { busy = null; showEditor(EditorController(this, store, settings, nb)); refresh() }
             } catch (e: Exception) {
                 runOnUiThread { busy = null; android.widget.Toast.makeText(this, e.message ?: "PDF açılamadı", android.widget.Toast.LENGTH_LONG).show() }
             }
         }
     }
 
-    private fun create(name: String) {
+    private fun create(name: String, inFolder: String? = null) {
         val title = name.ifBlank { "Adsız defter" }
-        val t = runCatching { Template.valueOf(settings.newTemplate.value) }.getOrDefault(Template.GRID)
+        val t = runCatching { Template.valueOf(settings.newTemplate.value) }.getOrDefault(Template.BLANK)
         val size = runCatching { PageSize.valueOf(settings.newSize.value) }.getOrDefault(PageSize.A4_PORTRAIT)
         val paper = Background.Paper(t, settings.newDark.value)
-        val f = folder ?: ""
+        val f = inFolder ?: folder?.takeIf { it != com.poyankee.note.ui.FAVORITES } ?: ""
         bg.execute {
             val nb = store.create(title, paper, size, f)
-            runOnUiThread { editor = EditorController(this, store, settings, nb); refresh() }
+            runOnUiThread { showEditor(EditorController(this, store, settings, nb)); refresh() }
         }
+    }
+
+    /** Hızlı not: "Hızlı notlar" klasöründe tarihli boş bir defter açar. */
+    private fun quickNote() {
+        closeEditor()
+        addFolder(QUICK_FOLDER)
+        val name = "Not " + java.text.SimpleDateFormat("d MMM HH:mm", java.util.Locale.forLanguageTag("tr")).format(java.util.Date())
+        create(name, QUICK_FOLDER)
+    }
+
+    private fun openById(id: String) {
+        val info = notebooks.firstOrNull { it.id == id }
+        if (info != null && info.locked) { pinFor = info; return }
+        open(id)
     }
 
     private fun open(id: String) {
@@ -190,7 +317,7 @@ class MainActivity : ComponentActivity() {
         bg.execute {
             try {
                 val nb = store.load(id)
-                runOnUiThread { loading = false; editor = EditorController(this, store, settings, nb) }
+                runOnUiThread { loading = false; showEditor(EditorController(this, store, settings, nb)) }
             } catch (e: Exception) {
                 runOnUiThread {
                     loading = false
@@ -200,11 +327,27 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun closeEditor() {
+    private fun showEditor(c: EditorController) {
+        editor = c
+        if (tabs.none { it.first == c.nb.id }) tabs = (tabs + (c.nb.id to c.nb.name)).takeLast(6)
+    }
+
+    private fun closeTab(id: String) {
+        val ed = editor
+        val rest = tabs.filter { it.first != id }
+        if (ed != null && ed.nb.id == id) {
+            closeEditor()
+            tabs = rest
+            rest.lastOrNull()?.let { openById(it.first) }
+        } else tabs = rest
+    }
+
+    private fun closeEditor(keepTab: Boolean = true) {
         val ed = editor ?: return
         editor = null
+        if (!keepTab) tabs = tabs.filter { it.first != ed.nb.id }
+        tabs = tabs.map { if (it.first == ed.nb.id) it.first to ed.nb.name else it }
         ed.close()
-        // kapak resmi arka planda yazılıyor; biraz sonra listeyi yenile
         refresh()
         bg.execute { Thread.sleep(800); runOnUiThread { refresh() } }
     }
@@ -218,5 +361,10 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         if (isFinishing) editor?.close()
         super.onDestroy()
+    }
+
+    companion object {
+        const val ACTION_QUICK_NOTE = "com.poyankee.note.QUICK_NOTE"
+        const val QUICK_FOLDER = "Hızlı notlar"
     }
 }

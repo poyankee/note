@@ -8,20 +8,23 @@ import android.os.Handler
 import android.os.Looper
 import android.os.ParcelFileDescriptor
 import android.util.LruCache
+import com.poyankee.note.core.Affine
+import com.poyankee.note.core.Background
+import com.poyankee.note.core.PdfGeom
 import java.io.File
 import java.util.concurrent.Executors
 import kotlin.math.ceil
 import kotlin.math.min
 
 /**
- * PDF sayfalarını arka planda bitmap'e çevirir.
+ * PDF sayfalarını arka planda bitmap'e çevirir (döndürme ve kırpma dahil).
  * - "Temel" görüntü: tüm sayfa, orta çözünürlükte (hızlı kaydırma için önbellekte).
  * - "Keskin" görüntü: yalnızca ekranda görünen bölge, tam ekran çözünürlüğünde (yakınlaştırınca net görünsün).
  * PdfRenderer iş parçacığı güvenli olmadığından her şey tek bir iş parçacığında yapılır.
  */
 class PdfPages(file: File, private val onUpdate: () -> Unit) {
 
-    class Sharp(val index: Int, val rect: RectF, val zoom: Float, val bitmap: Bitmap)
+    class Sharp(val key: Background.PdfPage, val rect: RectF, val zoom: Float, val bitmap: Bitmap)
 
     private val fd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
     private val renderer = PdfRenderer(fd)
@@ -32,48 +35,63 @@ class PdfPages(file: File, private val onUpdate: () -> Unit) {
     /** Kapatma istendi: yeni iş alınmaz, sıradaki işler (ör. kapak) yine de tamamlanır. */
     @Volatile private var closing = false
 
-    private val base = object : LruCache<Int, Bitmap>(140 * 1024 * 1024) {
-        override fun sizeOf(key: Int, value: Bitmap) = value.byteCount
+    private val base = object : LruCache<Background.PdfPage, Bitmap>(140 * 1024 * 1024) {
+        override fun sizeOf(key: Background.PdfPage, value: Bitmap) = value.byteCount
     }
-    private val pendingBase = HashSet<Int>()
+    private val pendingBase = HashSet<Background.PdfPage>()
     private val sharp = HashMap<Int, Sharp>()
     private val sharpGen = java.util.concurrent.ConcurrentHashMap<Int, Int>()
 
+    /** Tam sayfa → görünen sayfa dönüşümü, ardından [post]. */
+    private fun matrixFor(bg: Background.PdfPage, p: PdfRenderer.Page, post: Affine): Matrix {
+        val a = post.after(PdfGeom.fullToDisplay(p.width.toFloat(), p.height.toFloat(), bg.rotation, bg.crop))
+        return Matrix().apply { setValues(floatArrayOf(a.a, a.c, a.e, a.b, a.d, a.f, 0f, 0f, 1f)) }
+    }
+
+    private fun displaySize(bg: Background.PdfPage, p: PdfRenderer.Page) =
+        PdfGeom.displaySize(p.width.toFloat(), p.height.toFloat(), bg.rotation, bg.crop)
+
     /** Temel görüntü; hazır değilse null döner ve hazırlamaya başlar. */
-    fun base(index: Int): Bitmap? {
-        base.get(index)?.let { return it }
-        if (closing || closed || index !in 0 until pageCount || !pendingBase.add(index)) return null
+    fun base(bg: Background.PdfPage): Bitmap? {
+        base.get(bg)?.let { return it }
+        if (closing || closed || bg.index !in 0 until pageCount || !pendingBase.add(bg)) return null
         exec.execute {
             if (closed) return@execute
             val bmp = try {
-                renderer.openPage(index).use { p ->
-                    val scale = min(1.6f, 1800f / maxOf(p.width, p.height))
-                    val w = ceil(p.width * scale).toInt().coerceAtLeast(1)
-                    val h = ceil(p.height * scale).toInt().coerceAtLeast(1)
-                    val b = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-                    b.eraseColor(0xFFFFFFFF.toInt())
-                    p.render(b, null, Matrix().apply { setScale(w / p.width.toFloat(), h / p.height.toFloat()) }, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-                    b
+                renderer.openPage(bg.index).use { p ->
+                    val (dw, dh) = displaySize(bg, p)
+                    val scale = min(1.6f, 1800f / maxOf(dw, dh))
+                    renderPage(bg, p, scale, dw, dh)
                 }
             } catch (_: Throwable) { null }
             main.post {
-                pendingBase.remove(index)
-                if (bmp != null && !closed) { base.put(index, bmp); onUpdate() }
+                pendingBase.remove(bg)
+                if (bmp != null && !closed) { base.put(bg, bmp); onUpdate() }
             }
         }
         return null
     }
 
-    fun sharp(index: Int): Sharp? = sharp[index]
+    private fun renderPage(bg: Background.PdfPage, p: PdfRenderer.Page, scale: Float, dw: Float, dh: Float): Bitmap {
+        val w = ceil(dw * scale).toInt().coerceAtLeast(1)
+        val h = ceil(dh * scale).toInt().coerceAtLeast(1)
+        val b = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        b.eraseColor(0xFFFFFFFF.toInt())
+        p.render(b, null, matrixFor(bg, p, Affine(w / dw, 0f, 0f, h / dh, 0f, 0f)), PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+        return b
+    }
+
+    fun sharp(bg: Background.PdfPage): Sharp? = sharp[bg.index]?.takeIf { it.key == bg }
 
     /**
-     * Sayfanın [rect] bölgesini (sayfa koordinatı) [zoom] piksel/nokta ölçeğinde çizer.
+     * Sayfanın [rect] bölgesini (görünen sayfa koordinatı) [zoom] piksel/nokta ölçeğinde çizer.
      * Aynı sayfa için daha yeni bir istek gelirse eskisi atlanır.
      */
-    fun requestSharp(index: Int, rect: RectF, zoom: Float) {
+    fun requestSharp(bg: Background.PdfPage, rect: RectF, zoom: Float) {
+        val index = bg.index
         if (closing || closed || index !in 0 until pageCount) return
         val cur = sharp[index]
-        if (cur != null && cur.zoom == zoom && cur.rect.contains(rect)) return
+        if (cur != null && cur.key == bg && cur.zoom == zoom && cur.rect.contains(rect)) return
         val gen = (sharpGen[index] ?: 0) + 1
         sharpGen[index] = gen
         val r = RectF(rect)
@@ -86,17 +104,15 @@ class PdfPages(file: File, private val onUpdate: () -> Unit) {
                 renderer.openPage(index).use { p ->
                     val b = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
                     b.eraseColor(0xFFFFFFFF.toInt())
-                    val m = Matrix()
-                    m.setTranslate(-r.left, -r.top)
-                    m.postScale(zoom, zoom)
-                    p.render(b, null, m, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                    val post = Affine.scale(zoom).after(Affine.translate(-r.left, -r.top))
+                    p.render(b, null, matrixFor(bg, p, post), PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                     b
                 }
             } catch (_: Throwable) { null }
             main.post {
                 if (bmp == null || closed) return@post
                 if (sharpGen[index] != gen) { bmp.recycle(); return@post }
-                sharp.put(index, Sharp(index, r, zoom, bmp))?.bitmap?.recycle()
+                sharp.put(index, Sharp(bg, r, zoom, bmp))?.bitmap?.recycle()
                 onUpdate()
             }
         }
@@ -115,15 +131,16 @@ class PdfPages(file: File, private val onUpdate: () -> Unit) {
     fun runOnPdfThread(block: () -> Unit) { if (!closing && !closed) exec.execute { if (!closed) block() } }
 
     /** Yalnızca PDF iş parçacığında çağrılmalı. */
-    fun renderBlocking(index: Int, scale: Float): Bitmap? = try {
-        renderer.openPage(index).use { p ->
-            val w = ceil(p.width * scale).toInt().coerceAtLeast(1)
-            val h = ceil(p.height * scale).toInt().coerceAtLeast(1)
-            val b = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-            b.eraseColor(0xFFFFFFFF.toInt())
-            p.render(b, null, Matrix().apply { setScale(w / p.width.toFloat(), h / p.height.toFloat()) }, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-            b
+    fun renderBlocking(bg: Background.PdfPage, scale: Float): Bitmap? = try {
+        renderer.openPage(bg.index).use { p ->
+            val (dw, dh) = displaySize(bg, p)
+            renderPage(bg, p, scale, dw, dh)
         }
+    } catch (_: Throwable) { null }
+
+    /** Yalnızca PDF iş parçacığında: sayfanın döndürme/kırpma öncesi boyutu. */
+    fun fullSizeBlocking(index: Int): Pair<Float, Float>? = try {
+        renderer.openPage(index).use { p -> p.width.toFloat() to p.height.toFloat() }
     } catch (_: Throwable) { null }
 
     fun close() {

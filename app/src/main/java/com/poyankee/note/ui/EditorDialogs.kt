@@ -282,33 +282,6 @@ fun BookmarksDialog(ctl: EditorController, onDismiss: () -> Unit) {
 }
 
 @Composable
-fun TextDialog(ctl: EditorController, req: com.poyankee.note.editor.TextRequest) {
-    var text by remember(req) { mutableStateOf(req.existing?.text ?: "") }
-    var size by remember(req) { mutableStateOf(req.existing?.size ?: 16f) }
-    val focus = remember { FocusRequester() }
-    LaunchedEffect(req) { delay(150); try { focus.requestFocus() } catch (_: Exception) {} }
-    AlertDialog(
-        onDismissRequest = { ctl.textRequest = null },
-        title = { Text(if (req.existing != null) "Metni düzenle" else "Metin ekle") },
-        text = {
-            Column {
-                OutlinedTextField(text, { text = it }, modifier = Modifier.fillMaxWidth().heightIn(min = 100.dp).focusRequester(focus))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 8.dp)) {
-                    for (sz in listOf(10f, 14f, 18f, 24f, 36f)) FilterChip(size == sz, { size = sz }, { Text("${sz.toInt()}") })
-                }
-            }
-        },
-        confirmButton = { TextButton(onClick = { ctl.finishText(req, text, size) }) { Text("Tamam") } },
-        dismissButton = {
-            Row {
-                if (req.existing != null) TextButton(onClick = { ctl.finishText(req, "", size) }) { Text("Sil") }
-                TextButton(onClick = { ctl.textRequest = null }) { Text("Vazgeç") }
-            }
-        },
-    )
-}
-
-@Composable
 fun ExportDialog(ctl: EditorController, onDismiss: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -327,7 +300,7 @@ fun ExportDialog(ctl: EditorController, onDismiss: () -> Unit) {
                 val scale = 3f
                 val pdfBmp: Bitmap? = (snap.background as? Background.PdfPage)?.let { bg ->
                     val pdf = ctl.pdf ?: return@let null
-                    suspendCancellableCoroutine { cont -> pdf.runOnPdfThread { cont.resume(pdf.renderBlocking(bg.index, scale)) } }
+                    suspendCancellableCoroutine { cont -> pdf.runOnPdfThread { cont.resume(pdf.renderBlocking(bg, scale)) } }
                 }
                 val bmp = PageRenderer { ctl.loadImageBlocking(it) }.renderPage(snap, scale, pdfBmp)
                 FileOutputStream(f).use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }

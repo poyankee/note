@@ -16,7 +16,11 @@ object Templates {
 
     class TLine(val x1: Float, val y1: Float, val x2: Float, val y2: Float, val kind: Kind)
     class TLabel(val x: Float, val y: Float, val text: String)
-    class Geometry(val lines: List<TLine>, val dots: FloatArray, val labels: List<TLabel>, val dotRadius: Float = 1.1f)
+    class TCircle(val cx: Float, val cy: Float, val r: Float, val kind: Kind)
+    class Geometry(
+        val lines: List<TLine>, val dots: FloatArray, val labels: List<TLabel>,
+        val dotRadius: Float = 1.1f, val circles: List<TCircle> = emptyList(),
+    )
 
     /** Izgaranın başlangıç noktası (ızgara sayfanın ortasına hizalı). */
     fun gridOrigin(w: Float, h: Float, s: Float): Pair<Float, Float> {
@@ -26,14 +30,14 @@ object Templates {
 
     /** Şablonun varsayılan desen aralığı. */
     fun defaultSpacing(t: Template): Float = when (t) {
-        Template.LINED -> LINE
+        Template.LINED, Template.CORNELL, Template.TWO_COLUMN -> LINE
         Template.MILLIMETER -> MM
         else -> GRID
     }
 
     /** Ayarlanabilir aralık sınırları (en az, en çok). */
     fun spacingRange(t: Template): ClosedFloatingPointRange<Float> = when (t) {
-        Template.LINED -> 16f..44f
+        Template.LINED, Template.CORNELL, Template.TWO_COLUMN -> 16f..44f
         Template.MILLIMETER -> MM..(MM * 2f)
         else -> 10f..40f
     }
@@ -44,6 +48,7 @@ object Templates {
         val MM = spacing
         val lines = ArrayList<TLine>()
         val labels = ArrayList<TLabel>()
+        val circles = ArrayList<TCircle>()
         var dots = FloatArray(0)
         when (t) {
             Template.BLANK -> {}
@@ -127,8 +132,78 @@ object Templates {
                     y += MM; k++
                 }
             }
+            Template.NUMBER_LINE -> {
+                // Her satırda sıfırı ortada olan bir sayı doğrusu
+                val unit = spacing
+                val cx = w / 2f
+                var y = 70f
+                while (y < h - 30f) {
+                    lines += TLine(24f, y, w - 24f, y, Kind.AXIS)
+                    lines += TLine(w - 24f, y, w - 31f, y - 4f, Kind.AXIS); lines += TLine(w - 24f, y, w - 31f, y + 4f, Kind.AXIS)
+                    lines += TLine(24f, y, 31f, y - 4f, Kind.AXIS); lines += TLine(24f, y, 31f, y + 4f, Kind.AXIS)
+                    var i = 0
+                    while (cx + i * unit < w - 34f) {
+                        for (sgn in if (i == 0) intArrayOf(1) else intArrayOf(1, -1)) {
+                            val x = cx + sgn * i * unit
+                            lines += TLine(x, y - 4f, x, y + 4f, if (i % 5 == 0) Kind.AXIS else Kind.MAJOR)
+                            labels += TLabel(x, y + 13f, (sgn * i).toString())
+                        }
+                        i++
+                    }
+                    y += 4.5f * 20f
+                }
+            }
+            Template.UNIT_CIRCLE -> {
+                grid(lines, w, h, GRID, 0)
+                val cx = w / 2f; val cy = h / 2f
+                val r = minOf(w, h) * 0.36f
+                lines += TLine(cx - r - 30f, cy, cx + r + 30f, cy, Kind.AXIS)
+                lines += TLine(cx, cy - r - 30f, cx, cy + r + 30f, Kind.AXIS)
+                circles += TCircle(cx, cy, r, Kind.AXIS)
+                val degs = intArrayOf(30, 45, 60, 90, 120, 135, 150, 180, 210, 225, 240, 270, 300, 315, 330, 0)
+                for (d in degs) {
+                    val a = Math.toRadians(d.toDouble())
+                    val ex = cx + (r * kotlin.math.cos(a)).toFloat(); val ey = cy - (r * kotlin.math.sin(a)).toFloat()
+                    if (d % 90 != 0) lines += TLine(cx, cy, ex, ey, Kind.MINOR)
+                    val lx = cx + ((r + 16f) * kotlin.math.cos(a)).toFloat(); val ly = cy - ((r + 16f) * kotlin.math.sin(a)).toFloat() + 3f
+                    labels += TLabel(lx, ly, "$d°")
+                }
+                labels += TLabel(cx + r + 6f, cy + 11f, "1"); labels += TLabel(cx - r - 8f, cy + 11f, "-1")
+                labels += TLabel(cx + 8f, cy - r - 4f, "1"); labels += TLabel(cx + 10f, cy + r + 10f, "-1")
+            }
+            Template.POLAR -> {
+                val cx = w / 2f; val cy = h / 2f
+                val step = spacing * 1.5f
+                val maxR = minOf(w, h) / 2f - 20f
+                var r = step
+                var k = 1
+                while (r <= maxR) { circles += TCircle(cx, cy, r, if (k % 5 == 0) Kind.MAJOR else Kind.MINOR); r += step; k++ }
+                val outer = r - step
+                for (d in 0 until 360 step 15) {
+                    val a = Math.toRadians(d.toDouble())
+                    val ex = cx + (outer * kotlin.math.cos(a)).toFloat(); val ey = cy - (outer * kotlin.math.sin(a)).toFloat()
+                    lines += TLine(cx, cy, ex, ey, if (d % 90 == 0) Kind.AXIS else Kind.MINOR)
+                    if (d % 30 == 0) {
+                        labels += TLabel(cx + ((outer + 12f) * kotlin.math.cos(a)).toFloat(), cy - ((outer + 12f) * kotlin.math.sin(a)).toFloat() + 3f, "$d°")
+                    }
+                }
+            }
+            Template.CORNELL -> {
+                val top = 70f
+                val bottom = h - h * 0.2f
+                var y = top + LINE
+                while (y < h - 20f) { if (kotlin.math.abs(y - bottom) > 3f) lines += TLine(0f, y, w, y, Kind.MINOR); y += LINE }
+                lines += TLine(0f, top, w, top, Kind.MAJOR)
+                lines += TLine(w * 0.3f, top, w * 0.3f, bottom, Kind.MARGIN)
+                lines += TLine(0f, bottom, w, bottom, Kind.MAJOR)
+            }
+            Template.TWO_COLUMN -> {
+                var y = 80f
+                while (y < h - 20f) { lines += TLine(0f, y, w, y, Kind.MINOR); y += LINE }
+                lines += TLine(w / 2f, 50f, w / 2f, h - 20f, Kind.MAJOR)
+            }
         }
-        return Geometry(lines, dots, labels)
+        return Geometry(lines, dots, labels, circles = circles)
     }
 
     private fun grid(lines: MutableList<TLine>, w: Float, h: Float, s: Float, majorEvery: Int) {
@@ -143,7 +218,7 @@ object Templates {
 
     /** Şablonun yapışma kafesi; şablonda kafes yoksa null. Varsayılan [GRID] kafesi kullanılabilir. */
     fun snapLattice(t: Template?, w: Float, h: Float, s: Float = if (t != null) defaultSpacing(t) else GRID): Lattice? = when (t) {
-        Template.GRID, Template.DOTS, Template.COORDINATE -> Lattice.Square(gridOrigin(w, h, s), s)
+        Template.GRID, Template.DOTS, Template.COORDINATE, Template.UNIT_CIRCLE -> Lattice.Square(gridOrigin(w, h, s), s)
         Template.MILLIMETER -> Lattice.Square(0f to 0f, s * 5f)
         Template.ISOMETRIC -> Lattice.Iso(w / 2f - floor((w / 2f) / s) * s, h / 2f, s)
         else -> null

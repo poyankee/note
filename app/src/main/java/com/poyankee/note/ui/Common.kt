@@ -24,6 +24,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.Typography
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,29 +39,52 @@ import androidx.compose.ui.unit.sp
 /* ---------------- tasarım renkleri ---------------- */
 
 object UI {
-    val Primary = Color(0xFF4F46E5)          // indigo
-    val PrimarySoft = Color(0xFFEEF0FF)
-    val PrimaryText = Color(0xFF3730A3)
-    val Bg = Color(0xFFF4F5F8)
-    val Surface = Color(0xFFFFFFFF)
-    val Border = Color(0xFFE4E7EC)
-    val Text = Color(0xFF1D2330)
-    val TextSoft = Color(0xFF667085)
-    val TextFaint = Color(0xFF98A2B3)
-    val Desk = Color(0xFFE9EBEF)
-    val Danger = Color(0xFFE5484D)
+    /** Koyu tema açık mı (MainActivity ayarlar). Okuyan her ekran tema değişince yeniden çizilir. */
+    var dark by mutableStateOf(false)
+
+    private fun c(light: Long, darkC: Long) = Color(if (dark) darkC else light)
+    val Primary get() = c(0xFF4F46E5, 0xFF7C7FF5)
+    val PrimarySoft get() = c(0xFFEEF0FF, 0xFF262A52)
+    val PrimaryText get() = c(0xFF3730A3, 0xFFC7C9FF)
+    val Bg get() = c(0xFFF4F5F8, 0xFF0F1115)
+    val Surface get() = c(0xFFFFFFFF, 0xFF1A1D23)
+    val SurfaceAlt get() = c(0xFFF2F4F7, 0xFF242830)
+    val Border get() = c(0xFFE4E7EC, 0xFF2E333C)
+    val Text get() = c(0xFF1D2330, 0xFFE7E9EE)
+    val TextSoft get() = c(0xFF667085, 0xFFA3AAB8)
+    val TextFaint get() = c(0xFF98A2B3, 0xFF6E7684)
+    val Desk get() = c(0xFFE9EBEF, 0xFF0B0D10)
+    val Danger get() = c(0xFFE5484D, 0xFFFF6B6F)
     val Shadow = Color(0x1A101828)
 }
 
 // Eski adlar (diğer dosyalarla uyum)
-val Ink = UI.Text
-val Accent = UI.Primary
+val Ink get() = UI.Text
+val Accent get() = UI.Primary
 
 @Composable
 fun NoteTheme(content: @Composable () -> Unit) {
     val base = Typography()
     MaterialTheme(
-        colorScheme = lightColorScheme(
+        colorScheme = (if (UI.dark) androidx.compose.material3.darkColorScheme(
+            primary = UI.Primary,
+            onPrimary = Color.White,
+            primaryContainer = UI.PrimarySoft,
+            onPrimaryContainer = UI.PrimaryText,
+            secondary = Color(0xFF2DD4BF),
+            surface = UI.Surface,
+            onSurface = UI.Text,
+            background = UI.Bg,
+            onBackground = UI.Text,
+            surfaceVariant = UI.SurfaceAlt,
+            onSurfaceVariant = UI.TextSoft,
+            outline = UI.Border,
+            outlineVariant = UI.Border,
+            surfaceContainer = UI.Surface,
+            surfaceContainerHigh = UI.Surface,
+            surfaceContainerHighest = UI.SurfaceAlt,
+            surfaceContainerLow = UI.Surface,
+        ) else lightColorScheme(
             primary = UI.Primary,
             onPrimary = Color.White,
             primaryContainer = UI.PrimarySoft,
@@ -76,7 +102,7 @@ fun NoteTheme(content: @Composable () -> Unit) {
             surfaceContainerHigh = UI.Surface,
             surfaceContainerHighest = Color(0xFFF2F4F7),
             surfaceContainerLow = UI.Surface,
-        ),
+        )),
         typography = base.copy(
             headlineSmall = base.headlineSmall.copy(fontWeight = FontWeight.SemiBold, letterSpacing = (-0.3).sp),
             titleLarge = base.titleLarge.copy(fontWeight = FontWeight.SemiBold),
@@ -107,7 +133,7 @@ fun Pill(text: String, selected: Boolean, modifier: Modifier = Modifier, onClick
     Box(
         modifier
             .clip(RoundedCornerShape(50))
-            .background(if (selected) UI.PrimarySoft else Color(0xFFF2F4F7))
+            .background(if (selected) UI.PrimarySoft else UI.SurfaceAlt)
             .border(1.dp, if (selected) UI.Primary.copy(alpha = 0.35f) else Color.Transparent, RoundedCornerShape(50))
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 7.dp),

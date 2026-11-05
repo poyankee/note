@@ -164,7 +164,7 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
     fun invalidateAllPages() { dirty.addAll(nodes.keys); invalidate() }
     fun onPdfUpdated() { invalidate(); ctl.frameListeners.forEach { it() } }
 
-    private val deskColor = 0xFFE9EBEF.toInt()
+    var deskColor = 0xFFE9EBEF.toInt()
     private val shadow = Paint().apply { color = 0x22000000 }
     private val bmpPaint = Paint(Paint.FILTER_BITMAP_FLAG)
     private val overlayStroke = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND }
@@ -176,6 +176,7 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
         drawScene(canvas, zoom, sx, sy, width.toFloat(), height.toFloat(), forOutput = false)
         ctl.frameListeners.forEach { it() }
         if (laser.isNotEmpty() || temps.isNotEmpty()) postInvalidateOnAnimation()
+        if (ctl.timerEnd > 0L) postInvalidateDelayed(250)
     }
 
     /**
@@ -210,8 +211,8 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
             if (bg is Background.PdfPage) {
                 fillPaint.color = 0xFFFFFFFF.toInt()
                 c.drawRect(0f, 0f, page.width, page.height, fillPaint)
-                ctl.pdf?.base(bg.index)?.let { c.drawBitmap(it, null, RectF(0f, 0f, page.width, page.height), bmpPaint) }
-                ctl.pdf?.sharp(bg.index)?.let { s -> if (!s.bitmap.isRecycled) c.drawBitmap(s.bitmap, null, s.rect, bmpPaint) }
+                ctl.pdf?.base(bg)?.let { c.drawBitmap(it, null, RectF(0f, 0f, page.width, page.height), bmpPaint) }
+                ctl.pdf?.sharp(bg)?.let { s -> if (!s.bitmap.isRecycled) c.drawBitmap(s.bitmap, null, s.rect, bmpPaint) }
             }
             // içerik
             val skip = if (sel != null && sel!!.page == i) sel!!.ids else emptySet()
@@ -249,7 +250,64 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
         if (!forOutput) drawCursor(c, z)
         drawProtractorReading(c, z)
         c.restore()
+        drawLessonOverlays(c, z, ox, oy, vw, vh)
         if (useNodes) trimNodes(first, i)
+    }
+
+    /* ---------------- perde, spot ışığı, sayaç ---------------- */
+
+    /** Perdenin üst kenarı (belge koordinatı); NaN = henüz yerleştirilmedi. */
+    private var curtainY = Float.NaN
+    private var curtainDragId = -1
+    private var spotPos: Pair<Float, Float>? = null
+    private val timerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER; isFakeBoldText = true }
+
+    private fun drawLessonOverlays(c: Canvas, z: Float, ox: Float, oy: Float, vw: Float, vh: Float) {
+        // spot ışığı: her yer kararır, kalemin olduğu daire aydınlık kalır
+        val sp = spotPos
+        if (ctl.tool == Tool.SPOT && sp != null) {
+            val r = settings.spotRadiusDp.value * density * (vw / max(width.toFloat(), 1f))
+            val p = Path()
+            p.fillType = Path.FillType.EVEN_ODD
+            p.addRect(0f, 0f, vw, vh, Path.Direction.CW)
+            p.addCircle((sp.first - ox) * z, (sp.second - oy) * z, r, Path.Direction.CW)
+            fillPaint.color = 0xC8000000.toInt()
+            c.drawPath(p, fillPaint)
+        }
+        // perde: çizginin altını kapatır
+        if (ctl.curtain) {
+            if (curtainY.isNaN()) curtainY = sy + height / zoom * 0.4f
+            val y = ((curtainY - oy) * z).coerceIn(0f, vh)
+            fillPaint.color = 0xFF2A2F37.toInt()
+            c.drawRect(0f, y, vw, vh, fillPaint)
+            fillPaint.color = 0xFF4F46E5.toInt()
+            c.drawRect(0f, y, vw, y + 4f * density, fillPaint)
+            val hw = 46f * density * (vw / max(width.toFloat(), 1f))
+            c.drawRoundRect(RectF(vw / 2 - hw, y - 2f * density, vw / 2 + hw, y + 14f * density), 8f * density, 8f * density, fillPaint)
+            timerPaint.color = 0xFFFFFFFF.toInt(); timerPaint.textSize = 11f * density
+            c.drawText("perdeyi çekin", vw / 2, y + 9.5f * density, timerPaint)
+        }
+        // sayaç (sağ üst)
+        if (ctl.timerEnd > 0L) {
+            val left = ctl.timerLeftMs()
+            val sec = ((left + 999) / 1000).toInt()
+            val text = if (left <= 0L) "Süre doldu" else "%02d:%02d".format(sec / 60, sec % 60)
+            val scale = vw / max(width.toFloat(), 1f)
+            timerPaint.textSize = 28f * density * scale
+            val tw = timerPaint.measureText(text) + 28f * density * scale
+            val th = 46f * density * scale
+            val rx = vw - tw - 16f * density * scale; val ry = 14f * density * scale
+            fillPaint.color = if (left <= 0L) 0xF0E5484D.toInt() else if (left < 10_000L) 0xF0F59E0B.toInt() else 0xE61D2330.toInt()
+            c.drawRoundRect(RectF(rx, ry, rx + tw, ry + th), th / 2, th / 2, fillPaint)
+            timerPaint.color = 0xFFFFFFFF.toInt()
+            c.drawText(text, rx + tw / 2, ry + th * 0.68f, timerPaint)
+        }
+    }
+
+    /** Perde kenarına dokunuldu mu (ekran koordinatı)? */
+    private fun nearCurtain(y: Float): Boolean {
+        if (!ctl.curtain || curtainY.isNaN()) return false
+        return abs(y - (curtainY - sy) * zoom) < 30f * density
     }
 
     private fun trimNodes(first: Int, last: Int) {
@@ -272,7 +330,10 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
         val s = sel
         if (s != null && s.page == i) {
             val tr = s.live
-            for (it in s.items) renderer.drawItem(c, if (tr.isIdentity) it else it.transformed(tr))
+            val eg = s.editGeom
+            val one = s.single
+            if (eg != null && one != null) renderer.drawItem(c, one.withGeom(eg))
+            else for (it in s.items) renderer.drawItem(c, if (tr.isIdentity) it else it.transformed(tr))
             if (!forOutput) drawSelectionFrame(c, s, z)
         }
         val st = stroke ?: return
@@ -298,8 +359,27 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
                 }
                 overlayStroke.pathEffect = null
             }
+            st.solidParts.isNotEmpty() -> {
+                overlayStroke.color = st.color; overlayStroke.strokeWidth = max(st.width, 0.8f)
+                for (part in st.solidParts) {
+                    overlayStroke.pathEffect = if (part.hidden) DashPathEffect(floatArrayOf(st.width * 3 + 3, st.width * 2 + 3), 0f) else null
+                    c.drawPath(renderer.geomPath(part.geom), overlayStroke)
+                }
+                overlayStroke.pathEffect = null
+            }
             st.ink -> {
-                val pts = st.inkPoints(settings.smoothing.value)
+                var pts = st.inkPoints(settings.smoothing.value)
+                // tahmin: kalemin bir sonraki konumunu öngörüp çizgiyi biraz ileri uzat (gecikme hissini azaltır)
+                if (settings.prediction.value && st.guide == null && st.n >= 3) {
+                    val n = st.n
+                    val lx = st.pts[3 * (n - 1)]; val ly = st.pts[3 * (n - 1) + 1]
+                    val qx = st.pts[3 * (n - 3)]; val qy = st.pts[3 * (n - 3) + 1]
+                    val vx = (lx - qx) * 0.5f; val vy = (ly - qy) * 0.5f
+                    val lim = 6f / zoom
+                    val l = Geo.len(vx, vy)
+                    val k = if (l > lim) lim / l else 1f
+                    pts = pts + floatArrayOf(lx + vx * k, ly + vy * k, st.pts[3 * (n - 1) + 2])
+                }
                 if (pts.size >= 3) {
                     fillPaint.color = st.color
                     c.drawPath(renderer.inkPath(pts, st.width, st.pressure), fillPaint)
@@ -344,6 +424,12 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
             c.drawCircle(b.cx, b.top - rotOffset() / z, r * 0.55f, fillPaint)
             overlayStroke.strokeWidth = 1f / z
             c.drawLine(b.cx, b.top, b.cx, b.top - rotOffset() / z, overlayStroke)
+            val hs = 6f * density / z
+            for ((hx, hy) in s.vertexHandles()) {
+                fillPaint.color = 0xFFFFFFFF.toInt(); c.drawRect(hx - hs, hy - hs, hx + hs, hy + hs, fillPaint)
+                overlayStroke.color = 0xFF4F46E5.toInt(); overlayStroke.strokeWidth = 2f / z
+                c.drawRect(hx - hs, hy - hs, hx + hs, hy + hs, overlayStroke)
+            }
         }
     }
 
@@ -417,6 +503,18 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
     private inner class Selection(val page: Int, var items: List<Item>) {
         val ids get() = items.map { it.id }.toHashSet()
         var live = Similarity()
+        /** Tek şekil seçiliyken köşe sürükleme önizlemesi. */
+        var editGeom: Geom? = null
+        val single: ShapeItem? get() = items.singleOrNull() as? ShapeItem
+        /** Sürüklenebilir köşe tutamaçları (tek şekil seçiliyken). */
+        fun vertexHandles(): List<Pair<Float, Float>> {
+            val g = editGeom ?: single?.geom ?: return emptyList()
+            return when (g) {
+                is Geom.Polyline -> if (g.n <= 16) (0 until g.n).map { g.pts[2 * it] to g.pts[2 * it + 1] } else emptyList()
+                is Geom.Circle -> listOf((g.cx + g.r) to g.cy)
+                else -> emptyList()
+            }
+        }
         fun box(): Box = items.map { it.bounds() }.reduce { a, b -> a.union(b) }
         fun liveBox(): Box {
             if (live.isIdentity) return box()
@@ -431,6 +529,7 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
         sel = Selection(pageIndex, items)
         nb.pages.getOrNull(pageIndex)?.let { dirty += it.id }
         ctl.hasSelection = true
+        ctl.selectionHasShapes = items.any { it is ShapeItem }
         invalidate()
     }
 
@@ -455,6 +554,27 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
         val copies = s.items.map { it.transformed(Similarity.translate(14f, 14f), Ids.next()) }
         ctl.commit(page, emptyList(), copies)
         select(s.page, copies)
+    }
+
+    fun selectionCopy() { sel?.let { ctl.copy(it.items) } }
+
+    fun selectionCut() {
+        val s = sel ?: return
+        ctl.copy(s.items)
+        selectionDelete()
+    }
+
+    /** Seçili şekillerin içini kalem rengiyle (yarı saydam) doldurur; doluysa boşaltır. */
+    fun selectionFill() {
+        val s = sel ?: return
+        val page = nb.pages[s.page]
+        val shapes = s.items.filterIsInstance<ShapeItem>()
+        if (shapes.isEmpty()) return
+        val clear = shapes.all { it.fill != 0 }
+        val re = s.items.map { if (it is ShapeItem) it.withFill(if (clear) 0 else ctl.fillColor) else it }
+        ctl.commit(page, s.items, re)
+        sel = Selection(s.page, re)
+        invalidate()
     }
 
     fun selectionRecolor(color: Int) {
@@ -493,7 +613,8 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
     /** Kalem yakındayken ya da yeni kalktıysa parmak/avuç dokunuşlarını yok say. */
     private fun palmBlocked(): Boolean {
         val now = SystemClock.uptimeMillis()
-        return penId != -1 || penHovering || now - hoverExit < 400 || now - penUpTime < 250
+        val hold = settings.palmHoldMs.value.toLong()
+        return penId != -1 || penHovering || now - hoverExit < hold || now - penUpTime < minOf(250L, hold)
     }
 
     override fun onHoverEvent(e: MotionEvent): Boolean {
@@ -503,6 +624,7 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
                 penHovering = true
                 val dx = toDocX(e.x); val dy = toDocY(e.y)
                 laserDot = if (ctl.tool == Tool.LASER) dx to dy else null
+                if (ctl.tool == Tool.SPOT) spotPos = dx to dy
                 cursor = if (ctl.tool == Tool.ERASER) Triple(dx, dy, eraserRadius()) else null
                 protractorPen = if (instruments.any { it.kind == InstrumentKind.PROTRACTOR }) dx to dy else null
                 invalidate()
@@ -520,6 +642,19 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
     override fun onTouchEvent(e: MotionEvent): Boolean {
         val action = e.actionMasked
         val idx = e.actionIndex
+        // perde kenarı: kalem ya da parmakla sürüklenir
+        if (curtainDragId != -1 || (ctl.curtain && (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_POINTER_DOWN) && penId == -1 && nearCurtain(e.getY(idx)))) {
+            when (action) {
+                MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> if (curtainDragId == -1) curtainDragId = e.getPointerId(idx)
+                MotionEvent.ACTION_MOVE -> {
+                    val pi = e.findPointerIndex(curtainDragId)
+                    if (pi >= 0) { curtainY = toDocY(e.getY(pi)); invalidate() }
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP, MotionEvent.ACTION_CANCEL ->
+                    if (e.getPointerId(idx) == curtainDragId || action != MotionEvent.ACTION_POINTER_UP) curtainDragId = -1
+            }
+            return true
+        }
         when (action) {
             MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
                 if (isPen(e, idx)) {
@@ -582,7 +717,7 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
 
     private fun fingerDown(e: MotionEvent, idx: Int) {
         val id = e.getPointerId(idx)
-        val palmPx = 70f * density
+        val palmPx = settings.palmSizeDp.value * density
         val blocked = if (fingerDrawing) false else palmBlocked()
         if (blocked || e.getTouchMajor(idx) > palmPx || !settings.fingerGestures.value && settings.penOnly.value) {
             ignored += id; return
@@ -747,7 +882,7 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
                     val r = RectF(l, t, l + width / zoom, t + height / zoom)
                     val padX = r.width() * 0.1f; val padY = r.height() * 0.1f
                     r.inset(-padX, -padY)
-                    if (r.intersect(0f, 0f, page.width, page.height)) pdf.requestSharp(bg.index, r, zoom)
+                    if (r.intersect(0f, 0f, page.width, page.height)) pdf.requestSharp(bg, r, zoom)
                 }
             }
             i++
@@ -780,6 +915,8 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
         var holdX = 0f; var holdY = 0f
         var moved = false
         var sweep = 0f; var prevAngle = 0f
+        var editVertex = -1
+        var solidParts: List<com.poyankee.note.core.Solids.Part> = emptyList()
 
         fun add(x: Float, y: Float, p: Float) {
             if (3 * n + 3 > pts.size) pts = pts.copyOf(pts.size * 2)
@@ -827,11 +964,11 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
         return ctl.tool
     }
 
-    private fun snapperFor(i: Int): Snapper {
+    private fun snapperFor(i: Int, exclude: Long = -1L): Snapper {
         val page = nb.pages[i]
         val bg = page.background
         val lattice = if (settings.gridSnap.value && bg is Background.Paper) Templates.snapLattice(bg.template, page.width, page.height, bg.spacing) else null
-        return Snapper(lattice, Snapper.anchorsOf(page.items), max(3f, 13f * density / zoom), settings.angleSnap.value)
+        return Snapper(lattice, Snapper.anchorsOf(if (exclude == -1L) page.items else page.items.filter { it.id != exclude }), max(3f, 13f * density / zoom), settings.angleSnap.value)
     }
 
     private fun penDown(e: MotionEvent, idx: Int) {
@@ -847,7 +984,10 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
             val px = dx - pageLeft(s.page); val py = dy - tops[s.page]
             val b = s.box()
             val hr = handleR() / zoom
+            val vh = s.vertexHandles()
+            val vi = vh.indexOfFirst { (hx, hy) -> Geo.dist(px, py, hx, hy) < hr * 0.8f }
             val mode = when {
+                vi >= 0 -> 5
                 Geo.dist(px, py, b.right, b.bottom) < hr -> 2
                 Geo.dist(px, py, b.cx, b.top - rotOffset() / zoom) < hr -> 3
                 b.inflate(6f / zoom).contains(px, py) -> 1
@@ -857,6 +997,7 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
                 val st = Stroke(s.page, Tool.LASSO)
                 st.ax = px; st.ay = py
                 st.sweep = mode.toFloat()
+                st.editVertex = vi
                 stroke = st
                 return
             }
@@ -882,7 +1023,8 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
             Tool.LASSO -> st.lasso = true
             Tool.LASER -> { laser.addLast(LaserPt(dx, dy, SystemClock.uptimeMillis(), true)); laserDot = dx to dy }
             Tool.TEXT, Tool.MARK -> {}
-            Tool.LINE, Tool.ARROW, Tool.POLYGON -> {
+            Tool.SPOT -> spotPos = dx to dy
+            Tool.LINE, Tool.ARROW, Tool.POLYGON, Tool.SOLID -> {
                 val (x, y) = snapperFor(i).point(px, py)
                 st.ax = x; st.ay = y; st.color = ctl.penColor; st.width = ctl.penWidth; st.dashed = ctl.shapeDashed
             }
@@ -949,6 +1091,22 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
             // seçimi dönüştür
             val px = dx - pageLeft(s.page); val py = dy - tops[s.page]
             val b = s.box()
+            if (st.sweep.toInt() == 5) {
+                val one = s.single ?: return
+                val sn = snapperFor(s.page, exclude = one.id)
+                val (x, y) = sn.point(px, py)
+                s.editGeom = when (val g = one.geom) {
+                    is Geom.Polyline -> {
+                        val pts = g.pts.copyOf()
+                        pts[2 * st.editVertex] = x; pts[2 * st.editVertex + 1] = y
+                        Geom.Polyline(pts, g.closed)
+                    }
+                    is Geom.Circle -> Geom.Circle(g.cx, g.cy, max(2f, Geo.dist(g.cx, g.cy, x, y)))
+                    else -> g
+                }
+                st.moved = true
+                return
+            }
             s.live = when (st.sweep.toInt()) {
                 1 -> Similarity.translate(px - st.ax, py - st.ay)
                 2 -> {
@@ -993,6 +1151,11 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
             }
             Tool.LASSO -> st.add(px, py, 1f)
             Tool.LASER -> { laser.addLast(LaserPt(dx, dy, SystemClock.uptimeMillis(), false)); laserDot = dx to dy }
+            Tool.SPOT -> spotPos = dx to dy
+            Tool.SOLID -> {
+                val (x, y) = snapperFor(st.page).point(px, py)
+                st.solidParts = com.poyankee.note.core.Solids.create(ctl.solidKind, st.ax, st.ay, x, y)
+            }
             Tool.LINE, Tool.ARROW -> {
                 val sn = snapperFor(st.page)
                 val (x, y, hit) = sn.point(px, py)
@@ -1090,6 +1253,18 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
         protractorPen = null
         val page = nb.pages[st.page]
         val s = sel
+        if (st.tool == Tool.LASSO && s != null && st.sweep.toInt() == 5) {
+            val one = s.single
+            val eg = s.editGeom
+            s.editGeom = null
+            if (one != null && eg != null) {
+                val changed = one.withGeom(eg)
+                ctl.commit(nb.pages[s.page], listOf(one), listOf(changed))
+                sel = Selection(s.page, listOf(changed))
+                dirty += nb.pages[s.page].id
+            }
+            invalidate(); return
+        }
         if (st.tool == Tool.LASSO && s != null && st.sweep > 0f) {
             val tr = s.live
             s.live = Similarity()
@@ -1109,7 +1284,10 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
                     if (st.tool == Tool.HIGHLIGHTER && geom is Geom.Polyline && geom.n == 2) {
                         InkItem(Ids.next(), InkTool.HIGHLIGHTER, st.color, st.width,
                             floatArrayOf(geom.pts[0], geom.pts[1], 1f, geom.pts[2], geom.pts[3], 1f), false)
-                    } else ShapeItem(Ids.next(), geom, st.color, if (st.tool == Tool.HIGHLIGHTER) st.width else max(st.width, 0.8f), ctl.shapeDashed && st.tool != Tool.HIGHLIGHTER)
+                    } else ShapeItem(
+                        Ids.next(), geom, st.color, if (st.tool == Tool.HIGHLIGHTER) st.width else max(st.width, 0.8f),
+                        ctl.shapeDashed && st.tool != Tool.HIGHLIGHTER, fillFor(geom, st.tool != Tool.HIGHLIGHTER),
+                    )
                 } else {
                     var pts = st.inkPoints(settings.smoothing.value)
                     if (st.guide == null) pts = StrokeOutline.smooth(StrokeOutline.dedupe(st.raw(), 0.35f / zoom), settings.smoothing.value)
@@ -1119,7 +1297,10 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
                 if (st.tool == Tool.TEMP) {
                     temps += Temp(st.page, item, SystemClock.uptimeMillis() + settings.tempMs.value)
                     postInvalidateOnAnimation()
-                } else ctl.commit(page, emptyList(), listOf(item))
+                } else {
+                    val extras = if (item is ShapeItem) ctl.shapeExtras(page, listOf(item.geom)) else emptyList()
+                    ctl.commit(page, emptyList(), listOf(item) + extras)
+                }
             }
             Tool.ERASER -> {
                 cursor = null
@@ -1135,21 +1316,33 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
             }
             Tool.LASER -> laserDot = null
             Tool.TEXT -> {
-                if (!st.moved) ctl.requestText(st.page, st.ax, st.ay, HitTest.textAt(page.items, st.ax, st.ay))
+                if (!st.moved) {
+                    // formüle dokunulduysa formülü düzenle
+                    val fx = page.items.lastOrNull { it is ImageItem && it.source.isNotEmpty() && it.bounds().contains(st.ax, st.ay) } as ImageItem?
+                    if (fx != null) ctl.requestFormula(st.page, fx)
+                    else ctl.requestText(st.page, st.ax, st.ay, HitTest.textAt(page.items, st.ax, st.ay))
+                }
+            }
+            Tool.SPOT -> {}
+            Tool.SOLID -> {
+                if (st.moved && st.solidParts.isNotEmpty()) {
+                    ctl.commit(page, emptyList(), st.solidParts.map { ShapeItem(Ids.next(), it.geom, st.color, max(st.width, 0.8f), it.hidden) })
+                }
             }
             Tool.MARK -> {
                 if (!st.moved) {
                     val kind = when (ctl.markKind) { MarkKind.ANGLE -> Marks.Kind.ANGLE; MarkKind.TICK -> Marks.Kind.TICK; MarkKind.PARALLEL -> Marks.Kind.PARALLEL }
                     val geoms = Marks.create(page.items, st.ax, st.ay, kind, ctl.markCount, max(8f, 26f * density / zoom))
                     if (geoms.isEmpty()) ctl.message = "Yakında bir şekil köşesi/kenarı bulunamadı"
-                    else ctl.commit(page, emptyList(), geoms.map { ShapeItem(Ids.next(), it, ctl.penColor, min(ctl.penWidth, 1.4f)) })
+                    else ctl.commit(page, emptyList(), geoms.map { ShapeItem(Ids.next(), it, ctl.penColor, min(ctl.penWidth, 1.4f)) as Item } + geoms.mapNotNull { ctl.angleLabel(it) })
                 }
             }
             Tool.LINE, Tool.ARROW, Tool.POLYGON -> {
                 val g = st.shape
                 if (g != null && st.moved) {
                     val all = listOf(g) + st.extra
-                    ctl.commit(page, emptyList(), all.map { ShapeItem(Ids.next(), it, st.color, max(st.width, 0.8f), st.dashed) })
+                    val shapes: List<Item> = all.map { ShapeItem(Ids.next(), it, st.color, max(st.width, 0.8f), st.dashed, fillFor(it, true)) }
+                    ctl.commit(page, emptyList(), shapes + if (st.tool == Tool.ARROW) emptyList() else ctl.shapeExtras(page, listOf(g)))
                 }
             }
             Tool.COMPASS -> {
@@ -1163,13 +1356,20 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
                 } else {
                     val sw = st.sweep
                     val g: Geom = if (abs(sw) < 0.05f || abs(sw) >= Geo.TAU - 0.02f) Geom.Circle(cs.cx, cs.cy, cs.r) else Geom.Arc(cs.cx, cs.cy, cs.r, st.ax, sw)
-                    ctl.commit(nb.pages[cs.page], emptyList(), listOf(ShapeItem(Ids.next(), g, st.color, max(st.width, 0.8f), st.dashed)))
+                    ctl.commit(nb.pages[cs.page], emptyList(), listOf(ShapeItem(Ids.next(), g, st.color, max(st.width, 0.8f), st.dashed, fillFor(g, true))))
                     compass = null
                     ctl.hint = "Pergel: kalemi merkeze koyup yarıçap kadar çekin, sonra kalemi döndürerek yayı çizin."
                 }
             }
         }
         invalidate()
+    }
+
+    /** Dolgu açıksa kapalı şekiller için dolgu rengi. */
+    private fun fillFor(g: Geom, allowed: Boolean): Int {
+        if (!allowed || !ctl.shapeFill) return 0
+        val closed = when (g) { is Geom.Polyline -> g.closed; is Geom.Circle, is Geom.Ellipse -> true; else -> false }
+        return if (closed) ctl.fillColor else 0
     }
 
     private fun penCancel() {

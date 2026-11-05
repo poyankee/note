@@ -35,6 +35,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.FlashOn
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.CreateNewFolder
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.LibraryBooks
@@ -80,6 +83,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.poyankee.note.data.NotebookInfo
+import com.poyankee.note.data.SortMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -106,6 +110,11 @@ fun LibraryScreen(
     onRenameFolder: (String, String) -> Unit,
     onDeleteFolder: (String) -> Unit,
     onSettings: () -> Unit,
+    sort: SortMode = SortMode.UPDATED,
+    onSort: (SortMode) -> Unit = {},
+    onFavorite: (String, Boolean) -> Unit = { _, _ -> },
+    onLock: (String, String) -> Unit = { _, _ -> },
+    onQuickNote: () -> Unit = {},
 ) {
     var query by remember { mutableStateOf("") }
     var showNew by remember { mutableStateOf(false) }
@@ -115,6 +124,9 @@ fun LibraryScreen(
     var moveTarget by remember { mutableStateOf<NotebookInfo?>(null) }
     var folderRename by remember { mutableStateOf<String?>(null) }
     var folderDelete by remember { mutableStateOf<String?>(null) }
+    var lockTarget by remember { mutableStateOf<NotebookInfo?>(null) }
+    var sortMenu by remember { mutableStateOf(false) }
+    val isFav = folder == FAVORITES
 
     BoxWithConstraints(Modifier.fillMaxSize().background(UI.Bg)) {
         val wide = maxWidth > 720.dp
@@ -142,9 +154,15 @@ fun LibraryScreen(
                     onClick = onImportPdf, modifier = Modifier.fillMaxWidth().height(44.dp),
                     shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, UI.Border),
                 ) { Icon(Icons.Rounded.PictureAsPdf, null, tint = Color(0xFFD92D20)); Spacer(Modifier.width(6.dp)); Text("PDF aç", color = UI.Text) }
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = onQuickNote, modifier = Modifier.fillMaxWidth().height(44.dp),
+                    shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, UI.Border),
+                ) { Icon(Icons.Rounded.FlashOn, null, tint = Color(0xFFF59E0B)); Spacer(Modifier.width(6.dp)); Text("Hızlı not", color = UI.Text) }
 
                 Spacer(Modifier.height(20.dp))
                 NavItem(Icons.Rounded.LibraryBooks, "Tüm defterler", notebooks.size, folder == null) { onSelectFolder(null) }
+                NavItem(Icons.Rounded.Star, "Favoriler", notebooks.count { it.favorite }, isFav) { onSelectFolder(FAVORITES) }
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 8.dp, top = 18.dp, bottom = 4.dp)) {
                     Text("KLASÖRLER", style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.8.sp), color = UI.TextFaint, modifier = Modifier.weight(1f))
                     IconButton(onClick = { newFolder = true }, modifier = Modifier.size(30.dp)) {
@@ -177,13 +195,27 @@ fun LibraryScreen(
             Column(Modifier.weight(1f).fillMaxHeight()) {
                 Row(Modifier.fillMaxWidth().padding(start = 32.dp, end = 32.dp, top = 26.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text(folder ?: "Tüm defterler", style = TextStyle(fontSize = 28.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.6).sp), color = UI.Text)
-                        val count = notebooks.count { folder == null || it.folder == folder }
+                        Text(if (isFav) "Favoriler" else folder ?: "Tüm defterler", style = TextStyle(fontSize = 28.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.6).sp), color = UI.Text)
+                        val count = notebooks.count { matches(it, folder) }
                         Text("$count defter", color = UI.TextSoft, fontSize = 14.sp)
                     }
+                    Box {
+                        Pill("↕ " + sort.title, false) { sortMenu = true }
+                        DropdownMenu(sortMenu, { sortMenu = false }) {
+                            SortMode.entries.forEach { m -> DropdownMenuItem(text = { Text((if (m == sort) "✓ " else "") + m.title) }, onClick = { sortMenu = false; onSort(m) }) }
+                        }
+                    }
+                    Spacer(Modifier.width(10.dp))
                     SearchField(query) { query = it }
                 }
-                val list = notebooks.filter { (folder == null || it.folder == folder) && (query.isBlank() || it.name.contains(query, ignoreCase = true)) }
+                val filtered = notebooks.filter { matches(it, folder) && (query.isBlank() || it.name.contains(query, ignoreCase = true)) }
+                val sorted = when (sort) {
+                    SortMode.UPDATED -> filtered.sortedByDescending { it.updated }
+                    SortMode.NAME -> filtered.sortedBy { it.name.lowercase(Locale.forLanguageTag("tr")) }
+                    SortMode.CREATED -> filtered.sortedByDescending { it.created }
+                }
+                // favoriler her zaman en üstte
+                val list = sorted.sortedByDescending { it.favorite }
                 if (list.isEmpty()) {
                     EmptyState(
                         if (notebooks.isEmpty()) "Henüz defter yok" else if (query.isNotBlank()) "Sonuç bulunamadı" else "Bu klasör boş",
@@ -199,7 +231,10 @@ fun LibraryScreen(
                         modifier = Modifier.fillMaxSize(),
                     ) {
                         items(list, key = { it.id }) { nb ->
-                            NotebookCard(nb, onOpen = { onOpen(nb.id) }, onRename = { renameTarget = nb }, onMove = { moveTarget = nb }, onDelete = { deleteTarget = nb })
+                            NotebookCard(
+                                nb, onOpen = { onOpen(nb.id) }, onRename = { renameTarget = nb }, onMove = { moveTarget = nb }, onDelete = { deleteTarget = nb },
+                                onFavorite = { onFavorite(nb.id, !nb.favorite) }, onLock = { lockTarget = nb },
+                            )
                         }
                     }
                 }
@@ -218,6 +253,17 @@ fun LibraryScreen(
     renameTarget?.let { nb -> NameDialog("Yeniden adlandır", "Defter adı", nb.name, "Kaydet", onDismiss = { renameTarget = null }) { renameTarget = null; onRename(nb.id, it) } }
     deleteTarget?.let { nb ->
         ConfirmDialog("Defteri sil", "\"${nb.name}\" ve içindeki tüm yazılar kalıcı olarak silinecek.", "Sil", { onDelete(nb.id) }, { deleteTarget = null })
+    }
+    lockTarget?.let { nb ->
+        if (nb.locked) {
+            PinDialog("Kilidi kaldır", "Defterin PIN kodunu girin", onDismiss = { lockTarget = null }) { pin ->
+                if (com.poyankee.note.data.Lock.check(nb.id, pin, nb.lockHash)) { onLock(nb.id, ""); lockTarget = null; true } else false
+            }
+        } else {
+            PinDialog("Defteri kilitle", "4-8 haneli bir PIN belirleyin. PIN'i unutursanız defter açılamaz.", confirmTwice = true, onDismiss = { lockTarget = null }) { pin ->
+                onLock(nb.id, com.poyankee.note.data.Lock.hash(nb.id, pin)); lockTarget = null; true
+            }
+        }
     }
     moveTarget?.let { nb ->
         MoveDialog(nb, folders, onDismiss = { moveTarget = null }, onCreateFolder = onCreateFolder) { f -> moveTarget = null; onMove(nb.id, f) }
@@ -281,7 +327,10 @@ private fun EmptyState(title: String, text: String) {
 private val dateFmt = SimpleDateFormat("d MMM yyyy", Locale.forLanguageTag("tr"))
 
 @Composable
-private fun NotebookCard(nb: NotebookInfo, onOpen: () -> Unit, onRename: () -> Unit, onMove: () -> Unit, onDelete: () -> Unit) {
+private fun NotebookCard(
+    nb: NotebookInfo, onOpen: () -> Unit, onRename: () -> Unit, onMove: () -> Unit, onDelete: () -> Unit,
+    onFavorite: () -> Unit, onLock: () -> Unit,
+) {
     var menu by remember { mutableStateOf(false) }
     val cover by produceState<ImageBitmap?>(null, nb.cover, nb.coverStamp) {
         value = nb.cover?.let { f -> withContext(Dispatchers.IO) { try { BitmapFactory.decodeFile(f.path)?.asImageBitmap() } catch (_: Throwable) { null } } }
@@ -290,11 +339,15 @@ private fun NotebookCard(nb: NotebookInfo, onOpen: () -> Unit, onRename: () -> U
         Box(
             Modifier.fillMaxWidth().aspectRatio(0.72f)
                 .shadow(6.dp, RoundedCornerShape(10.dp), ambientColor = UI.Shadow, spotColor = UI.Shadow)
-                .clip(RoundedCornerShape(10.dp)).background(Color.White)
+                .clip(RoundedCornerShape(10.dp)).background(UI.Surface)
                 .combinedClickable(onClick = onOpen, onLongClick = { menu = true }),
         ) {
-            val img = cover
-            if (img != null) {
+            val img = if (nb.locked) null else cover
+            if (nb.locked) {
+                Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF334155), Color(0xFF0F172A)))), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Rounded.Lock, null, tint = Color.White.copy(alpha = 0.9f), modifier = Modifier.size(44.dp))
+                }
+            } else if (img != null) {
                 Image(img, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             } else {
                 val hue = (nb.id.hashCode() and 0x7fffffff) % 5
@@ -310,6 +363,11 @@ private fun NotebookCard(nb: NotebookInfo, onOpen: () -> Unit, onRename: () -> U
             }
             // sırt şeridi
             Box(Modifier.width(7.dp).fillMaxHeight().background(Color(0x14000000)))
+            if (nb.favorite) {
+                Box(Modifier.align(Alignment.TopStart).padding(8.dp).size(28.dp).clip(CircleShape).background(Color(0xE6FFFFFF)), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Rounded.Star, "Favori", tint = Color(0xFFF59E0B), modifier = Modifier.size(18.dp))
+                }
+            }
             if (nb.isPdf) {
                 Surface(color = Color(0xFFD92D20), shape = RoundedCornerShape(6.dp), modifier = Modifier.align(Alignment.BottomStart).padding(10.dp)) {
                     Text("PDF", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
@@ -324,6 +382,8 @@ private fun NotebookCard(nb: NotebookInfo, onOpen: () -> Unit, onRename: () -> U
                     DropdownMenuItem(text = { Text("Aç") }, onClick = { menu = false; onOpen() })
                     DropdownMenuItem(text = { Text("Yeniden adlandır") }, onClick = { menu = false; onRename() })
                     DropdownMenuItem(text = { Text("Klasöre taşı") }, onClick = { menu = false; onMove() })
+                    DropdownMenuItem(text = { Text(if (nb.favorite) "Favorilerden çıkar" else "Favorilere ekle") }, onClick = { menu = false; onFavorite() })
+                    DropdownMenuItem(text = { Text(if (nb.locked) "Kilidi kaldır" else "Kilitle") }, onClick = { menu = false; onLock() })
                     DropdownMenuItem(text = { Text("Sil", color = UI.Danger) }, onClick = { menu = false; onDelete() })
                 }
             }
@@ -396,4 +456,60 @@ private fun FolderRow(name: String, selected: Boolean, onClick: () -> Unit) {
         Spacer(Modifier.width(12.dp))
         Text(name, color = UI.Text, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal)
     }
+}
+
+/** Kenar çubuğunda "Favoriler" seçimi için özel değer. */
+const val FAVORITES = "\u0000favoriler"
+
+private fun matches(nb: NotebookInfo, folder: String?) = when (folder) {
+    null -> true
+    FAVORITES -> nb.favorite
+    else -> nb.folder == folder
+}
+
+/** PIN girişi. [onPin] true dönerse pencere kapanır, false ise "yanlış PIN" gösterilir. */
+@Composable
+fun PinDialog(title: String, text: String, confirmTwice: Boolean = false, onDismiss: () -> Unit, onPin: (String) -> Boolean) {
+    var pin by remember { mutableStateOf("") }
+    var pin2 by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { delay(120); try { focus.requestFocus() } catch (_: Exception) {} }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = UI.Surface,
+        title = { Text(title) },
+        text = {
+            Column {
+                Text(text, fontSize = 14.sp, color = UI.TextSoft)
+                Spacer(Modifier.height(10.dp))
+                OutlinedTextField(
+                    pin, { pin = it.filter { c -> c.isDigit() }.take(8); error = null }, label = { Text("PIN") }, singleLine = true,
+                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword),
+                    modifier = Modifier.fillMaxWidth().focusRequester(focus),
+                )
+                if (confirmTwice) {
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        pin2, { pin2 = it.filter { c -> c.isDigit() }.take(8); error = null }, label = { Text("PIN (tekrar)") }, singleLine = true,
+                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                error?.let { Text(it, color = UI.Danger, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp)) }
+            }
+        },
+        confirmButton = {
+            Button(onClick = {
+                when {
+                    pin.length < 4 -> error = "En az 4 hane"
+                    confirmTwice && pin != pin2 -> error = "PIN'ler aynı değil"
+                    !onPin(pin) -> error = "PIN yanlış"
+                }
+            }, shape = RoundedCornerShape(10.dp)) { Text("Tamam") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Vazgeç", color = UI.TextSoft) } },
+    )
 }

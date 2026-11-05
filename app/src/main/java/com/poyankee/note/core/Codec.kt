@@ -12,7 +12,7 @@ import java.io.IOException
 object Codec {
     private const val NB_MAGIC = 0x4E4F5445 // "NOTE"
     private const val PG_MAGIC = 0x50414745 // "PAGE"
-    private const val VERSION = 2
+    private const val VERSION = 3
 
     fun writeNotebook(nb: Notebook, out: DataOutputStream) {
         out.writeInt(NB_MAGIC); out.writeInt(VERSION)
@@ -21,12 +21,17 @@ object Codec {
         out.writeBoolean(nb.pdfFile != null); nb.pdfFile?.let { out.writeUTF(it) }
         out.writeInt(nb.pageOffset)
         writePaper(nb.defaultPaper, out); out.writeInt(nb.defaultSize.ordinal); out.writeUTF(nb.folder)
+        out.writeBoolean(nb.favorite); out.writeUTF(nb.lockHash)
         out.writeInt(nb.pages.size)
         for (p in nb.pages) {
             out.writeLong(p.id); out.writeFloat(p.width); out.writeFloat(p.height)
             when (val bg = p.background) {
                 is Background.Paper -> { out.writeByte(0); writePaper(bg, out) }
-                is Background.PdfPage -> { out.writeByte(1); out.writeInt(bg.index) }
+                is Background.PdfPage -> {
+                    out.writeByte(1); out.writeInt(bg.index); out.writeInt(bg.rotation)
+                    out.writeFloat(bg.crop.l); out.writeFloat(bg.crop.t); out.writeFloat(bg.crop.r); out.writeFloat(bg.crop.b)
+                    out.writeFloat(bg.fullW); out.writeFloat(bg.fullH)
+                }
             }
         }
         out.writeInt(nb.bookmarks.size)
@@ -45,13 +50,19 @@ object Codec {
         val paper = readPaper(inp, ver)
         val size = PageSize.entries[inp.readInt()]
         val folder = if (ver >= 2) inp.readUTF() else ""
-        val nb = Notebook(id, name, created, updated, pdf, offset, paper, size, folder)
+        val fav = if (ver >= 3) inp.readBoolean() else false
+        val lock = if (ver >= 3) inp.readUTF() else ""
+        val nb = Notebook(id, name, created, updated, pdf, offset, paper, size, folder, fav, lock)
         val pc = inp.readInt()
         repeat(pc) {
             val pid = inp.readLong(); val w = inp.readFloat(); val h = inp.readFloat()
             val bg = when (inp.readByte().toInt()) {
                 0 -> readPaper(inp, ver)
-                else -> Background.PdfPage(inp.readInt())
+                else -> if (ver >= 3) Background.PdfPage(
+                    inp.readInt(), inp.readInt(),
+                    Crop(inp.readFloat(), inp.readFloat(), inp.readFloat(), inp.readFloat()),
+                    inp.readFloat(), inp.readFloat(),
+                ) else Background.PdfPage(inp.readInt())
             }
             nb.pages += Page(pid, bg, w, h)
         }
@@ -62,12 +73,15 @@ object Codec {
 
     private fun writePaper(p: Background.Paper, out: DataOutputStream) {
         out.writeInt(p.template.ordinal); out.writeInt(p.color); out.writeFloat(p.spacing); out.writeFloat(p.opacity)
+        out.writeUTF(p.image)
     }
 
     private fun readPaper(inp: DataInputStream, ver: Int): Background.Paper {
         val t = Template.entries[inp.readInt()]
         if (ver < 2) return Background.Paper(t, inp.readBoolean())
-        return Background.Paper(t, inp.readInt(), inp.readFloat(), inp.readFloat())
+        val c = inp.readInt(); val sp = inp.readFloat(); val op = inp.readFloat()
+        val img = if (ver >= 3) inp.readUTF() else ""
+        return Background.Paper(t, c, sp, op, img)
     }
 
     fun writeItems(items: List<Item>, out: DataOutputStream) {
@@ -78,10 +92,10 @@ object Codec {
 
     fun readItems(inp: DataInputStream): List<Item> {
         if (inp.readInt() != PG_MAGIC) throw IOException("Geçersiz sayfa dosyası")
-        inp.readInt()
+        val ver = inp.readInt()
         val n = inp.readInt()
         val list = ArrayList<Item>(n)
-        repeat(n) { list += readItem(inp) }
+        repeat(n) { list += readItem(inp, ver) }
         return list
     }
 
@@ -110,19 +124,22 @@ object Codec {
                     is Geom.Ellipse -> { out.writeByte(2); out.writeFloat(g.cx); out.writeFloat(g.cy); out.writeFloat(g.rx); out.writeFloat(g.ry); out.writeFloat(g.rot) }
                     is Geom.Arc -> { out.writeByte(3); out.writeFloat(g.cx); out.writeFloat(g.cy); out.writeFloat(g.r); out.writeFloat(g.start); out.writeFloat(g.sweep) }
                 }
+                out.writeInt(it.fill)
             }
             is TextItem -> {
                 out.writeByte(3); out.writeLong(it.id); out.writeFloat(it.x); out.writeFloat(it.y)
                 out.writeUTF(it.text); out.writeFloat(it.size); out.writeInt(it.color); out.writeFloat(it.rotation)
+                out.writeInt(it.bg)
             }
             is ImageItem -> {
                 out.writeByte(4); out.writeLong(it.id); out.writeFloat(it.x); out.writeFloat(it.y)
                 out.writeFloat(it.w); out.writeFloat(it.h); out.writeUTF(it.file); out.writeFloat(it.rotation)
+                out.writeUTF(it.source)
             }
         }
     }
 
-    fun readItem(inp: DataInputStream): Item = when (val t = inp.readByte().toInt()) {
+    fun readItem(inp: DataInputStream, ver: Int = VERSION): Item = when (val t = inp.readByte().toInt()) {
         1 -> {
             val id = inp.readLong(); val tool = InkTool.entries[inp.readByte().toInt()]
             val color = inp.readInt(); val w = inp.readFloat(); val pr = inp.readBoolean()
@@ -136,10 +153,16 @@ object Codec {
                 2 -> Geom.Ellipse(inp.readFloat(), inp.readFloat(), inp.readFloat(), inp.readFloat(), inp.readFloat())
                 else -> Geom.Arc(inp.readFloat(), inp.readFloat(), inp.readFloat(), inp.readFloat(), inp.readFloat())
             }
-            ShapeItem(id, g, color, w, dashed)
+            ShapeItem(id, g, color, w, dashed, if (ver >= 3) inp.readInt() else 0)
         }
-        3 -> TextItem(inp.readLong(), inp.readFloat(), inp.readFloat(), inp.readUTF(), inp.readFloat(), inp.readInt(), inp.readFloat())
-        4 -> ImageItem(inp.readLong(), inp.readFloat(), inp.readFloat(), inp.readFloat(), inp.readFloat(), inp.readUTF(), inp.readFloat())
+        3 -> TextItem(
+            inp.readLong(), inp.readFloat(), inp.readFloat(), inp.readUTF(), inp.readFloat(), inp.readInt(), inp.readFloat(),
+            if (ver >= 3) inp.readInt() else 0,
+        )
+        4 -> ImageItem(
+            inp.readLong(), inp.readFloat(), inp.readFloat(), inp.readFloat(), inp.readFloat(), inp.readUTF(), inp.readFloat(),
+            if (ver >= 3) inp.readUTF() else "",
+        )
         else -> throw IOException("Bilinmeyen öğe türü $t")
     }
 }

@@ -81,7 +81,20 @@ class PageRenderer(private val images: ImageSource?) {
         val bg = page.background
         if (bg !is Background.Paper) return
         c.drawColor(bg.color)
+        if (bg.image.isNotEmpty()) drawPaperImage(c, bg, page.width, page.height)
         drawTemplate(c, bg.template, bg.dark, page.width, page.height, bg.spacing, bg.opacity)
+    }
+
+    /** Kendi deseniniz: resmi sayfaya sığdırarak ortalar (görünürlük ayarı resme de uygulanır). */
+    private fun drawPaperImage(c: Canvas, bg: Background.Paper, w: Float, h: Float) {
+        val bmp = images?.get(bg.image) ?: return
+        if (bmp.isRecycled) return
+        val s = minOf(w / bmp.width, h / bmp.height)
+        val iw = bmp.width * s; val ih = bmp.height * s
+        val l = (w - iw) / 2f; val t = (h - ih) / 2f
+        bmpPaint.alpha = (255 * bg.opacity.coerceIn(0.1f, 1f)).toInt()
+        c.drawBitmap(bmp, null, RectF(l, t, l + iw, t + ih), bmpPaint)
+        bmpPaint.alpha = 255
     }
 
     fun drawTemplate(c: Canvas, t: Template, dark: Boolean, w: Float, h: Float, spacing: Float = Templates.defaultSpacing(t), opacity: Float = 1f) {
@@ -91,6 +104,11 @@ class PageRenderer(private val images: ImageSource?) {
             lineP.color = mulAlpha(lineColor(l.kind, dark), opacity)
             lineP.strokeWidth = lineWidth(l.kind)
             c.drawLine(l.x1, l.y1, l.x2, l.y2, lineP)
+        }
+        for (ci in g.circles) {
+            lineP.color = mulAlpha(lineColor(ci.kind, dark), opacity)
+            lineP.strokeWidth = lineWidth(ci.kind)
+            c.drawCircle(ci.cx, ci.cy, ci.r, lineP)
         }
         if (g.dots.isNotEmpty()) {
             fill.color = mulAlpha(dotColor(dark), opacity)
@@ -118,6 +136,10 @@ class PageRenderer(private val images: ImageSource?) {
             }
             is ShapeItem -> {
                 val p = pathCache.getOrPut(item) { geomPath(item.geom) }
+                if (item.fill != 0) {
+                    fill.color = mulAlpha(item.fill, alphaMul)
+                    c.drawPath(p, fill)
+                }
                 stroke.color = mulAlpha(item.color, alphaMul)
                 stroke.strokeWidth = item.width
                 stroke.pathEffect = if (item.dashed) DashPathEffect(floatArrayOf(item.width * 3f + 3f, item.width * 2f + 3f), 0f) else null
@@ -147,6 +169,18 @@ class PageRenderer(private val images: ImageSource?) {
         text.textSize = t.size
         c.save()
         c.rotate(Math.toDegrees(t.rotation.toDouble()).toFloat(), t.x, t.y)
+        if (t.bg != 0) {
+            // yapışkan not / damga zemini
+            val lines = t.text.split('\n')
+            val w = lines.maxOf { text.measureText(it) }
+            val h = lines.size * t.size * 1.25f
+            val pad = t.padding()
+            val r = RectF(t.x - pad, t.y - pad, t.x + w + pad, t.y + h + pad * 0.6f)
+            fill.color = mulAlpha(0x22000000, alphaMul)
+            c.drawRoundRect(RectF(r.left + 1.2f, r.top + 1.8f, r.right + 1.2f, r.bottom + 1.8f), pad * 0.5f, pad * 0.5f, fill)
+            fill.color = mulAlpha(t.bg, alphaMul)
+            c.drawRoundRect(r, pad * 0.5f, pad * 0.5f, fill)
+        }
         t.text.split('\n').forEachIndexed { i, line -> c.drawText(line, t.x, t.y + t.size * (0.95f + 1.25f * i), text) }
         c.restore()
     }

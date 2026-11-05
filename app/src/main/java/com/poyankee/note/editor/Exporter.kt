@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
+import com.poyankee.note.core.Affine
 import com.poyankee.note.core.Background
 import com.poyankee.note.core.Geo
 import com.poyankee.note.core.Geom
@@ -26,6 +27,7 @@ import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.pdmodel.PDPage
 import com.tom_roush.pdfbox.pdmodel.PDPageContentStream
 import com.tom_roush.pdfbox.pdmodel.common.PDRectangle
+import com.tom_roush.pdfbox.pdmodel.font.PDType1Font
 import com.tom_roush.pdfbox.pdmodel.graphics.image.JPEGFactory
 import com.tom_roush.pdfbox.pdmodel.graphics.image.LosslessFactory
 import com.tom_roush.pdfbox.pdmodel.graphics.image.PDImageXObject
@@ -33,6 +35,7 @@ import com.tom_roush.pdfbox.pdmodel.graphics.state.PDExtendedGraphicsState
 import com.tom_roush.pdfbox.pdmodel.interactive.documentnavigation.outline.PDOutlineItem
 import com.tom_roush.pdfbox.util.Matrix
 import java.io.File
+import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -105,10 +108,29 @@ object Exporter {
                         np.mediaBox = sp.mediaBox
                         np.cropBox = sp.cropBox
                         np.rotation = sp.rotation
+                        // kırpma: görünen kırpma dikdörtgenini PDF kullanıcı koordinatına çevirip kutuyu daralt
+                        if (!bg.crop.isNone) {
+                            val fw = if (bg.fullW > 0f) bg.fullW else page.width
+                            val fh = if (bg.fullH > 0f) bg.fullH else page.height
+                            val m = displayToUser(sp.cropBox, sp.rotation, fw)
+                            val x0 = bg.crop.l * fw; val y0 = bg.crop.t * fh
+                            val x1 = fw - bg.crop.r * fw; val y1 = fh - bg.crop.b * fh
+                            val ux0 = m.mapX(x0, y0); val uy0 = m.mapY(x0, y0)
+                            val ux1 = m.mapX(x1, y1); val uy1 = m.mapY(x1, y1)
+                            val rect = PDRectangle(minOf(ux0, ux1), minOf(uy0, uy1), abs(ux1 - ux0), abs(uy1 - uy0))
+                            np.cropBox = rect
+                            np.mediaBox = rect
+                        }
+                        np.rotation = (sp.rotation + bg.rotation) % 360
                         pd = out.importPage(np)
                     } else {
                         pd = PDPage(PDRectangle(page.width, page.height))
                         out.addPage(pd)
+                    }
+                    paperImage = null; paperImageX = null
+                    if (bg is Background.Paper && bg.image.isNotEmpty()) {
+                        paperImage = loadImage(bg.image)
+                        paperImageX = paperImage?.let { LosslessFactory.createFromImage(out, it) }
                     }
                     PDPageContentStream(out, pd, PDPageContentStream.AppendMode.APPEND, true, true).use { cs ->
                         cs.saveGraphicsState()
@@ -130,17 +152,22 @@ object Exporter {
 
     /** Sayfa koordinatlarını (y aşağı) PDF koordinatlarına (y yukarı, döndürme dahil) çeviren matris. */
     private fun pageMatrix(pd: PDPage, page: Page): Matrix {
-        val box = pd.cropBox
+        val a = displayToUser(pd.cropBox, pd.rotation, page.width)
+        return Matrix(a.a, a.b, a.c, a.d, a.e, a.f)
+    }
+
+    /** Görünen sayfa (genişliği [displayWidth]) → PDF kullanıcı koordinatı. */
+    private fun displayToUser(box: PDRectangle, rotation: Int, displayWidth: Float): Affine {
         val llx = box.lowerLeftX; val lly = box.lowerLeftY
         val cw = box.width; val ch = box.height
-        val rot = ((pd.rotation % 360) + 360) % 360
+        val rot = ((rotation % 360) + 360) % 360
         val dispW = if (rot == 90 || rot == 270) ch else cw
-        val k = if (page.width > 0f) dispW / page.width else 1f
+        val k = if (displayWidth > 0f) dispW / displayWidth else 1f
         return when (rot) {
-            90 -> Matrix(0f, k, k, 0f, llx, lly)
-            180 -> Matrix(-k, 0f, 0f, k, llx + cw, lly)
-            270 -> Matrix(0f, -k, -k, 0f, llx + cw, lly + ch)
-            else -> Matrix(k, 0f, 0f, -k, llx, lly + ch)
+            90 -> Affine(0f, k, k, 0f, llx, lly)
+            180 -> Affine(-k, 0f, 0f, k, llx + cw, lly)
+            270 -> Affine(0f, -k, -k, 0f, llx + cw, lly + ch)
+            else -> Affine(k, 0f, 0f, -k, llx, lly + ch)
         }
     }
 
@@ -160,10 +187,39 @@ object Exporter {
             cs.setNonStrokingColor(c[0], c[1], c[2])
             cs.addRect(0f, 0f, page.width, page.height); cs.fill()
         }
+        if (bg.image.isNotEmpty()) paperImage?.let { b ->
+            val s = minOf(page.width / b.width, page.height / b.height)
+            val iw = b.width * s; val ih = b.height * s
+            cs.saveGraphicsState()
+            if (bg.opacity < 0.99f) setAlpha(cs, bg.opacity.coerceAtLeast(0.1f))
+            paperImageX?.let { drawImage(cs, it, (page.width - iw) / 2f, (page.height - ih) / 2f, iw, ih, 0f) }
+            cs.restoreGraphicsState()
+        }
         if (bg.opacity <= 0.01f) return
         val g = Templates.geometry(bg.template, page.width, page.height, bg.spacing)
         cs.saveGraphicsState()
         if (bg.opacity < 0.99f) setAlpha(cs, bg.opacity)
+        for (ci in g.circles) {
+            val c = rgb(PageRenderer.lineColor(ci.kind, bg.dark))
+            cs.setStrokingColor(c[0], c[1], c[2])
+            cs.setLineWidth(PageRenderer.lineWidth(ci.kind))
+            polygon(cs, Geo.ellipsePoints(ci.cx, ci.cy, ci.r, ci.r, 0f, 0f, Geo.TAU, 2f, true)); cs.stroke()
+        }
+        if (g.labels.isNotEmpty()) {
+            val c = rgb(if (bg.dark) 0xFFE0E0E0.toInt() else 0xFF455A64.toInt())
+            cs.setNonStrokingColor(c[0], c[1], c[2])
+            val font = PDType1Font.HELVETICA
+            for (lb in g.labels) {
+                try {
+                    val w = font.getStringWidth(lb.text) / 1000f * 7f
+                    cs.beginText()
+                    cs.setFont(font, 7f)
+                    cs.setTextMatrix(Matrix(1f, 0f, 0f, -1f, lb.x - w / 2f, lb.y))
+                    cs.showText(lb.text)
+                    cs.endText()
+                } catch (_: Exception) {}
+            }
+        }
         for (l in g.lines) {
             val c = rgb(PageRenderer.lineColor(l.kind, bg.dark))
             cs.setStrokingColor(c[0], c[1], c[2])
@@ -213,6 +269,15 @@ object Exporter {
                 cs.setLineCapStyle(1); cs.setLineJoinStyle(1)
                 if (item.dashed) cs.setLineDashPattern(floatArrayOf(item.width * 3f + 3f, item.width * 2f + 3f), 0f)
                 val g = item.geom
+                if (item.fill != 0) {
+                    cs.saveGraphicsState()
+                    val fc = rgb(item.fill)
+                    cs.setNonStrokingColor(fc[0], fc[1], fc[2])
+                    setAlpha(cs, alpha(item.fill))
+                    polygon(cs, if (g is Geom.Polyline) g.pts else g.sample(1.5f))
+                    cs.fill()
+                    cs.restoreGraphicsState()
+                }
                 if (g is Geom.Polyline) {
                     if (g.n >= 2) {
                         cs.moveTo(g.pts[0], g.pts[1])
@@ -235,7 +300,10 @@ object Exporter {
                 val b = textBitmap(item) ?: return
                 val img = LosslessFactory.createFromImage(doc, b)
                 val w = b.width / TEXT_SCALE; val h = b.height / TEXT_SCALE
-                drawImage(cs, img, item.x, item.y, w, h, item.rotation)
+                val pad = if (item.bg != 0) item.padding() else 0f
+                val c0 = cos(item.rotation); val s0 = sin(item.rotation)
+                // zeminli metinde resim, dolgu payı kadar sol üstten başlar (döndürme metnin köşesi etrafında)
+                drawImage(cs, img, item.x - pad * c0 + pad * s0, item.y - pad * s0 - pad * c0, w, h, item.rotation)
                 b.recycle()
             }
             is ImageItem -> {
@@ -247,16 +315,24 @@ object Exporter {
     }
 
     private const val TEXT_SCALE = 4f
+    private var paperImage: Bitmap? = null
+    private var paperImageX: PDImageXObject? = null
 
     private fun textBitmap(t: TextItem): Bitmap? {
         val p = Paint(Paint.ANTI_ALIAS_FLAG).apply { textSize = t.size * TEXT_SCALE; color = t.color }
         val lines = t.text.split('\n')
-        val w = (lines.maxOf { p.measureText(it) } + 4).toInt().coerceAtLeast(1)
-        val h = (t.size * TEXT_SCALE * (1.25f * lines.size)).toInt().coerceAtLeast(1)
+        val pad = if (t.bg != 0) t.padding() * TEXT_SCALE else 0f
+        val tw = lines.maxOf { p.measureText(it) }
+        val w = (tw + 4 + 2 * pad).toInt().coerceAtLeast(1)
+        val h = (t.size * TEXT_SCALE * (1.25f * lines.size) + pad * 1.6f).toInt().coerceAtLeast(1)
         if (w * h > 20_000_000) return null
         val b = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val c = Canvas(b)
-        lines.forEachIndexed { i, s -> c.drawText(s, 0f, t.size * TEXT_SCALE * (0.95f + 1.25f * i), p) }
+        if (t.bg != 0) {
+            val bgp = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = t.bg }
+            c.drawRoundRect(android.graphics.RectF(0f, 0f, w.toFloat(), h.toFloat()), pad * 0.5f, pad * 0.5f, bgp)
+        }
+        lines.forEachIndexed { i, s -> c.drawText(s, pad, pad + t.size * TEXT_SCALE * (0.95f + 1.25f * i), p) }
         return b
     }
 
