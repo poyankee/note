@@ -1,10 +1,11 @@
-# Note — Ders Anlatımı İçin Kalem Odaklı Yazı Uygulaması
+# Note — Matematik ve Geometri Dersi İçin Kalem Odaklı Yazı Uygulaması
 
-Tablette kalemle ders anlatmak için ücretsiz, kişisel bir not/yazı uygulaması.
+Android tablette (hedef: Xiaomi Pad 7) kalemle ders anlatmak için ücretsiz, kişisel bir not/yazı uygulaması.
 
-- Boş defter açıp kalemle yazma (çizgili, kareli, noktalı, boş sayfa)
-- PDF açıp üzerine yazma ve yazılmış hâliyle PDF olarak dışa aktarma
+- Boş defter açıp kalemle yazma (çizgili, kareli, noktalı, koordinat, izometrik sayfa)
+- PDF açıp üzerine yazma, **sayfa numarasına doğrudan gitme** ve yazılmış hâliyle PDF olarak dışa aktarma
 - **Sadece kalem modu**: el/avuç dokunuşları çizim yapmaz, yalnızca kaydırma/yakınlaştırma yapar
-- Ders anlatımına özel araçlar: lazer işaretçi, sunum modu, cetvel, şekil düzeltme
+- Geometri araçları: cetvel, iletki, gönye, pergel, şekil tanıma, ızgaraya yapışma
+- Ders anlatımı: lazer işaretçi, sunum modu, projeksiyon için ikinci ekran, uygulama içinden ders kaydı
 
 Ayrıntılı özellik listesi, teknoloji seçimi ve yol haritası: [docs/YOL_HARITASI.md](docs/YOL_HARITASI.md)
