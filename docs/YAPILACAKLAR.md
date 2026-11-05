@@ -115,19 +115,32 @@ Kenarda açılır "Kütüphane" paneli, kategorilere ayrılmış, aranabilir; ek
 - **İzinler**: yalnızca mikrofon (ders kaydı, isteğe bağlı); kamera izin istemeden sistem kamerasıyla.
 - Bağımlılıkların güncel ve bilinen açığı olmayan sürümleri.
 
-## Q. Play Store'a hazırlık (yapılacak)
-- **AAB paketi** (Play'in istediği format) ve CI'da otomatik üretim; güncel `targetSdk` (mağazanın o yılki zorunluluğu).
-- **Gizlilik politikası sayfası** (zorunlu): "Hiçbir veri toplanmaz, her şey cihazda kalır". GitHub Pages'te basit bir sayfa.
+## Q. Play Store'a hazırlık
+- **AAB paketi** ve güncel `targetSdk` (mağazanın o yılki zorunluluğu).
+- **İngilizce dil desteği** (onaylandı): tüm metinler `strings.xml`'e; Türkçe + İngilizce, telefon diline göre.
+- **Gizlilik politikası sayfası** (onaylandı): "Hiçbir veri toplanmaz, her şey cihazda kalır" (uygulama içinde + GitHub Pages).
+- **Hakkında sayfası** (onaylandı): sürüm, kısa tanıtım, gizlilik politikası, "Sorun bildir" (e-posta uygulamasıyla, istenirse hata kaydı ekli), en altta **açık kaynak lisansları** (PDFBox — Apache 2.0 vb.).
+- **Ayarların yedeğe girmesi** (onaylandı): paletler, kayıtlı kalemler, klasör renkleri, ayarlar.
 - **Veri güvenliği formu**: veri toplanmıyor / paylaşılmıyor.
-- **İngilizce dil desteği**: tüm metinler `strings.xml`'e taşınır; Türkçe + İngilizce (herkes yararlansın diye). Telefon dili hangisiyse o.
-- **Telefon ekranlarına uyum**: tablet öncelikli ama telefonda da düzgün açılsın (Play büyük/küçük ekran kontrolü yapıyor); dar ekranda menülerin sığması.
-- **İlk açılış tanıtımı**: mağazadan indiren yeni kullanıcı için 3-4 ekranlık kısa rehber (kalem/el ayrımı, menü, sayfa paneli); Ayarlar'dan tekrar açılabilir.
-- **Ayarların da yedeğe girmesi**: yeni cihaza geçince paletler, kayıtlı kalemler ve ayarlar da gelsin.
-- **Açık kaynak lisansları ekranı**: kullanılan kütüphanelerin (PDFBox — Apache 2.0) lisans bildirimi (lisans gereği).
-- **Erişilebilirlik**: düğme açıklamaları (ekran okuyucu), yeterli dokunma alanı, kontrast.
-- **Mağaza görselleri**: 512 px simge, tanıtım görseli, ekran görüntüleri (emülatör ekran görüntüsü altyapısı bunun için kullanılabilir), Türkçe + İngilizce açıklama.
-- **Kategori**: Eğitim (verimlilik); "çocuklara yönelik" olarak işaretlenmeyecek (Aile politikası ek yükümlülükleri yüzünden) ama herkes için uygun içerik derecelendirmesi.
-- **Sürüm numaralandırma**: anlamlı sürüm adları (1.0, 1.1...) ve uygulama içinde "Yenilikler" notu.
+- **Telefon ekranlarına uyum**: dar ekranda menülerin sığması.
+- **Erişilebilirlik** (onaylandı): uygulama kendisi sesli okuma yapmaz; Android'in yerleşik ekran okuyucusu **TalkBack** ekrandakini okur. Bizim işimiz her düğmeye anlamlı bir ad vermek ("Kalem", "Geri al"...), dokunma alanlarını yeterince büyük tutmak ve yeterli kontrast. TalkBack açıkken test edilecek.
+- **EN SON yapılacaklar** (özellikler bittikten sonra): **ilk açılış tanıtımı** (kesin yapılacak), **mağaza görselleri** (simge, tanıtım görseli, ekran görüntüleri, TR+EN açıklama).
+- **Kategori**: Eğitim; "çocuklara yönelik" işaretlenmeyecek, herkes için uygun derecelendirme.
+- **Sürüm numaralandırma**: 1.0, 1.1... ve uygulama içinde "Yenilikler" notu.
+
+## R. Defter kilidi — şifre unutulursa (yapılacak)
+- **Cihaz kilidiyle açma (öncelikli yöntem)**: defter kilidi tabletin kendi ekran kilidini kullanır (parmak izi / yüz / cihaz PIN'i). Kullanıcı ayrı bir şifre ezberlemez; tableti açabilen defteri de açar. Ek izin gerekmez (Android'in biyometrik/cihaz kimlik doğrulama ekranı).
+- **Ayrı PIN seçilirse**: kilitlerken bir kez **kurtarma kodu** gösterilir (ör. 8 karakter), "not edin / yazdırın" uyarısıyla. PIN unutulursa kurtarma kodu veya cihaz kilidiyle açılır, yeni PIN belirlenir.
+- Hiçbiri yoksa: veriler şifrelenmediği için kaybolmaz; "kilidi sıfırla" yalnızca cihaz kilidi doğrulamasıyla mümkün olur (tableti açamayan kişi sıfırlayamaz).
+- Kullanıcıya açıkça söylenecek: kilit, tableti başkasına verdiğinizde meraklı gözlere karşıdır; dosyaları şifrelemez.
+
+## S. Unutulmaması gerekenler (kontrol listesi)
+- **Gerçek cihazda performans**: 300-500 sayfalık PDF'te kaydırma, bellek; uzun ders kaydı (45+ dk) sırasında ısınma/kesilme.
+- **Ekran döndürme ve çoklu pencere**: yatay/dikey geçişte kaybolan çizim olmaması; Android bölünmüş ekranda (başka uygulamayla yan yana) düzgün çalışma.
+- **Klavye kapağı kısayolları**: Ctrl+Z / Ctrl+Y, Ctrl+C / Ctrl+V, sayfa ileri/geri (Xiaomi klavye kapağı için).
+- **Farklı kalemler**: Samsung S Pen, Lenovo vb. kalemlerin basınç ve tuşlarının da çalışması (mağaza için).
+- **Pil**: ekran açık tutma yalnızca defter içinde; arka planda iş yapılmaması.
+- **Format uyumluluğu**: her yeni sürümün eski defterleri açabilmesi (birim testiyle korunuyor, devam edecek).
 
 ## L. Kontrol
 - Her değişiklikten sonra emülatör testi ve ekran görüntüsü incelemesi.
