@@ -116,10 +116,16 @@ class Settings(context: Context) {
     // Görünüm
     val theme = str("theme", ThemeMode.SYSTEM.name)
     val colorTheme = str("colorTheme", "DEFAULT")
+    /** Özel tema rengi ve kullanıcının eklediği tema / masa renkleri. */
+    val customAccent = int("customAccent", 0xFF4F46E5.toInt())
+    val savedAccents = str("savedAccents", "")
+    val savedDesks = str("savedDesks", "")
     /** Arayüz stili: CLEAN (Sade), VIVID (Canlı), DARK (Koyu). */
     val uiStyle = str("uiStyle", "CLEAN")
     /** Araç çubuğu: TOP (üstte şerit) veya LEFT (solda yüzen menü). */
     val toolbarPos = str("toolbarPos", "TOP")
+    /** Soldaki araç listesinde görünecekler (virgülle, sırayla). */
+    val railItems = str("railItems", "PEN,HIGHLIGHTER,ERASER,LASSO,GEOMETRY,TEXT,LASER,UNDO,REDO,PAGES")
     /** Uygulama dili: "tr" veya "en". */
     val language = str("language", "tr")
     /** İlk açılış tanıtımı gösterildi mi. */
@@ -183,6 +189,10 @@ class Settings(context: Context) {
     }
 
     fun paletteColors(): List<Int> = colors(palette)
+    fun savedAccentList(): List<Int> = colors(savedAccents)
+    fun savedDeskList(): List<Int> = colors(savedDesks)
+    fun addColor(p: Pref<String>, c: Int) { p.value = (colors(p).filter { it != c } + c).takeLast(8).joinToString(",") { String.format("%08X", it) } }
+    fun removeColor(p: Pref<String>, c: Int) { p.value = colors(p).filter { it != c }.joinToString(",") { String.format("%08X", it) } }
     fun setPaletteColor(index: Int, color: Int) = setColor(palette, index, color)
     fun highlighterColors(): List<Int> = colors(hlPalette)
     fun setHighlighterColor(index: Int, color: Int) = setColor(hlPalette, index, color or 0xFF000000.toInt())

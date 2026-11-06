@@ -103,7 +103,7 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         if (!fitted || oldw == 0) {
-            zoom = fitZoom(); sx = -margin; sy = -margin; fitted = true
+            zoom = fitZoom(); sx = -margin; sy = minSy(); fitted = true
             goToPage(ctl.currentPage)
         } else if (oldw > 0 && oldw != w) {
             // döndürme: aynı yerde kal, genişliğe göre ölçekle
@@ -115,12 +115,25 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
         clampScroll(); invalidate(); scheduleSharp()
     }
 
+    /** İlk sayfanın üstündeki defter menüsünün yüksekliği (piksel); belgenin üstünde bu kadar yer açılır. */
+    var headerPx = 0f
+        private set
+    fun setHeaderHeight(h: Float) {
+        val atTop = sy <= minSy() + 1f
+        headerPx = h
+        if (atTop) sy = minSy()
+        clampScroll(); invalidate()
+    }
+    private fun minSy() = -margin - (if (headerPx > 0f) (headerPx + 20f * density) / zoom else 0f)
+
     private fun clampScroll() {
         if (width == 0) return
         zoom = zoom.coerceIn(fitZoom() * 0.35f, fitZoom() * 12f)
         val vw = width / zoom; val vh = height / zoom
         sx = if (docW + 2 * margin <= vw) -(vw - docW) / 2f else sx.coerceIn(-margin, docW + margin - vw)
-        sy = if (docH + 2 * margin <= vh) -margin else sy.coerceIn(-margin, docH + margin - vh)
+        val lo = minSy()
+        sy = if (docH + margin - lo <= vh) lo else sy.coerceIn(lo, docH + margin - vh)
+        ctl.viewTick++
     }
 
     fun pageIndexAt(docY: Float): Int {
@@ -138,7 +151,7 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
 
     fun goToPage(i: Int) {
         if (i !in tops.indices) return
-        sy = tops[i] - 8f / zoom
+        sy = if (i == 0) minSy() else tops[i] - 8f / zoom
         scroller.forceFinished(true)
         clampScroll(); invalidate(); scheduleSharp()
         if (ctl.currentPage != i) ctl.currentPage = i
@@ -147,15 +160,17 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
     /** Kaydırma çubuğu için: belgenin neresindeyiz (0..1) ve ekranda görünen oran. */
     fun scrollFraction(): Float {
         if (height == 0) return 0f
-        val range = docH + 2 * margin - height / zoom
-        return if (range <= 0f) 0f else ((sy + margin) / range).coerceIn(0f, 1f)
+        val lo = minSy()
+        val range = docH + margin - height / zoom - lo
+        return if (range <= 0f) 0f else ((sy - lo) / range).coerceIn(0f, 1f)
     }
     fun visibleFraction(): Float = if (height == 0) 1f else ((height / zoom) / (docH + 2 * margin)).coerceIn(0.04f, 1f)
     fun scrollToFraction(f: Float) {
         if (height == 0) return
-        val range = docH + 2 * margin - height / zoom
+        val lo = minSy()
+        val range = docH + margin - height / zoom - lo
         if (range <= 0f) return
-        sy = -margin + f.coerceIn(0f, 1f) * range
+        sy = lo + f.coerceIn(0f, 1f) * range
         scroller.forceFinished(true)
         clampScroll(); invalidate(); updateCurrentPage(); scheduleSharp()
     }

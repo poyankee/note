@@ -71,6 +71,7 @@ import androidx.compose.material.icons.rounded.Checklist
 import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.Cast
 import androidx.compose.material.icons.rounded.Category
+import androidx.compose.material.icons.rounded.AssignmentLate
 import androidx.compose.material.icons.rounded.Straighten
 import androidx.compose.material.icons.rounded.CropSquare
 import androidx.compose.material.icons.rounded.ChevronLeft
@@ -264,48 +265,70 @@ fun EditorScreen(
     val dockLeft = !s.leftHanded.value
     val toolsTop = s.toolbarPos.value != "LEFT"
     Column(Modifier.fillMaxSize().background(UI.Desk)) {
-        AnimatedVisibility(!ctl.presentation && !ctl.topBarHidden, enter = androidx.compose.animation.expandVertically() + fadeIn(), exit = androidx.compose.animation.shrinkVertically() + fadeOut()) {
-          Column {
-            if (tabs.size > 1) TabsRow(tabs, ctl.nb.id, onTab, onCloseTab)
-            EditorTopBar(
-                ctl, secondActive, recState, recTime, panel,
-                onClose = onClose, onRename = { showRename = true },
-                onPagePanel = { panel = if (panel == Panel.PAGE) Panel.NONE else Panel.PAGE },
-                onPages = { panel = if (panel == Panel.PAGES) Panel.NONE else Panel.PAGES },
-                onBookmarks = { showBookmarks = true }, onExport = { showExport = true }, onClear = { showClear = true },
-                onImage = { pickImage.launch("image/*") }, onCamera = { openCamera() }, onSettings = onSettings,
-                onFormula = { ctl.requestFormula(ctl.view?.visibleCenter()?.first ?: ctl.currentPage, null) },
-                onPlot = { showPlot = true }, onSticky = { ctl.requestStickyNote() }, onStamp = { showStamp = true },
-                onTimer = { showTimer = true },
-                onRecord = { toggleRecord() },
-                onPauseResume = { if (recState == 1) { recorder.pause(); recState = 2 } else if (recState == 2) { recorder.resume(); recState = 1 } },
-                onStopRecord = { stopRecording() },
-                onTodos = { showTodos = !showTodos },
-                toolsInBar = toolsTop,
-                onTimer2 = { showTimer = true },
-                onExtra = { key ->
-                    when (key) {
-                        "library" -> panel = if (panel == Panel.LIBRARY) Panel.NONE else Panel.LIBRARY
-                        "wrong" -> { ctl.view?.clearSelection(); ctl.captureMode = true }
-                        "valuetable" -> showValueTable = true
-                        "search" -> showSearch = true
-                        "print" -> printNotebook(context, ctl)
-                        "extract" -> showExtract = true
-                        "insertpdf" -> pickPdf.launch(arrayOf("application/pdf"))
-                    }
-                },
-            )
-            if (toolsTop && ctl.optionsBarOpen) OptionsStrip(ctl, onClear = { showClear = true }, onEditPalette = { paletteFor = it })
-          }
-        }
+        if (!ctl.presentation && tabs.size > 1) TabsRow(tabs, ctl.nb.id, onTab, onCloseTab)
         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth().clipToBounds()) {
             val areaW = maxWidth; val areaH = maxHeight
             AndroidView(factory = { ink }, modifier = Modifier.fillMaxSize().clipToBounds())
 
+            // defter menüsü: ilk sayfanın üstünde, sayfayla birlikte kayar (sabit üst çubuk yok)
+            if (!ctl.presentation) {
+                @Suppress("UNUSED_VARIABLE") val vt = ctl.viewTick
+                val dens = androidx.compose.ui.platform.LocalDensity.current.density
+                val r = ink.pageScreenRect(0)
+                val viewW = areaW.value * dens
+                val minW = minOf(viewW - 24 * dens, 760 * dens)
+                val wPx = r.width().coerceIn(minW, viewW - 24 * dens)
+                val xPx = (r.centerX() - wPx / 2).coerceIn(12 * dens, viewW - wPx - 12 * dens)
+                val yPx = r.top - ink.headerPx - 10 * dens
+                if (yPx + ink.headerPx > -20) Box(
+                    Modifier.offset { androidx.compose.ui.unit.IntOffset(xPx.roundToInt(), yPx.roundToInt()) }
+                        .width((wPx / dens).dp)
+                        .onGloballyPositioned { c -> val h = c.size.height.toFloat(); if (h != ink.headerPx) ink.setHeaderHeight(h) }
+                        .shadow(8.dp, RoundedCornerShape(UI.radius.dp)).clip(RoundedCornerShape(UI.radius.dp)),
+                ) {
+                    EditorTopBar(
+                        ctl, secondActive, recState, recTime, panel,
+                        onClose = onClose, onRename = { showRename = true },
+                        onPagePanel = { panel = if (panel == Panel.PAGE) Panel.NONE else Panel.PAGE },
+                        onPages = { panel = if (panel == Panel.PAGES) Panel.NONE else Panel.PAGES },
+                        onBookmarks = { showBookmarks = true }, onExport = { showExport = true }, onClear = { showClear = true },
+                        onImage = { pickImage.launch("image/*") }, onCamera = { openCamera() }, onSettings = onSettings,
+                        onFormula = { ctl.requestFormula(ctl.view?.visibleCenter()?.first ?: ctl.currentPage, null) },
+                        onPlot = { showPlot = true }, onSticky = { ctl.requestStickyNote() }, onStamp = { showStamp = true },
+                        onTimer = { showTimer = true },
+                        onRecord = { toggleRecord() },
+                        onPauseResume = { if (recState == 1) { recorder.pause(); recState = 2 } else if (recState == 2) { recorder.resume(); recState = 1 } },
+                        onStopRecord = { stopRecording() },
+                        onTodos = { showTodos = !showTodos },
+                        toolsInBar = false,
+                        headerMode = true,
+                        onTimer2 = { showTimer = true },
+                        onExtra = { key ->
+                            when (key) {
+                                "library" -> panel = if (panel == Panel.LIBRARY) Panel.NONE else Panel.LIBRARY
+                                "wrong" -> { ctl.view?.clearSelection(); ctl.captureMode = true }
+                                "valuetable" -> showValueTable = true
+                                "search" -> showSearch = true
+                                "print" -> printNotebook(context, ctl)
+                                "extract" -> showExtract = true
+                                "insertpdf" -> pickPdf.launch(arrayOf("application/pdf"))
+                            }
+                        },
+                    )
+                }
+            }
+
             if (!ctl.presentation) {
                 // yüzen araç menüsü (tutamaktan sürüklenip taşınabilir, daraltılabilir)
-                if (!toolsTop) Draggable(s.dockX, s.dockY, areaW, areaH, Modifier.align(if (dockLeft) Alignment.CenterStart else Alignment.CenterEnd).padding(horizontal = 14.dp)) { handle, _ ->
-                    ToolDock(ctl, handle, onTimer = { showTimer = true }, onClear = { showClear = true }, onEditPalette = { paletteFor = it })
+                Draggable(s.dockX, s.dockY, areaW, areaH, Modifier.align(if (dockLeft) Alignment.CenterStart else Alignment.CenterEnd).padding(horizontal = 14.dp)) { handle, _ ->
+                    ToolDock(
+                        ctl, handle, onClear = { showClear = true }, onEditPalette = { paletteFor = it },
+                        onBack = onClose,
+                        onPages = { panel = if (panel == Panel.PAGES) Panel.NONE else Panel.PAGES },
+                        onLibrary = { panel = if (panel == Panel.LIBRARY) Panel.NONE else Panel.LIBRARY },
+                        onTodos = { showTodos = !showTodos },
+                        onWrong = { ctl.view?.clearSelection(); ctl.captureMode = true },
+                    )
                 }
                 // geometri araçlarında kısa ipucu
                 Column(Modifier.align(Alignment.TopCenter).padding(top = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -316,10 +339,6 @@ fun EditorScreen(
                             }
                         }
                     }
-                }
-                // sayfa gezgini
-                Draggable(s.navX, s.navY, areaW, areaH, Modifier.align(if (dockLeft) Alignment.BottomEnd else Alignment.BottomStart).padding(16.dp)) { handle, _ ->
-                    PageNavigator(ctl, handle, onGoto = { showGoto = true }, onPages = { panel = Panel.PAGES })
                 }
             } else {
                 Draggable(s.presX, s.presY, areaW, areaH, Modifier.align(if (dockLeft) Alignment.BottomStart else Alignment.BottomEnd).padding(14.dp)) { handle, vertical ->
@@ -417,7 +436,6 @@ fun EditorScreen(
     ctl.formulaRequest?.let { FormulaDialog(ctl, it) }
     if (showPlot) PlotDialog(ctl) { showPlot = false }
     if (showStamp) StampDialog(ctl) { showStamp = false }
-    if (showTimer) TimerDialog(ctl) { showTimer = false }
     if (cropIndex >= 0) CropDialog(ctl, cropIndex) { cropIndex = -1 }
     paletteFor?.let { hl -> PaletteDialog(ctl, hl) { paletteFor = null } }
 }
@@ -615,6 +633,7 @@ private fun EditorTopBar(
     onExtra: (String) -> Unit = {},
     toolsInBar: Boolean = false,
     onTimer2: () -> Unit = {},
+    headerMode: Boolean = false,
 ) {
     var more by remember { mutableStateOf(false) }
     var insert by remember { mutableStateOf(false) }
@@ -630,8 +649,7 @@ private fun EditorTopBar(
             }
             Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
                 Row(Modifier.horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
-                    if (toolsInBar) ToolStrip(ctl, onTimer2)
-                    else {
+                    if (!headerMode) {
                         BarIcon(Icons.Rounded.Undo, L.t("Geri al"), enabled = ctl.canUndo) { ctl.undo() }
                         BarIcon(Icons.Rounded.Redo, L.t("Yinele"), enabled = ctl.canRedo) { ctl.redo() }
                     }
@@ -680,7 +698,7 @@ private fun EditorTopBar(
                     }
                 }
                 if (recState == 0 && !toolsInBar) BarIcon(Icons.Rounded.FiberManualRecord, L.t("Ders kaydı"), tint = UI.Danger, onClick = onRecord)
-                BarIcon(Icons.Rounded.Fullscreen, L.t("Odak modu (menüleri gizle)")) { ctl.view?.clearSelection(); ctl.presentation = true }
+                if (!headerMode) BarIcon(Icons.Rounded.Fullscreen, L.t("Odak modu (menüleri gizle)")) { ctl.view?.clearSelection(); ctl.presentation = true }
                 BarIcon(Icons.Rounded.Share, L.t("Dışa aktar / paylaş"), onClick = onExport)
                 Box {
                     BarIcon(Icons.Rounded.MoreVert, L.t("Diğer")) { more = true }
@@ -700,8 +718,6 @@ private fun EditorTopBar(
                         )
                         DropdownMenuItem(text = { Text(L.t("Yazdır")) }, onClick = { more = false; onExtra("print") })
                         DropdownMenuItem(text = { Text(L.t("Sayfaları ayrı deftere çıkar")) }, onClick = { more = false; onExtra("extract") })
-                        DropdownMenuItem(text = { Text(if (ctl.curtain) L.t("Perdeyi kaldır") else L.t("Perde")) }, onClick = { more = false; ctl.curtain = !ctl.curtain; ctl.view?.invalidate() })
-                        DropdownMenuItem(text = { Text(L.t("Sayaç")) }, onClick = { more = false; onTimer() })
                         DropdownMenuItem(text = { Text(L.t("Sayfaya sığdır")) }, onClick = { more = false; ctl.view?.fitToWidth() })
                         DropdownMenuItem(
                             text = { Text((if (ctl.settings.zoomLock.value) "✓ " else "") + L.t("Yakınlaştırma kilidi")) },
@@ -745,120 +761,14 @@ private fun LabeledBarButton(text: String, selected: Boolean, onClick: () -> Uni
     Spacer(Modifier.width(4.dp))
 }
 
-/* ======================= üstteki araç şeridi ======================= */
-
-/** Üst çubuğun ortasındaki araçlar. Seçili araca tekrar dokunmak alttaki seçenek şeridini açıp kapatır. */
-@Composable
-private fun ToolStrip(ctl: EditorController, onTimer: () -> Unit) {
-    @Composable
-    fun Btn(t: Tool, selected: Boolean = ctl.tool == t, label: String = shortName(t)) {
-        val tint = if (selected) UI.ToolSelFg else UI.BarFg
-        val accent = when (t) {
-            Tool.PEN -> Color(ctl.penColor or 0xFF000000.toInt())
-            Tool.HIGHLIGHTER -> Color(ctl.hlColor or 0xFF000000.toInt())
-            else -> tint
-        }
-        Box(
-            Modifier.testTag("tool-" + t.name).padding(horizontal = 1.dp).size(46.dp).clip(RoundedCornerShape(UI.radius.dp - 2.dp))
-                .background(if (selected) UI.ToolSelBg else Color.Transparent)
-                .clickable { if (ctl.tool == t) ctl.optionsBarOpen = !ctl.optionsBarOpen else { ctl.selectTool(t); ctl.optionsBarOpen = true } }
-                .semantics { contentDescription = label },
-            contentAlignment = Alignment.Center,
-        ) { ToolGlyph(t, tint, accent, 26.dp) }
-    }
-    for (t in listOf(Tool.PEN, Tool.HIGHLIGHTER, Tool.ERASER, Tool.LASSO)) Btn(t)
-    val gt = if (ctl.tool.isGeometry) ctl.tool else ctl.lastGeometryTool
-    Btn(gt, selected = ctl.tool.isGeometry, label = L.t("Geometri"))
-    for (t in listOf(Tool.TEXT, Tool.LASER, Tool.TEMP)) Btn(t)
-    Box(Modifier.padding(horizontal = 6.dp).width(1.dp).height(28.dp).background(UI.BarFgSoft.copy(alpha = 0.3f)))
-    var instMenu by remember { mutableStateOf(false) }
-    var lessonMenu by remember { mutableStateOf(false) }
-    Box {
-        Box(
-            Modifier.size(46.dp).clip(RoundedCornerShape(UI.radius.dp - 2.dp)).background(if (ctl.instruments.isNotEmpty()) UI.ToolSelBg else Color.Transparent)
-                .clickable { instMenu = true }.semantics { contentDescription = L.t("Cetvel") },
-            contentAlignment = Alignment.Center,
-        ) { InstrumentGlyph(null, if (ctl.instruments.isNotEmpty()) UI.ToolSelFg else UI.BarFg) }
-        DropdownMenu(instMenu, { instMenu = false }) {
-            InstrumentKind.entries.forEach { k ->
-                DropdownMenuItem(
-                    text = { Text(k.title, fontWeight = if (k in ctl.instruments) FontWeight.SemiBold else FontWeight.Normal) },
-                    leadingIcon = { InstrumentGlyph(k, if (k in ctl.instruments) UI.Primary else UI.Text) },
-                    trailingIcon = { if (k in ctl.instruments) Text(L.t("Açık"), color = UI.Primary, fontSize = 12.sp) },
-                    onClick = { instMenu = false; ctl.view?.toggleInstrument(k) },
-                )
-            }
-        }
-    }
-    Box {
-        val lessonOn = ctl.tool == Tool.SPOT || ctl.curtain || ctl.timerEnd > 0L
-        Box(
-            Modifier.size(46.dp).clip(RoundedCornerShape(UI.radius.dp - 2.dp)).background(if (lessonOn) UI.ToolSelBg else Color.Transparent)
-                .clickable { lessonMenu = true }.semantics { contentDescription = L.t("Ders") },
-            contentAlignment = Alignment.Center,
-        ) { ToolGlyph(Tool.SPOT, if (lessonOn) UI.ToolSelFg else UI.BarFg, size = 26.dp) }
-        DropdownMenu(lessonMenu, { lessonMenu = false }) {
-            DropdownMenuItem(text = { Text(L.t("Spot ışığı") + if (ctl.tool == Tool.SPOT) "  ✓" else "") }, onClick = { lessonMenu = false; ctl.selectTool(if (ctl.tool == Tool.SPOT) Tool.PEN else Tool.SPOT) })
-            DropdownMenuItem(text = { Text(if (ctl.curtain) L.t("Perdeyi kaldır") else L.t("Perde (sayfanın altını kapat)")) }, onClick = { lessonMenu = false; ctl.curtain = !ctl.curtain; ctl.view?.invalidate() })
-            DropdownMenuItem(text = { Text(if (ctl.timerEnd > 0L) L.t("Sayaç (çalışıyor)") else L.t("Sayaç")) }, onClick = { lessonMenu = false; onTimer() })
-        }
-    }
-}
-
-/** Seçili aracın seçenekleri: üst çubuğun hemen altında ince bir şerit (renkler, kalınlık, kayıtlı kalemler…). */
-@Composable
-private fun OptionsStrip(ctl: EditorController, onClear: () -> Unit, onEditPalette: (Boolean) -> Unit) {
-    val t = ctl.tool
-    Row(
-        Modifier.fillMaxWidth().testTag("options").background(UI.Panel).horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 5.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        Text(shortName(t), fontWeight = FontWeight.SemiBold, color = UI.Text, fontSize = 14.sp, modifier = Modifier.padding(end = 6.dp))
-        when {
-            t == Tool.ERASER -> {
-                Pill(L.t("Bütün çizgi"), !ctl.eraserPartial) { ctl.eraserPartial = false; ctl.settings.eraserPartial.value = false }
-                Pill(L.t("Kısmi"), ctl.eraserPartial) { ctl.eraserPartial = true; ctl.settings.eraserPartial.value = true }
-                BarDivider()
-                listOf(8, 14, 22).forEachIndexed { i, d -> SizeDot(d, ctl.eraserSize == i, Color(0xFF98A2B3)) { ctl.eraserSize = i; ctl.settings.eraserSize.value = i } }
-                BarDivider()
-                Text(L.t("Sildikten sonra kaleme dön"), fontSize = 13.sp, color = UI.TextSoft)
-                Switch(ctl.settings.eraserReturn.value, { ctl.settings.eraserReturn.value = it })
-                BarDivider()
-                Pill(L.t("Sayfayı temizle"), false, onClick = onClear)
-            }
-            t == Tool.LASSO -> {
-                Text(L.t("Seçmek istediğiniz yazının etrafını çizin"), fontSize = 13.sp, color = UI.TextSoft)
-                if (ctl.clipboardCount > 0) Pill(L.t("Yapıştır") + " (${ctl.clipboardCount})", false) { ctl.paste() }
-            }
-            t == Tool.LASER -> Text(L.t("Kalemle gösterin; iz birkaç saniyede kaybolur"), fontSize = 13.sp, color = UI.TextSoft)
-            t == Tool.SPOT -> Text(L.t("Kalemin gösterdiği yer aydınlanır"), fontSize = 13.sp, color = UI.TextSoft)
-            else -> {
-                if (t.isGeometry) { GeometryChooser(ctl); BarDivider() }
-                val hl = t == Tool.HIGHLIGHTER
-                val colors = if (hl) ctl.settings.highlighterColors() else ctl.settings.paletteColors()
-                val active = ctl.activeColor or 0xFF000000.toInt()
-                colors.forEach { c -> ColorDot(c, (c or 0xFF000000.toInt()) == active, 30, onLongClick = { onEditPalette(hl) }) { ctl.setColor(c) } }
-                Box(
-                    Modifier.size(30.dp).clip(CircleShape).background(UI.SurfaceAlt).clickable { onEditPalette(hl) },
-                    contentAlignment = Alignment.Center,
-                ) { Icon(Icons.Rounded.Edit, L.t("Renkleri düzenle"), tint = UI.TextSoft, modifier = Modifier.size(15.dp)) }
-                if (t != Tool.TEXT) {
-                    BarDivider()
-                    val widths = if (hl) listOf(8f, 14f, 22f) else listOf(1.0f, 2.0f, 3.6f)
-                    widths.forEachIndexed { i, w -> SizeDot(6 + i * 5, abs(ctl.activeWidth - w) < 0.05f, Color(ctl.activeColor or 0xFF000000.toInt())) { ctl.setWidth(w) } }
-                }
-                if (t == Tool.PEN || t == Tool.HIGHLIGHTER) { BarDivider(); PresetRow(ctl) }
-            }
-        }
-    }
-    HorizontalDivider(color = if (UI.style == UiStyle.DARK) Color(0x1FFFFFFF) else UI.Border)
-}
-
 /* ======================= araç menüsü ======================= */
 
 @Composable
-private fun ToolDock(ctl: EditorController, handle: Modifier, onTimer: () -> Unit, onClear: () -> Unit, onEditPalette: (Boolean) -> Unit) {
-    // seçili araca tekrar (çift) dokununca o aracın seçenekleri açılır
+private fun ToolDock(
+    ctl: EditorController, handle: Modifier, onClear: () -> Unit, onEditPalette: (Boolean) -> Unit,
+    onBack: () -> Unit, onPages: () -> Unit, onLibrary: () -> Unit, onTodos: () -> Unit, onWrong: () -> Unit,
+) {
+    // seçili araca tekrar dokununca o aracın seçenekleri açılır
     var optionsFor by remember { mutableStateOf<Tool?>(null) }
     @Composable
     fun Btn(t: Tool, selectedOverride: Boolean? = null, label: String = shortName(t)) {
@@ -869,74 +779,82 @@ private fun ToolDock(ctl: EditorController, handle: Modifier, onTimer: () -> Uni
             }
         }
     }
+    @Composable
+    fun Act(icon: ImageVector, label: String, enabled: Boolean = true, selected: Boolean = false, onClick: () -> Unit) {
+        DockItem(selected, label, onClick = { if (enabled) onClick() }) {
+            Icon(icon, label, tint = if (!enabled) UI.TextFaint.copy(alpha = 0.5f) else if (selected) UI.Primary else UI.Text, modifier = Modifier.size(24.dp))
+        }
+    }
     var instMenu by remember { mutableStateOf(false) }
-    var lessonMenu by remember { mutableStateOf(false) }
+    val items = RailItem.parse(ctl.settings.railItems.value)
     val collapsed = ctl.settings.dockCollapsed.value
-    FloatingCard(Modifier.testTag("dock"), radius = 22) {
+    FloatingCard(Modifier.testTag("dock"), radius = UI.radius + 6) {
         Column(
             Modifier.verticalScroll(rememberScrollState()).padding(vertical = 4.dp, horizontal = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
-            // tutamak + daralt
             Grip(handle)
+            Act(Icons.Rounded.ArrowBack, L.t("Defterler"), onClick = onBack)
+            Box(Modifier.padding(vertical = 3.dp).width(30.dp).height(1.dp).background(UI.Border))
             if (collapsed) {
-                // küçükken kalem ve silgi her zaman görünür; başka bir araç seçiliyse o da görünür
-                Btn(Tool.PEN)
-                Btn(Tool.ERASER)
+                Btn(Tool.PEN); Btn(Tool.ERASER)
                 if (ctl.tool != Tool.PEN && ctl.tool != Tool.ERASER) Btn(ctl.tool, selectedOverride = true)
                 Box(Modifier.size(40.dp).clip(CircleShape).clickable { ctl.settings.dockCollapsed.value = false }, contentAlignment = Alignment.Center) {
                     Icon(Icons.Rounded.KeyboardArrowDown, L.t("Menüyü aç"), tint = UI.TextSoft)
                 }
                 return@Column
             }
-            for (t in listOf(Tool.PEN, Tool.HIGHLIGHTER, Tool.ERASER, Tool.LASSO)) Btn(t)
-            val gt = if (ctl.tool.isGeometry) ctl.tool else ctl.lastGeometryTool
-            Btn(gt, selectedOverride = ctl.tool.isGeometry, label = L.t("Geometri"))
-            for (t in listOf(Tool.TEXT, Tool.LASER, Tool.TEMP)) Btn(t)
-            Box(Modifier.padding(vertical = 4.dp).width(30.dp).height(1.dp).background(UI.Border))
-            Box {
-                DockItem(selected = ctl.instruments.isNotEmpty(), label = L.t("Cetvel"), onClick = { instMenu = true }) {
-                    InstrumentGlyph(null, if (ctl.instruments.isNotEmpty()) UI.Primary else UI.Text)
-                }
-                DropdownMenu(instMenu, { instMenu = false }) {
-                    Text(L.t("Geometri araçları"), fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
-                    InstrumentKind.entries.forEach { k ->
-                        DropdownMenuItem(
-                            text = { Text(k.title, fontWeight = if (k in ctl.instruments) FontWeight.SemiBold else FontWeight.Normal) },
-                            leadingIcon = { InstrumentGlyph(k, if (k in ctl.instruments) UI.Primary else UI.Text) },
-                            trailingIcon = { if (k in ctl.instruments) Text(L.t("Açık"), color = UI.Primary, fontSize = 12.sp) },
-                            onClick = { instMenu = false; ctl.view?.toggleInstrument(k) },
-                        )
+            for (it in items) when (it) {
+                RailItem.PEN -> Btn(Tool.PEN)
+                RailItem.HIGHLIGHTER -> Btn(Tool.HIGHLIGHTER)
+                RailItem.ERASER -> Btn(Tool.ERASER)
+                RailItem.LASSO -> Btn(Tool.LASSO)
+                RailItem.GEOMETRY -> { val gt = if (ctl.tool.isGeometry) ctl.tool else ctl.lastGeometryTool; Btn(gt, selectedOverride = ctl.tool.isGeometry, label = L.t("Geometri")) }
+                RailItem.TEXT -> Btn(Tool.TEXT)
+                RailItem.LASER -> Btn(Tool.LASER)
+                RailItem.TEMP -> Btn(Tool.TEMP)
+                RailItem.RULER -> Box {
+                    DockItem(selected = ctl.instruments.isNotEmpty(), label = L.t("Cetvel"), onClick = { instMenu = true }) {
+                        InstrumentGlyph(null, if (ctl.instruments.isNotEmpty()) UI.Primary else UI.Text)
                     }
-                    Text(
-                        L.t("Parmakla taşıyın, iki parmakla döndürün.\nKalemi kenarına yaklaştırınca düz çizer."),
-                        fontSize = 12.sp, color = UI.TextSoft, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
-                    )
+                    DropdownMenu(instMenu, { instMenu = false }) {
+                        InstrumentKind.entries.forEach { k ->
+                            DropdownMenuItem(
+                                text = { Text(k.title, fontWeight = if (k in ctl.instruments) FontWeight.SemiBold else FontWeight.Normal) },
+                                leadingIcon = { InstrumentGlyph(k, if (k in ctl.instruments) UI.Primary else UI.Text) },
+                                trailingIcon = { if (k in ctl.instruments) Text(L.t("Açık"), color = UI.Primary, fontSize = 12.sp) },
+                                onClick = { instMenu = false; ctl.view?.toggleInstrument(k) },
+                            )
+                        }
+                    }
                 }
-            }
-            Box {
-                val lessonOn = ctl.tool == Tool.SPOT || ctl.curtain || ctl.timerEnd > 0L
-                DockItem(selected = lessonOn, label = L.t("Ders"), onClick = { lessonMenu = true }) {
-                    ToolGlyph(Tool.SPOT, if (lessonOn) UI.Primary else UI.Text, size = 26.dp)
+                RailItem.UNDO -> Act(Icons.Rounded.Undo, L.t("Geri al"), enabled = ctl.canUndo) { ctl.undo() }
+                RailItem.REDO -> Act(Icons.Rounded.Redo, L.t("Yinele"), enabled = ctl.canRedo) { ctl.redo() }
+                RailItem.PAGES -> DockItem(false, "${ctl.currentPage + 1}/${ctl.pageCount}", onClick = onPages) {
+                    Icon(Icons.Rounded.ViewModule, L.t("Sayfalar"), tint = UI.Text, modifier = Modifier.size(24.dp))
                 }
-                DropdownMenu(lessonMenu, { lessonMenu = false }) {
-                    Text(L.t("Ders araçları"), fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
-                    DropdownMenuItem(
-                        text = { Text(L.t("Spot ışığı") + if (ctl.tool == Tool.SPOT) "  ✓" else "") },
-                        onClick = { lessonMenu = false; ctl.selectTool(if (ctl.tool == Tool.SPOT) Tool.PEN else Tool.SPOT) },
-                    )
-                    DropdownMenuItem(
-                        text = { Text(if (ctl.curtain) L.t("Perdeyi kaldır") else L.t("Perde (sayfanın altını kapat)")) },
-                        onClick = { lessonMenu = false; ctl.curtain = !ctl.curtain; ctl.view?.invalidate() },
-                    )
-                    DropdownMenuItem(text = { Text(if (ctl.timerEnd > 0L) L.t("Sayaç (çalışıyor)") else L.t("Sayaç")) }, onClick = { lessonMenu = false; onTimer() })
-                }
+                RailItem.NEW_PAGE -> Act(Icons.Rounded.Add, L.t("Yeni sayfa")) { ctl.insertPageAfter(ctl.currentPage) }
+                RailItem.LIBRARY -> Act(Icons.Rounded.Category, L.t("Kütüphane"), onClick = onLibrary)
+                RailItem.TODO -> Act(Icons.Rounded.Checklist, L.t("Yapılacaklar"), onClick = onTodos)
+                RailItem.WRONG -> Act(Icons.Rounded.AssignmentLate, L.t("Yanlış defteri"), onClick = onWrong)
             }
             Box(Modifier.size(40.dp).clip(CircleShape).clickable { ctl.settings.dockCollapsed.value = true }, contentAlignment = Alignment.Center) {
                 Icon(Icons.Rounded.KeyboardArrowUp, L.t("Menüyü daralt"), tint = UI.TextSoft)
             }
         }
+    }
+}
+
+/** Soldaki araç listesinde gösterilebilecek öğeler (Ayarlar › Araç listesi). */
+enum class RailItem(val title: String) {
+    PEN("Kalem"), HIGHLIGHTER("Fosforlu"), ERASER("Silgi"), LASSO("Seçim"), GEOMETRY("Geometri"), TEXT("Metin"),
+    LASER("Lazer"), TEMP("Geçici kalem"), RULER("Cetvel"), UNDO("Geri al"), REDO("Yinele"), PAGES("Sayfalar"),
+    NEW_PAGE("Yeni sayfa"), LIBRARY("Kütüphane"), TODO("Yapılacaklar"), WRONG("Yanlış defteri");
+
+    companion object {
+        const val DEFAULT = "PEN,HIGHLIGHTER,ERASER,LASSO,GEOMETRY,TEXT,LASER,UNDO,REDO,PAGES"
+        fun parse(s: String): List<RailItem> = s.split(',').mapNotNull { n -> entries.firstOrNull { it.name == n.trim() } }.ifEmpty { parse(DEFAULT) }
     }
 }
 
@@ -1390,21 +1308,14 @@ private fun PageStylePanel(ctl: EditorController, onClose: () -> Unit) {
             }
 
             SectionTitle(L.t("Masa rengi (sayfanın dışı)"))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                val desks = listOf(0 to L.t("Tema"), 0xFFE9EBEF.toInt() to L.t("Açık gri"), 0xFFF3EBDD.toInt() to L.t("Krem"), 0xFF5B6472.toInt() to L.t("Koyu gri"), 0xFF111418.toInt() to L.t("Siyah"))
-                desks.forEach { (c, name) ->
-                    val sel = ctl.settings.deskColor.value == c
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable { ctl.settings.deskColor.value = c }) {
-                        Box(
-                            Modifier.size(34.dp).clip(RoundedCornerShape(8.dp))
-                                .border(if (sel) 3.dp else 1.dp, if (sel) UI.Primary else UI.Border, RoundedCornerShape(8.dp))
-                                .padding(if (sel) 4.dp else 0.dp).clip(RoundedCornerShape(5.dp))
-                                .background(if (c == 0) UI.Desk else Color(c)),
-                        )
-                        Text(name, fontSize = 10.sp, color = UI.TextSoft, modifier = Modifier.padding(top = 3.dp))
-                    }
-                }
-            }
+            Pill(L.t("Temaya göre"), ctl.settings.deskColor.value == 0) { ctl.settings.deskColor.value = 0 }
+            Spacer(Modifier.height(8.dp))
+            ColorChoiceRow(
+                presets = DESK_PRESETS, saved = ctl.settings.savedDeskList(), selected = ctl.settings.deskColor.value, size = 32,
+                onPick = { c -> ctl.settings.deskColor.value = c },
+                onAdd = { c -> ctl.settings.addColor(ctl.settings.savedDesks, c) },
+                onRemove = { c -> ctl.settings.removeColor(ctl.settings.savedDesks, c) },
+            )
 
             if (!isPdf && page != null) {
                 SectionTitle(L.t("Sayfa boyutu"))

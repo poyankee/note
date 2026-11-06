@@ -108,6 +108,7 @@ class MainActivity : ComponentActivity() {
             if (UI.dark != wantDark) UI.dark = wantDark
             val pal = try { com.poyankee.note.ui.Palette.valueOf(settings.colorTheme.value) } catch (_: Exception) { com.poyankee.note.ui.Palette.DEFAULT }
             if (UI.palette != pal) UI.palette = pal
+            if (UI.customAccent != settings.customAccent.value) UI.customAccent = settings.customAccent.value
             LaunchedEffect(UI.dark) {
                 WindowCompat.getInsetsController(window, window.decorView).apply {
                     isAppearanceLightStatusBars = !UI.dark

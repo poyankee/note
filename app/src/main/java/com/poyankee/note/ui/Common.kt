@@ -15,6 +15,9 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.remember
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -51,6 +54,7 @@ enum class Palette(val title: String, val c: LongArray) {
     SUNSET(L.t("Gün batımı"), longArrayOf(0xFFC2410C, 0xFFFB923C, 0xFFFFEDD5, 0xFF43230F, 0xFF9A3412, 0xFFFED7AA, 0xFFFAF4F0, 0xFF16100C, 0xFFF0E6DF, 0xFF0F0A07)),
     PAPER(L.t("Kağıt"), longArrayOf(0xFF8B5E34, 0xFFD6A46B, 0xFFF5EBDD, 0xFF3A2C1E, 0xFF6B4423, 0xFFF0DCC2, 0xFFF7F2E9, 0xFF15120E, 0xFFEDE5D6, 0xFF0E0C09)),
     NIGHT(L.t("Gece"), longArrayOf(0xFF4338CA, 0xFFA5B4FC, 0xFFE0E7FF, 0xFF1E1B4B, 0xFF312E81, 0xFFE0E7FF, 0xFFEEF0F7, 0xFF080A14, 0xFFE2E5F0, 0xFF04050C)),
+    CUSTOM(L.t("Özel"), longArrayOf(0xFF4F46E5, 0xFF7C7FF5, 0xFFEEF0FF, 0xFF262A52, 0xFF3730A3, 0xFFC7C9FF, 0xFFF4F5F8, 0xFF0F1115, 0xFFE9EBEF, 0xFF0B0D10)),
     CONTRAST(L.t("Yüksek kontrast"), longArrayOf(0xFF1D00B8, 0xFFFFE600, 0xFFDCD6FF, 0xFF3A3400, 0xFF12007A, 0xFFFFF59D, 0xFFFFFFFF, 0xFF000000, 0xFFDDDDDD, 0xFF000000)),
 }
 
@@ -82,7 +86,24 @@ object UI {
     var warm by mutableStateOf(false)
 
     private fun c(light: Long, darkC: Long) = Color(if (dark) darkC else light)
-    private fun p(i: Int) = Color(palette.c[2 * i + (if (dark) 1 else 0)])
+    /** Özel tema rengi (Ayarlar › Renk teması › +). */
+    var customAccent by mutableStateOf(0xFF4F46E5.toInt())
+    private fun mix(a: Int, b: Int, t: Float): Color {
+        fun ch(x: Int, s: Int) = ((x shr s) and 0xFF)
+        val r = ch(a, 16) + (ch(b, 16) - ch(a, 16)) * t; val g = ch(a, 8) + (ch(b, 8) - ch(a, 8)) * t; val bl = ch(a, 0) + (ch(b, 0) - ch(a, 0)) * t
+        return Color(r / 255f, g / 255f, bl / 255f)
+    }
+    private fun p(i: Int): Color {
+        if (palette == Palette.CUSTOM && i <= 2) {
+            val a = customAccent; val w = 0xFFFFFFFF.toInt(); val k = 0xFF000000.toInt(); val dk = 0xFF1A1D23.toInt()
+            return when (i) {
+                0 -> if (dark) mix(a, w, 0.35f) else Color(a)
+                1 -> if (dark) mix(a, dk, 0.75f) else mix(a, w, 0.88f)
+                else -> if (dark) mix(a, w, 0.6f) else mix(a, k, 0.35f)
+            }
+        }
+        return Color(palette.c[2 * i + (if (dark) 1 else 0)])
+    }
     private val hc get() = palette == Palette.CONTRAST
     val Primary get() = p(0)
     val PrimarySoft get() = p(1)
@@ -273,3 +294,36 @@ fun LabeledRow(label: String, sub: String? = null, modifier: Modifier = Modifier
         trailing()
     }
 }
+
+/**
+ * Önerilen sabit renkler + kullanıcının eklediği renkler + "+" (ton/doygunluk/parlaklık ile yeni renk).
+ * Eklenen renge uzun basınca silinir.
+ */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+fun ColorChoiceRow(presets: List<Int>, saved: List<Int>, selected: Int, size: Int = 36, onPick: (Int) -> Unit, onAdd: (Int) -> Unit, onRemove: (Int) -> Unit) {
+    var adding by remember { mutableStateOf(false) }
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        presets.forEach { c -> ColorDot(c, c == selected, size) { onPick(c) } }
+        if (saved.isNotEmpty()) Box(Modifier.width(1.dp).height(size.dp).background(UI.Border))
+        saved.forEach { c -> ColorDot(c, c == selected, size, onLongClick = { onRemove(c) }) { onPick(c) } }
+        Box(
+            Modifier.size(size.dp).clip(CircleShape).background(UI.SurfaceAlt).border(1.dp, UI.Border, CircleShape).clickable { adding = true },
+            contentAlignment = Alignment.Center,
+        ) { Text("+", fontSize = 20.sp, color = UI.TextSoft) }
+    }
+    if (adding) {
+        var picked by remember { mutableStateOf(selected) }
+        val start = remember { selected }
+        AlertDialog(
+            onDismissRequest = { adding = false }, containerColor = UI.Surface,
+            title = { Text(L.t("Özel renk")) },
+            text = { Column { HsvPicker(start) { picked = it or 0xFF000000.toInt() } } },
+            confirmButton = { TextButton(onClick = { adding = false; onAdd(picked); onPick(picked) }) { Text(L.t("Ekle")) } },
+            dismissButton = { TextButton(onClick = { adding = false }) { Text(L.t("Vazgeç"), color = UI.TextSoft) } },
+        )
+    }
+}
+
+/** Sayfanın arkası (masa) için önerilen renkler. */
+val DESK_PRESETS = listOf(0xFFE9EBEF, 0xFFF3EBDD, 0xFFDCE6EE, 0xFFE3EADF, 0xFF5B6472, 0xFF2A2F38, 0xFF111418).map { it.toInt() }

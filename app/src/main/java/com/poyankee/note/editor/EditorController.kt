@@ -67,7 +67,7 @@ enum class Tool(val title: String) {
 enum class MarkKind(val title: String) { ANGLE(L.t("Açı / dik açı")), TICK(L.t("Eşit uzunluk çentiği")), PARALLEL(L.t("Paralel oku")) }
 
 /** Bilgi kutusu başlığının işareti (konu özeti kutuları bununla bulur). */
-const val BOX_MARK = "▍"
+const val BOX_MARK = "\u2063"
 private const val PageSizeW = 595f
 private const val PageSizeH = 842f
 
@@ -131,6 +131,9 @@ class EditorController(
     val instruments = mutableStateListOf<InstrumentKind>()
     var secondScreenActive by mutableStateOf(false)
     var pagesVersion by mutableIntStateOf(0)
+    /** Görünüm kaydırıldı / yakınlaştı (sayfa üstündeki menünün yerini güncellemek için). */
+    var viewTick by mutableIntStateOf(0)
+
     /** Üstteki araç şeridinin altındaki seçenek şeridi açık mı. */
     var optionsBarOpen by mutableStateOf(true)
 
@@ -717,20 +720,36 @@ class EditorController(
         WARNING(L.t("Dikkat"), 0xFFD32F2F.toInt()), FORMULA(L.t("Formül"), 0xFF6A1B9A.toInt()), SUMMARY(L.t("Özet"), 0xFF00838F.toInt()),
     }
 
-    /** Seçili yazıları renkli, başlıklı bir bilgi kutusuna alır (yazılar aynen kalır). */
+    /** Yuvarlak köşeli dikdörtgen (kapalı çokgen olarak). */
+    private fun roundRect(l: Float, t: Float, r: Float, b: Float, rad: Float): FloatArray {
+        val pts = ArrayList<Float>()
+        val corners = listOf(Triple(r - rad, t + rad, -Math.PI / 2), Triple(r - rad, b - rad, 0.0), Triple(l + rad, b - rad, Math.PI / 2), Triple(l + rad, t + rad, Math.PI))
+        for ((cx, cy, a0) in corners) for (k in 0..6) {
+            val a = a0 + k * (Math.PI / 2) / 6
+            pts += (cx + rad * Math.cos(a)).toFloat(); pts += (cy + rad * Math.sin(a)).toFloat()
+        }
+        return pts.toFloatArray()
+    }
+
+    /**
+     * Seçili yazıları bilgi kutusuna alır: açık renkli yuvarlak zemin, solda kalın renkli şerit,
+     * üstte renkli rozet içinde başlık. Yazılar aynen kalır.
+     */
     fun makeInfoBox(kind: InfoBox) {
         val v = view ?: return
         val items = v.selectedItems(); val pi = v.selectedPage()
         val page = nb.pages.getOrNull(pi) ?: return
         if (items.isEmpty()) return
         val b = items.map { it.bounds() }.reduce { a, c -> a.union(c) }
-        val pad = 12f
-        val l = b.left - pad; val t = b.top - pad - 24f; val r = maxOf(b.right + pad, l + 140f); val bt = b.bottom + pad
-        val frame = ShapeItem(Ids.next(), Geom.Polyline(floatArrayOf(l, t, r, t, r, bt, l, bt), true), kind.color, 1.6f, false, (kind.color and 0x00FFFFFF) or 0x1A000000)
-        val title = TextItem(Ids.next(), l + 10f, t + 5f, BOX_MARK + " " + kind.title, 13f, kind.color)
+        val pad = 14f
+        val l = b.left - pad - 6f; val t = b.top - pad - 30f; val r = maxOf(b.right + pad, l + 160f); val bt = b.bottom + pad
+        val rgb = kind.color and 0x00FFFFFF
+        val frame = ShapeItem(Ids.next(), Geom.Polyline(roundRect(l, t, r, bt, 12f), true), rgb or 0x55000000, 1f, false, rgb or 0x14000000)
+        val stripe = ShapeItem(Ids.next(), Geom.Polyline(roundRect(l, t, l + 6f, bt, 3f), true), kind.color, 0.5f, false, kind.color)
+        val title = TextItem(Ids.next(), l + 22f, t + 9f, BOX_MARK + L.t(kind.title), 12f, 0xFFFFFFFF.toInt(), 0f, kind.color)
         v.clearSelection()
-        commit(page, items, listOf(frame, title) + items)
-        message = "\"${kind.title}\" kutusu oluşturuldu"
+        commit(page, items, listOf(frame, stripe, title) + items)
+        message = "\"${L.t(kind.title)}\" " + L.t("kutusu oluşturuldu")
     }
 
     /** Defterdeki bütün bilgi kutularını sona eklenen "Konu özeti" sayfalarında toplar. Eklenen sayfa sayısı. */
@@ -739,11 +758,12 @@ class EditorController(
         val found = ArrayList<Found>()
         for ((pi, page) in nb.pages.withIndex()) {
             if ((page.items.firstOrNull { it is TextItem && (it.text.startsWith("Konu özeti") || it.text.startsWith(L.t("Konu özeti"))) }) != null) continue
-            for (t in page.items.filterIsInstance<TextItem>().filter { it.text.startsWith(BOX_MARK) }) {
-                val frame = page.items.filterIsInstance<ShapeItem>().firstOrNull { f ->
+            for (t in page.items.filterIsInstance<TextItem>().filter { it.text.startsWith(BOX_MARK) || it.text.startsWith("▍") }) {
+                val tone = (if (t.bg != 0) t.bg else t.color) and 0x00FFFFFF
+                val frame = page.items.filterIsInstance<ShapeItem>().filter { f ->
                     val g = f.geom
-                    g is Geom.Polyline && g.closed && f.color == t.color && f.bounds().contains(t.x + 1f, t.y + 1f)
-                } ?: continue
+                    g is Geom.Polyline && g.closed && (f.color and 0x00FFFFFF) == tone && f.bounds().contains(t.x + 1f, t.y + 1f)
+                }.maxByOrNull { it.bounds().width } ?: continue
                 val fb = frame.bounds()
                 val inside = page.items.filter { it.bounds().let { bb -> fb.contains(bb.cx, (bb.top + bb.bottom) / 2f) } }
                 found += Found(pi, inside, fb)

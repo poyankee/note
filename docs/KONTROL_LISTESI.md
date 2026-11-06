@@ -39,10 +39,12 @@ Kurulum: GitHub › Releases › en yeni **Note sürüm N** › `Note-N.apk` (es
 - [ ] İki parmakla yakınlaştırma / kaydırma
 - [ ] Ayarlar › Yazı: basınç, **basınç eğrisi**, yumuşatma, tahmin, silgiden otomatik dönüş, otomatik yeni sayfa, yakınlaştırma kilidi
 
-## 4. Araçlar (üstteki şerit)
-- [ ] Araçlar üst çubuğun ortasında yatay şerit; seçili aracın renk / kalınlık / kayıtlı kalemleri hemen altında ince bir şeritte
-- [ ] Seçili araca tekrar dokununca alttaki seçenek şeridi gizleniyor / açılıyor
-- [ ] Ayarlar › Görünüm › **Araç çubuğu: Solda yüzen menü** seçilince eski sol menü geri geliyor
+## 4. Defter düzeni ve araçlar
+- [ ] Sabit üst çubuk yok: defter adı, Sayfa düzeni, Sayfalar, Kütüphane, Ekle, Paylaş, ⋮ **ilk sayfanın üstündeki menüde**; aşağı kaydırınca sayfayla birlikte yukarı kayıp gidiyor, başa dönünce geliyor
+- [ ] Sık kullanılan araçlar **solda dikey listede** (← Defterler, kalem, fosforlu, silgi, seçim, geometri, metin, lazer, geri al, yinele, sayfalar…)
+- [ ] Ayarlar › Görünüm › **Araç listesi**: listede nelerin olacağını seçin (cetvel, geçici kalem, yeni sayfa, kütüphane, yapılacaklar, yanlış defteri de eklenebilir)
+- [ ] Listede **sayfa göstergesi (ör. 3/12)**: dokununca sayfalar paneli açılıyor (alttaki eski sayfa penceresi kalktı)
+- [ ] Spot ışığı, perde ve sayaç kaldırıldı
 - [ ] Kalem, fosforlu, silgi (bütün / kısmi), seçim, geometri, metin, lazer, geçici kalem
 - [ ] **Seçili araca tekrar dokununca** seçenek penceresi: renkler, kalınlık, kayıtlı kalemler, ✎ renkleri düzenle
 - [ ] Silgi seçenekleri: boyut, kısmi, "Sildikten sonra kaleme dön", Sayfayı temizle
@@ -51,14 +53,13 @@ Kurulum: GitHub › Releases › en yeni **Note sürüm N** › `Note-N.apk` (es
 - [ ] Geometri: şekil, doğru, ok, çokgen, pergel, işaret, 3B; seçenekler (kesikli, dolgu, harfler, ölçüler)
 - [ ] Çizip bekle → düzgün şekil
 - [ ] Cetvel, gönyeler (45° ve 30°-60°), iletki (Cetvel menüsü)
-- [ ] Ders menüsü: spot ışığı, perde, sayaç
 
 ## 5. Seçim
 - [ ] Kement ile seç → taşı, büyüt (sağ alt), döndür (üst)
 - [ ] Alt çubuk: Kopyala, Kes, Çoğalt, Doldur, **Ölçü**, **Kutu**, **Kütüphaneye**, Sil, **renkler**
 - [ ] Tek şekil seçince köşeleri sürükleme
 - [ ] **Hareketli geometri**: üçgen/dörtgen seçiliyken kenar (cm), açılar (°), alan ve çevre görünüyor; köşe sürüklenince değişiyor
-- [ ] **Kutu**: seçili yazıyı Kural / Tanım / Örnek / Dikkat / Formül / Özet kutusuna alıyor
+- [ ] **Kutu**: seçili yazıyı Kural / Tanım / Örnek / Dikkat / Formül / Özet kutusuna alıyor (yeni tasarım: açık renkli yuvarlak zemin, solda renkli şerit, üstte renkli başlık rozeti)
 - [ ] **Bağlı oklar**: Kütüphane › Genel › Kavram haritası ekleyin; bir kutuyu seçip taşıyın → ona bağlı ok da uzayıp kısalarak takip ediyor
 - [ ] ⋮ › **Konu özeti oluştur**: bütün kutular sona eklenen "Konu özeti" sayfasında
 
@@ -104,7 +105,7 @@ Kurulum: GitHub › Releases › en yeni **Note sürüm N** › `Note-N.apk` (es
 ## 9. Ders anlatımı
 - [ ] **Odak modu** (üstte tam ekran simgesi): sadece küçük panel; sağ/sol kenara götürünce dikey
 - [ ] Projeksiyon / HDMI: harici ekranda yalnız sayfa
-- [ ] Lazer, geçici kalem, spot, perde, sayaç
+- [ ] Lazer, geçici kalem
 - [ ] **Çözüm katmanı**: Ayarlar › Sayfalar › Çözüm rengi (ör. kırmızı) → ⋮ › Çözümleri gizle / göster
 - [ ] Ders kaydı (beklemede; çalışıyor mu bakmanız yeterli)
 
@@ -116,6 +117,8 @@ Kurulum: GitHub › Releases › en yeni **Note sürüm N** › `Note-N.apk` (es
 
 ## 11. Ayarlar
 - [ ] **Arayüz stili**: Sade / Canlı / Koyu (önizlemeli); hem ana sayfa hem defter değişiyor
+- [ ] **Kendi tema renginiz**: önerilen renkler + "+" ile kendi renginizi ekleme (eklediğinize uzun basınca silinir)
+- [ ] **Sayfanın arkası (masa) rengi**: Temaya göre / önerilen renkler / "+" ile kendi renginiz (Sayfa panelinde de var)
 - [ ] **Dil / Language**: English seçince uygulama yeniden açılıyor ve menüler İngilizce; Türkçe ile geri dönüyor
 - [ ] Tema: sistem / açık / koyu; **Renk teması** (Okyanus, Orman, Gün batımı, Kağıt, Gece, Yüksek kontrast)
 - [ ] **Arayüz boyutu** (Küçük … Çok büyük = erişilebilirlik)

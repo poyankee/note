@@ -62,6 +62,7 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
 @Suppress("DEPRECATION")
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun SettingsScreen(
     s: Settings,
@@ -118,12 +119,20 @@ fun SettingsScreen(
                         }
                     }
                     Column(Modifier.padding(vertical = 10.dp)) {
-                        Text(L.t("Araç çubuğu"), fontSize = 16.sp, color = UI.Text)
+                        Text(L.t("Araç listesi"), fontSize = 16.sp, color = UI.Text)
+                        Text(L.t("Defterde solda dikey duran listede nelerin olacağını seçin"), fontSize = 13.sp, color = UI.TextSoft)
                         Spacer(Modifier.height(8.dp))
-                        PillRow {
-                            Pill(L.t("Üstte şerit"), s.toolbarPos.value != "LEFT") { s.toolbarPos.value = "TOP" }
-                            Pill(L.t("Solda yüzen menü"), s.toolbarPos.value == "LEFT") { s.toolbarPos.value = "LEFT" }
+                        val chosen = com.poyankee.note.ui.RailItem.parse(s.railItems.value)
+                        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            com.poyankee.note.ui.RailItem.entries.forEach { it ->
+                                val on = it in chosen
+                                Pill((if (on) "✓ " else "") + L.t(it.title), on) {
+                                    val next = if (on) chosen - it else chosen + it
+                                    s.railItems.value = com.poyankee.note.ui.RailItem.entries.filter { e -> e in next }.joinToString(",") { e -> e.name }
+                                }
+                            }
                         }
+                        TextButton(onClick = { s.railItems.value = com.poyankee.note.ui.RailItem.DEFAULT }) { Text(L.t("Varsayılana dön")) }
                     }
                     Column(Modifier.padding(vertical = 10.dp)) {
                         Text("Dil / Language", fontSize = 16.sp, color = UI.Text)
@@ -143,7 +152,7 @@ fun SettingsScreen(
                         Text(L.t("Renk teması"), fontSize = 16.sp, color = UI.Text)
                         Spacer(Modifier.height(8.dp))
                         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Palette.entries.forEach { pal ->
+                            Palette.entries.filter { it != Palette.CUSTOM }.forEach { pal ->
                                 val sel = UI.palette == pal
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -158,6 +167,33 @@ fun SettingsScreen(
                                     Text(pal.title, fontSize = 11.sp, color = if (sel) UI.Text else UI.TextSoft, modifier = Modifier.padding(top = 4.dp))
                                 }
                             }
+                        }
+                    }
+                    Column(Modifier.padding(vertical = 10.dp)) {
+                        Text(L.t("Kendi tema renginiz"), fontSize = 16.sp, color = UI.Text)
+                        Text(L.t("Önerilen renklerden birini seçin ya da + ile kendi renginizi ekleyin (eklediğinize uzun basınca silinir)"), fontSize = 13.sp, color = UI.TextSoft)
+                        Spacer(Modifier.height(8.dp))
+                        ColorChoiceRow(
+                            presets = listOf(0xFF7C3AED, 0xFF0EA5E9, 0xFF10B981, 0xFFF43F5E, 0xFFF59E0B, 0xFF334155).map { it.toInt() },
+                            saved = s.savedAccentList(),
+                            selected = if (UI.palette == Palette.CUSTOM) s.customAccent.value else 0,
+                            onPick = { c -> s.customAccent.value = c; s.colorTheme.value = Palette.CUSTOM.name },
+                            onAdd = { c -> s.addColor(s.savedAccents, c) },
+                            onRemove = { c -> s.removeColor(s.savedAccents, c) },
+                        )
+                    }
+                    Column(Modifier.padding(vertical = 10.dp)) {
+                        Text(L.t("Sayfanın arkası (masa) rengi"), fontSize = 16.sp, color = UI.Text)
+                        Spacer(Modifier.height(8.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Pill(L.t("Temaya göre"), s.deskColor.value == 0) { s.deskColor.value = 0 }
+                            Spacer(Modifier.width(10.dp))
+                            ColorChoiceRow(
+                                presets = DESK_PRESETS, saved = s.savedDeskList(), selected = s.deskColor.value, size = 32,
+                                onPick = { c -> s.deskColor.value = c },
+                                onAdd = { c -> s.addColor(s.savedDesks, c) },
+                                onRemove = { c -> s.removeColor(s.savedDesks, c) },
+                            )
                         }
                     }
                     Column(Modifier.padding(vertical = 10.dp)) {
@@ -220,7 +256,6 @@ fun SettingsScreen(
                 }
                 Group(L.t("Yazı")) {
                     Toggle(L.t("Basınç duyarlılığı"), L.t("Kalemi bastırdıkça çizgi kalınlaşır"), s.pressure.value) { s.pressure.value = it }
-                    Toggle(L.t("Kaydırınca üst çubuğu gizle"), L.t("Defterde aşağı kaydırınca üst çubuk gizlenir, yukarı çekince geri gelir"), s.autoHideBar.value) { s.autoHideBar.value = it }
                     Toggle(L.t("Yazarken otomatik yeni sayfa"), L.t("Son sayfanın alt kısmına yazınca yeni düz sayfa eklenir"), s.autoNewPage.value) { s.autoNewPage.value = it }
                     Toggle(L.t("Yakınlaştırma kilidi"), L.t("İki parmak sayfayı yakınlaştırmaz, sadece kaydırır"), s.zoomLock.value) { s.zoomLock.value = it }
                     Toggle(L.t("Silgiden kaleme otomatik dön"), L.t("Silgiyle sildikten sonra önceki araca geri geçer"), s.eraserReturn.value) { s.eraserReturn.value = it }
@@ -271,7 +306,6 @@ fun SettingsScreen(
                     SliderRow(L.t("Geçici kalemin kaybolma süresi"), "${"%.1f".format(s.tempMs.value / 1000f)} sn", s.tempMs.value.toFloat(), 1000f..10000f) {
                         s.tempMs.value = (it / 100).roundToInt() * 100
                     }
-                    SliderRow(L.t("Spot ışığı boyutu"), "${s.spotRadiusDp.value}", s.spotRadiusDp.value.toFloat(), 60f..300f) { s.spotRadiusDp.value = it.roundToInt() }
                     Toggle(L.t("İkinci ekran (projeksiyon / HDMI)"), L.t("Harici ekranda sadece temiz sayfa görünür, araçlar tablette kalır"), s.secondScreen.value) { s.secondScreen.value = it }
                     Toggle(L.t("Ders kaydında mikrofon"), L.t("Video kaydına sesinizi de ekler"), s.recordAudio.value) { s.recordAudio.value = it }
                 }

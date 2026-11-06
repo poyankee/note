@@ -179,7 +179,7 @@ class SmokeTest {
         // 0) Arayüz görünür olmalı: sayfa çizimi üst çubuğun ve araç menüsünün üzerine taşmamalı
         val topWhite = whiteRatio("topbar")
         assertTrue("üst çubuk görünmüyor (beyaz oranı $topWhite)", topWhite > 0.5f)
-        assertTrue("araç seçenekleri şeridi görünmüyor", whiteRatio("options") > 0.3f)
+        assertTrue("araç listesi görünmüyor", whiteRatio("dock") > 0.3f)
 
         // 0b) Sayfa stili: desen, renk, aralık, saydamlık
         main { c.setPageStyle(0, Background.Paper(Template.ISOMETRIC, PaperColors.CREAM, 14f, 0.3f)) }
@@ -496,11 +496,11 @@ class SmokeTest {
         assertEquals(pagesBefore + 1, main { c.nb.pages.size })
         main { c.undo(); c.undo() }
         assertEquals(pagesBefore, main { c.nb.pages.size })
-        // aşağı kaydırınca üst çubuk gizlenir
-        main { c.topBarHidden = true }
+        // defter menüsü sayfayla birlikte kayar: aşağı inince ekrandan çıkar, başa dönünce geri gelir
+        main { v.scrollToFraction(1f) }
         rule.waitForIdle()
-        assertTrue(rule.onAllNodesWithTag("topbar").fetchSemanticsNodes().isEmpty())
-        main { c.topBarHidden = false }
+        shot("16c-menu-kaydi")
+        main { c.goToPage(0, false) }
         rule.waitForIdle()
         // kaydırınca sağda sayfa çubuğu
         main { c.scrollTick++ }
