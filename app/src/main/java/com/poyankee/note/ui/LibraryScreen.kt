@@ -409,7 +409,6 @@ private fun EmptyState(title: String, text: String) {
 
 private val dateFmt = SimpleDateFormat("d MMM yyyy", Locale.forLanguageTag("tr"))
 
-@Composable
 private class CardActions(
     val onOpen: () -> Unit, val onLongPress: () -> Unit, val onRename: () -> Unit, val onMove: () -> Unit, val onDelete: () -> Unit,
     val onFavorite: () -> Unit, val onLock: () -> Unit,
