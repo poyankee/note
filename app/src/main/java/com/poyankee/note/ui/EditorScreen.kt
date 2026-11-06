@@ -339,9 +339,17 @@ private fun Draggable(
     var h by remember { mutableStateOf(0f) }
     fun clampX(v: Float) = if (baseX.isNaN()) v else v.coerceIn(-baseX, (areaW.value - w - baseX).coerceAtLeast(-baseX))
     fun clampY(v: Float) = if (baseX.isNaN()) v else v.coerceIn(-baseY, (areaH.value - h - baseY).coerceAtLeast(-baseY))
+    // Dikey/yatay kararı yalnızca sürükleme bitince (ve ilk ölçümde) verilir; aksi halde boyut
+    // değiştikçe karar da değişip sonsuz döngüye girebilir.
+    var nearSide by remember { mutableStateOf(false) }
+    fun decide() {
+        if (baseX.isNaN() || areaW.value <= 0f) return
+        val cx = baseX + x + w / 2
+        nearSide = cx < areaW.value * 0.22f || cx > areaW.value * 0.78f
+    }
     val handle = Modifier.pointerInput(Unit) {
         detectDragGestures(
-            onDragEnd = { px.value = x; py.value = y },
+            onDragEnd = { px.value = x; py.value = y; decide() },
             onDragCancel = { px.value = x; py.value = y },
         ) { change, drag ->
             change.consume()
@@ -354,6 +362,8 @@ private fun Draggable(
         val cx = clampX(x); val cy = clampY(y)
         if (cx != x || cy != y) { x = cx; y = cy; px.value = x; py.value = y }
     }
+    val measured = !baseX.isNaN()
+    LaunchedEffect(measured, areaW) { decide() }
     Box(
         modifier
             .offset { androidx.compose.ui.unit.IntOffset((x * density).roundToInt(), (y * density).roundToInt()) }
@@ -364,9 +374,7 @@ private fun Draggable(
                 w = c.size.width / density; h = c.size.height / density
             },
     ) {
-        // panel ekranın sol ya da sağ kenarına yakınsa dikey düzen kullanılabilir
-        val cx = if (baseX.isNaN()) areaW.value / 2 else baseX + x + w / 2
-        content(handle, cx < areaW.value * 0.22f || cx > areaW.value * 0.78f)
+        content(handle, nearSide)
     }
 }
 
