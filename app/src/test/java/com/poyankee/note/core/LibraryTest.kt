@@ -54,3 +54,21 @@ class PageRangesTest {
         assertEquals(null, PageRanges.parse("", 5))
     }
 }
+
+class MeasureTest {
+    @Test
+    fun rightTriangle() {
+        val k = Measure.PT_PER_CM
+        // 3-4-5 üçgeni (y aşağı)
+        val m = Measure.polygon(floatArrayOf(0f, 0f, 4 * k, 0f, 0f, 3 * k))
+        assertEquals(4f, m.sides[0], 0.01f); assertEquals(5f, m.sides[1], 0.01f); assertEquals(3f, m.sides[2], 0.01f)
+        assertEquals(6f, m.area, 0.01f); assertEquals(12f, m.perimeter, 0.01f)
+        assertEquals(90f, m.angles[0], 0.1f)
+        assertEquals(180f, m.angles.sum(), 0.1f)
+        // içbükey dörtgen: iç açılar toplamı 360
+        val c = Measure.polygon(floatArrayOf(0f, 0f, 100f, 0f, 50f, 30f, 50f, 100f))
+        assertEquals(360f, c.angles.sum(), 0.5f)
+        assertTrue(c.angles.any { it > 180f })
+        assertEquals("2,5", Measure.fmt(2.46f)); assertEquals("3", Measure.fmt(3.01f))
+    }
+}

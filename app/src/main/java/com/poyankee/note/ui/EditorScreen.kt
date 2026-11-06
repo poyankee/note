@@ -69,6 +69,8 @@ import androidx.compose.material.icons.rounded.Checklist
 import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.Cast
 import androidx.compose.material.icons.rounded.Category
+import androidx.compose.material.icons.rounded.Straighten
+import androidx.compose.material.icons.rounded.CropSquare
 import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Close
@@ -630,6 +632,11 @@ private fun EditorTopBar(
                     DropdownMenu(more, { more = false }) {
                         if (ctl.clipboardCount > 0) DropdownMenuItem(text = { Text("Yapıştır (${ctl.clipboardCount})") }, onClick = { more = false; ctl.paste() })
                         DropdownMenuItem(text = { Text("Defterde ara") }, onClick = { more = false; onExtra("search") })
+                        DropdownMenuItem(text = { Text("Konu özeti oluştur") }, onClick = { more = false; ctl.buildSummary() })
+                        if (ctl.settings.solutionColor.value != 0) DropdownMenuItem(
+                            text = { Text(if (ctl.settings.hideSolutions.value) "Çözümleri göster" else "Çözümleri gizle") },
+                            onClick = { more = false; ctl.settings.hideSolutions.value = !ctl.settings.hideSolutions.value; ctl.view?.refreshAll() },
+                        )
                         DropdownMenuItem(text = { Text("Yazdır") }, onClick = { more = false; onExtra("print") })
                         DropdownMenuItem(text = { Text("Sayfaları ayrı deftere çıkar") }, onClick = { more = false; onExtra("extract") })
                         DropdownMenuItem(text = { Text(if (ctl.curtain) "Perdeyi kaldır" else "Perde") }, onClick = { more = false; ctl.curtain = !ctl.curtain; ctl.view?.invalidate() })
@@ -1026,6 +1033,18 @@ private fun SelectionBar(ctl: EditorController, onSaveToLib: () -> Unit, modifie
             SelAction(Icons.Rounded.ContentCut, "Kes", UI.Text) { ctl.view?.selectionCut() }
             SelAction(Icons.Rounded.AddCircleOutline, "Çoğalt", UI.Text) { ctl.view?.selectionDuplicate() }
             if (ctl.selectionHasShapes) SelAction(Icons.Rounded.FormatColorFill, "Doldur", UI.Text) { ctl.view?.selectionFill() }
+            if (ctl.selectionHasShapes) SelAction(Icons.Rounded.Straighten, if (ctl.liveMeasure) "Ölçü: açık" else "Ölçü: kapalı", if (ctl.liveMeasure) UI.Primary else UI.Text) {
+                ctl.liveMeasure = !ctl.liveMeasure; ctl.view?.invalidate()
+            }
+            Box {
+                var boxMenu by remember { mutableStateOf(false) }
+                SelAction(Icons.Rounded.CropSquare, "Kutu", UI.Text) { boxMenu = true }
+                DropdownMenu(boxMenu, { boxMenu = false }) {
+                    EditorController.InfoBox.entries.forEach { k ->
+                        DropdownMenuItem(text = { Text(k.title, color = Color(k.color), fontWeight = FontWeight.SemiBold) }, onClick = { boxMenu = false; ctl.makeInfoBox(k) })
+                    }
+                }
+            }
             SelAction(Icons.Rounded.Category, "Kütüphaneye", UI.Text, onSaveToLib)
             SelAction(Icons.Rounded.Delete, "Sil", UI.Danger) { ctl.view?.selectionDelete() }
             BarDivider()

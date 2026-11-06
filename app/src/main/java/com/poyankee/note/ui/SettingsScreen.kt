@@ -80,6 +80,7 @@ fun SettingsScreen(
         }
     }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var info by remember { mutableStateOf<Pair<String, String>?>(null) }
     val backupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri -> if (uri != null) onBackupNow(uri) }
     val restoreLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) onRestore(uri) }
     val folderLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri -> if (uri != null) onBackupFolder(uri) }
@@ -122,6 +123,13 @@ fun SettingsScreen(
                             }
                         }
                     }
+                    Column(Modifier.padding(vertical = 10.dp)) {
+                        Text("Arayüz boyutu", fontSize = 16.sp, color = UI.Text)
+                        Text("Düğmeler, menüler ve yazılar. \"Çok büyük\" görme güçlüğü olanlar için (erişilebilirlik).", fontSize = 13.sp, color = UI.TextSoft)
+                        Spacer(Modifier.height(8.dp))
+                        PillRow { listOf("Küçük", "Normal", "Büyük", "Çok büyük").forEachIndexed { i, t -> Pill(t, s.uiSize.value == i) { s.uiSize.value = i } } }
+                    }
+                    Toggle("Göz dostu mod", "Koyu tema ve ekrana hafif sıcak renk filtresi; akşam çalışırken gözü yormaz", s.eyeComfort.value) { s.eyeComfort.value = it }
                     Toggle("Solak kullanım", "Araç menüsü sağ tarafa geçer", s.leftHanded.value) { s.leftHanded.value = it }
                     Column(Modifier.padding(vertical = 10.dp)) {
                         Text("Panelleri varsayılan yerine al", fontSize = 16.sp, color = UI.Text)
@@ -178,6 +186,8 @@ fun SettingsScreen(
                     Toggle("Yazarken otomatik yeni sayfa", "Son sayfanın alt kısmına yazınca yeni düz sayfa eklenir", s.autoNewPage.value) { s.autoNewPage.value = it }
                     Toggle("Yakınlaştırma kilidi", "İki parmak sayfayı yakınlaştırmaz, sadece kaydırır", s.zoomLock.value) { s.zoomLock.value = it }
                     Toggle("Silgiden kaleme otomatik dön", "Silgiyle sildikten sonra önceki araca geri geçer", s.eraserReturn.value) { s.eraserReturn.value = it }
+                    SliderRow("Kalem basıncı eğrisi", listOf("Çok yumuşak", "Yumuşak", "Normal", "Sert", "Çok sert")[s.pressureCurve.value.coerceIn(0, 4)],
+                        s.pressureCurve.value.toFloat(), 0f..4f, 3) { s.pressureCurve.value = it.roundToInt() }
                     Toggle("Gecikme azaltma (tahmin)", "Çizgi kalemin ucunu daha yakından takip eder", s.prediction.value) { s.prediction.value = it }
                     SliderRow("Çizgi yumuşatma", listOf("Kapalı", "Az", "Orta", "Çok", "En çok")[s.smoothing.value.coerceIn(0, 4)],
                         s.smoothing.value.toFloat(), 0f..4f, 3) { s.smoothing.value = it.roundToInt() }
@@ -189,6 +199,21 @@ fun SettingsScreen(
                         PillRow {
                             Pill("Düz beyaz", !s.newPageSame.value) { s.newPageSame.value = false }
                             Pill("Önceki sayfa gibi", s.newPageSame.value) { s.newPageSame.value = true }
+                        }
+                    }
+                    Column(Modifier.padding(vertical = 10.dp)) {
+                        Text("Sayfa altında", fontSize = 16.sp, color = UI.Text)
+                        Text("Sağ alt köşeye sayfa numarası (ve sayfanın açıldığı tarih); dışa aktarılan PDF'te de görünür", fontSize = 13.sp, color = UI.TextSoft)
+                        Spacer(Modifier.height(8.dp))
+                        PillRow { listOf("Hiçbir şey", "Sayfa no", "Sayfa no + tarih").forEachIndexed { i, t -> Pill(t, s.pageFooter.value == i) { s.pageFooter.value = i } } }
+                    }
+                    Column(Modifier.padding(vertical = 10.dp)) {
+                        Text("Çözüm katmanı", fontSize = 16.sp, color = UI.Text)
+                        Text("Bu renkle yazdıklarınız \"çözüm\" sayılır: defterde ⋮ › Çözümleri gizle ile saklanır, dışa aktarırken soru kağıdı olarak çıkarılabilir.", fontSize = 13.sp, color = UI.TextSoft)
+                        Spacer(Modifier.height(8.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Pill("Kapalı", s.solutionColor.value == 0) { s.solutionColor.value = 0 }
+                            s.paletteColors().forEach { c -> ColorDot(c, (s.solutionColor.value or 0xFF000000.toInt()) == (c or 0xFF000000.toInt()) && s.solutionColor.value != 0, 30) { s.solutionColor.value = c } }
                         }
                     }
                 }
@@ -288,6 +313,23 @@ fun SettingsScreen(
                         }
                     }
                 }
+                Group("Hakkında") {
+                    Column(Modifier.padding(vertical = 10.dp)) {
+                        val ver = try { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName } catch (_: Exception) { "" }
+                        Text("Note $ver", fontSize = 16.sp, color = UI.Text)
+                        Text("Öğretmenler ve öğrenciler için ücretsiz, reklamsız, internete bağlanmayan not uygulaması.", fontSize = 13.sp, color = UI.TextSoft)
+                        Spacer(Modifier.height(10.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Pill("Gizlilik politikası", false) { info = "Gizlilik politikası" to PRIVACY_TEXT }
+                            Pill("Sorun bildir", false) {
+                                try {
+                                    ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://github.com/poyankee/note/issues")))
+                                } catch (_: Exception) {}
+                            }
+                            Pill("Açık kaynak lisansları", false) { info = "Açık kaynak lisansları" to LICENSES_TEXT }
+                        }
+                    }
+                }
                 Text(
                     "Not: Kablosuz yansıtma tüm ekranı gösterir; temiz görüntü için odak modunu (menüler gizli) kullanın.",
                     fontSize = 13.sp, color = UI.TextSoft, modifier = Modifier.padding(vertical = 16.dp),
@@ -297,6 +339,7 @@ fun SettingsScreen(
     }
 
     if (penTest) PenTestDialog(s) { penTest = false }
+    info?.let { (t, body) -> InfoDialog(t, body) { info = null } }
     if (learning) {
         DisposableEffect(Unit) {
             PenKeys.learner = { code -> s.addPenKeyCode(code); learning = false }

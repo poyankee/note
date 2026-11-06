@@ -57,6 +57,10 @@ object UI {
     var dark by mutableStateOf(false)
     /** Renk teması (MainActivity ayarlardan okur). */
     var palette by mutableStateOf(Palette.DEFAULT)
+    /** Arayüz boyutu çarpanı (düğmeler ve yazılar). Sayfadaki yazıları etkilemez. */
+    var scale by mutableStateOf(1f)
+    /** Göz dostu mod: ekranın üstüne hafif sıcak (turuncu) filtre. */
+    var warm by mutableStateOf(false)
 
     private fun c(light: Long, darkC: Long) = Color(if (dark) darkC else light)
     private fun p(i: Int) = Color(palette.c[2 * i + (if (dark) 1 else 0)])
@@ -127,7 +131,20 @@ fun NoteTheme(content: @Composable () -> Unit) {
             titleMedium = base.titleMedium.copy(fontWeight = FontWeight.SemiBold),
             titleSmall = base.titleSmall.copy(fontWeight = FontWeight.SemiBold),
         ),
-        content = content,
+        content = {
+            val d = androidx.compose.ui.platform.LocalDensity.current
+            val sc = UI.scale
+            androidx.compose.runtime.CompositionLocalProvider(
+                androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(d.density * sc, d.fontScale),
+            ) {
+                androidx.compose.foundation.layout.Box {
+                    content()
+                    if (UI.warm) androidx.compose.foundation.layout.Box(
+                        Modifier.matchParentSize().background(Color(0x1FFF8A00)),
+                    )
+                }
+            }
+        },
     )
 }
 

@@ -16,6 +16,7 @@ import android.view.View
 import android.view.ViewConfiguration
 import android.widget.OverScroller
 import com.poyankee.note.core.Background
+import com.poyankee.note.core.Measure
 import com.poyankee.note.core.Box
 import com.poyankee.note.core.Geo
 import com.poyankee.note.core.Geom
@@ -248,7 +249,8 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
                 ctl.pdf?.sharp(bg)?.let { s -> if (!s.bitmap.isRecycled) c.drawBitmap(s.bitmap, null, s.rect, bmpPaint) }
             }
             // içerik
-            val skip = if (sel != null && sel!!.page == i) sel!!.ids else emptySet()
+            val selSkip = if (sel != null && sel!!.page == i) sel!!.ids else emptySet()
+            val skip = if (settings.hideSolutions.value && settings.solutionColor.value != 0) selSkip + solutionIds(page) else selSkip
             if (useNodes) {
                 var node = nodes[page.id]
                 if (node == null || page.id in dirty || !node.hasDisplayList()) {
@@ -270,6 +272,7 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
                 r.drawItems(c, page.items, skip)
                 c.restore()
             }
+            drawFooter(c, i, page)
             drawPageOverlays(c, i, z, now, forOutput)
             c.restore()
             i++
@@ -432,7 +435,64 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
         c.drawText(text, x, y - 6f / z - h * 0.28f, overlayText)
     }
 
+    private val measurePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER; isFakeBoldText = true }
+    private val measureBg = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xE61D2330.toInt() }
+
+    /** Hareketli geometri: tek şekil seçiliyken kenar, açı, alan ve çevre canlı gösterilir (köşe sürüklenince güncellenir). */
+    private fun drawMeasures(c: Canvas, s: Selection, z: Float) {
+        if (!ctl.liveMeasure) return
+        val shape = s.single ?: return
+        val g0 = s.editGeom ?: shape.geom
+        val g = if (s.live.isIdentity) g0 else g0.transformed(s.live)
+        val ts = 12f * density / z
+        measurePaint.textSize = ts
+        fun label(x: Float, y: Float, t: String, color: Int) {
+            val w = measurePaint.measureText(t) / 2f + 5f * density / z
+            val h = ts * 0.75f
+            measureBg.color = color
+            c.drawRoundRect(x - w, y - h, x + w, y + h * 0.7f, 6f / z, 6f / z, measureBg)
+            measurePaint.color = 0xFFFFFFFF.toInt()
+            c.drawText(t, x, y + ts * 0.33f - h * 0.15f, measurePaint)
+        }
+        when (g) {
+            is Geom.Polyline -> {
+                val p = g.pts
+                val n = g.n
+                if (n < 2) return
+                if (!g.closed || n < 3) {
+                    var len = 0f
+                    for (i in 0 until n - 1) len += Geo.dist(p[2 * i], p[2 * i + 1], p[2 * i + 2], p[2 * i + 3])
+                    label((p[0] + p[2 * n - 2]) / 2f, (p[1] + p[2 * n - 1]) / 2f - ts, Measure.fmt(len / Measure.PT_PER_CM) + " cm", 0xE61565C0.toInt())
+                    return
+                }
+                val m = Measure.polygon(p)
+                var cx = 0f; var cy = 0f
+                for (i in 0 until n) { cx += p[2 * i]; cy += p[2 * i + 1] }
+                cx /= n; cy /= n
+                for (i in 0 until n) {
+                    val j = (i + 1) % n
+                    val mx = (p[2 * i] + p[2 * j]) / 2f; val my = (p[2 * i + 1] + p[2 * j + 1]) / 2f
+                    val d = Geo.dist(cx, cy, mx, my).coerceAtLeast(1f)
+                    val o = 16f * density / z
+                    label(mx + (mx - cx) / d * o, my + (my - cy) / d * o, Measure.fmt(m.sides[i]) + " cm", 0xE61565C0.toInt())
+                    val vx = p[2 * i]; val vy = p[2 * i + 1]
+                    val dv = Geo.dist(cx, cy, vx, vy).coerceAtLeast(1f)
+                    val ov = 20f * density / z
+                    label(vx - (vx - cx) / dv * ov, vy - (vy - cy) / dv * ov, Measure.fmt(m.angles[i]) + "°", 0xE6D32F2F.toInt())
+                }
+                label(cx, cy, "Alan " + Measure.fmt(m.area) + " cm²  ·  Çevre " + Measure.fmt(m.perimeter) + " cm", 0xE62E7D32.toInt())
+            }
+            is Geom.Circle -> {
+                val r = g.r / Measure.PT_PER_CM
+                label(g.cx, g.cy - ts, "r = " + Measure.fmt(r) + " cm", 0xE61565C0.toInt())
+                label(g.cx, g.cy + ts, "Alan " + Measure.fmt((Math.PI * r * r).toFloat()) + " cm²  ·  Çevre " + Measure.fmt((2 * Math.PI * r).toFloat()) + " cm", 0xE62E7D32.toInt())
+            }
+            else -> {}
+        }
+    }
+
     private fun drawSelectionFrame(c: Canvas, s: Selection, z: Float) {
+        drawMeasures(c, s, z)
         val b = s.liveBox()
         overlayStroke.color = 0xFF1E88E5.toInt(); overlayStroke.strokeWidth = 1.2f / z
         overlayStroke.pathEffect = DashPathEffect(floatArrayOf(6f / z, 4f / z), 0f)
@@ -557,8 +617,28 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
 
     private var sel: Selection? = null
 
+    private val footerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.RIGHT; textSize = 9f; color = 0xFF98A2B3.toInt() }
+
+    /** Çözüm katmanındaki öğeler (çözüm rengindekiler). */
+    private fun solutionIds(page: com.poyankee.note.core.Page): Set<Long> {
+        val sc = settings.solutionColor.value or 0xFF000000.toInt()
+        return page.items.filter { com.poyankee.note.editor.Exporter.colorOf(it)?.let { c -> (c or 0xFF000000.toInt()) == sc } == true }.map { it.id }.toHashSet()
+    }
+
+    private fun drawFooter(c: Canvas, i: Int, page: com.poyankee.note.core.Page) {
+        val f = settings.pageFooter.value
+        if (f == 0) return
+        val text = Exporter.footerText(f, i, page)
+        footerPaint.color = if ((page.background as? Background.Paper)?.dark == true) 0xFFB0B8C4.toInt() else 0xFF98A2B3.toInt()
+        c.drawText(text, page.width - 14f, page.height - 12f, footerPaint)
+    }
+
+    /** Ayar değişince (çözüm katmanı, sayfa altı) bütün sayfaları yeniden çiz. */
+    fun refreshAll() { invalidateAllPages() }
+
     /** Seçili öğeler (kütüphaneye kaydetmek için). */
     fun selectedItems(): List<Item> = sel?.items ?: emptyList()
+    fun selectedPage(): Int = sel?.page ?: -1
 
     fun select(pageIndex: Int, items: List<Item>) {
         if (items.isEmpty()) { clearSelection(); return }
@@ -984,8 +1064,9 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
 
     private fun pressureOf(e: MotionEvent, idx: Int, h: Int = -1): Float {
         if (e.getToolType(idx) == MotionEvent.TOOL_TYPE_FINGER) return 0.6f
-        val p = if (h >= 0) e.getHistoricalPressure(idx, h) else e.getPressure(idx)
-        return p.coerceIn(0.05f, 1f)
+        val p = (if (h >= 0) e.getHistoricalPressure(idx, h) else e.getPressure(idx)).coerceIn(0.05f, 1f)
+        val g = floatArrayOf(0.5f, 0.72f, 1f, 1.4f, 2f)[settings.pressureCurve.value.coerceIn(0, 4)]
+        return if (g == 1f) p else Math.pow(p.toDouble(), g.toDouble()).toFloat().coerceIn(0.05f, 1f)
     }
 
     private fun effectiveTool(e: MotionEvent, idx: Int): Tool {

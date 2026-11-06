@@ -64,6 +64,11 @@ enum class Tool(val title: String) {
 
 enum class MarkKind(val title: String) { ANGLE("Açı / dik açı"), TICK("Eşit uzunluk çentiği"), PARALLEL("Paralel oku") }
 
+/** Bilgi kutusu başlığının işareti (konu özeti kutuları bununla bulur). */
+const val BOX_MARK = "▍"
+private const val PageSizeW = 595f
+private const val PageSizeH = 842f
+
 class TextRequest(val pageIndex: Int, val x: Float, val y: Float, val existing: TextItem?, val sticky: Boolean = false)
 class FormulaRequest(val pageIndex: Int, val existing: ImageItem?)
 
@@ -686,6 +691,77 @@ class EditorController(
         commit(page, emptyList(), placed)
         selectTool(Tool.LASSO)
         v.select(pi, placed)
+    }
+
+    /** Hareketli geometri: seçili şeklin ölçüleri canlı gösterilsin mi. */
+    var liveMeasure by mutableStateOf(true)
+
+    /* ---------- bilgi kutuları ve konu özeti ---------- */
+
+    enum class InfoBox(val title: String, val color: Int) {
+        RULE("Kural", 0xFF1565C0.toInt()), DEFINITION("Tanım", 0xFF2E7D32.toInt()), EXAMPLE("Örnek", 0xFFF57C00.toInt()),
+        WARNING("Dikkat", 0xFFD32F2F.toInt()), FORMULA("Formül", 0xFF6A1B9A.toInt()), SUMMARY("Özet", 0xFF00838F.toInt()),
+    }
+
+    /** Seçili yazıları renkli, başlıklı bir bilgi kutusuna alır (yazılar aynen kalır). */
+    fun makeInfoBox(kind: InfoBox) {
+        val v = view ?: return
+        val items = v.selectedItems(); val pi = v.selectedPage()
+        val page = nb.pages.getOrNull(pi) ?: return
+        if (items.isEmpty()) return
+        val b = items.map { it.bounds() }.reduce { a, c -> a.union(c) }
+        val pad = 12f
+        val l = b.left - pad; val t = b.top - pad - 24f; val r = maxOf(b.right + pad, l + 140f); val bt = b.bottom + pad
+        val frame = ShapeItem(Ids.next(), Geom.Polyline(floatArrayOf(l, t, r, t, r, bt, l, bt), true), kind.color, 1.6f, false, (kind.color and 0x00FFFFFF) or 0x1A000000)
+        val title = TextItem(Ids.next(), l + 10f, t + 5f, BOX_MARK + " " + kind.title, 13f, kind.color)
+        v.clearSelection()
+        commit(page, items, listOf(frame, title) + items)
+        message = "\"${kind.title}\" kutusu oluşturuldu"
+    }
+
+    /** Defterdeki bütün bilgi kutularını sona eklenen "Konu özeti" sayfalarında toplar. Eklenen sayfa sayısı. */
+    fun buildSummary(): Int {
+        class Found(val page: Int, val items: List<Item>, val box: com.poyankee.note.core.Box)
+        val found = ArrayList<Found>()
+        for ((pi, page) in nb.pages.withIndex()) {
+            if ((page.items.firstOrNull { it is TextItem && it.text.startsWith("Konu özeti") }) != null) continue
+            for (t in page.items.filterIsInstance<TextItem>().filter { it.text.startsWith(BOX_MARK) }) {
+                val frame = page.items.filterIsInstance<ShapeItem>().firstOrNull { f ->
+                    val g = f.geom
+                    g is Geom.Polyline && g.closed && f.color == t.color && f.bounds().contains(t.x + 1f, t.y + 1f)
+                } ?: continue
+                val fb = frame.bounds()
+                val inside = page.items.filter { it.bounds().let { bb -> fb.contains(bb.cx, (bb.top + bb.bottom) / 2f) } }
+                found += Found(pi, inside, fb)
+            }
+        }
+        if (found.isEmpty()) { message = "Defterde bilgi kutusu yok (seçim › Kutu ile oluşturun)"; return 0 }
+        val w = PageSizeW; val h = PageSizeH
+        var page = Page(Ids.next(), Background.Paper(Template.BLANK, PaperColors.WHITE), w, h)
+        val pages = arrayListOf(page)
+        page.items += TextItem(Ids.next(), 30f, 24f, "Konu özeti", 20f, 0xFF1D2330.toInt())
+        var y = 64f
+        for (f in found) {
+            val s = minOf(1f, (w - 60f) / f.box.width.coerceAtLeast(1f))
+            val bh = f.box.height * s
+            if (y + bh + 24f > h - 20f && y > 70f) {
+                page = Page(Ids.next(), Background.Paper(Template.BLANK, PaperColors.WHITE), w, h); pages += page; y = 30f
+            }
+            val tr = Similarity(dx = 30f - f.box.left, dy = y - f.box.top, scale = s, ox = f.box.left, oy = f.box.top)
+            page.items += f.items.map { it.transformed(tr, Ids.next()) }
+            page.items += TextItem(Ids.next(), 30f + f.box.width * s - 40f, y + bh + 2f, "s. ${f.page + 1}", 9f, 0xFF98A2B3.toInt())
+            y += bh + 26f
+        }
+        val at = nb.pages.size
+        for ((k, p) in pages.withIndex()) {
+            nb.pages.add(at + k, p)
+            undoStack.pageAdded(p, at + k)
+            store.savePage(nb.id, p)
+        }
+        pagesChanged()
+        goToPage(at, remember = true)
+        message = "${found.size} kutu, ${pages.size} sayfalık özete toplandı"
+        return pages.size
     }
 
     /* ---------- yanlış defteri ---------- */

@@ -21,16 +21,19 @@ jobs:
       - name: Birim testleri
         run: ./gradlew --no-daemon :app:testDebugUnitTest
       - name: APK derle
-        run: ./gradlew --no-daemon :app:assembleRelease :app:assembleDebug
+        run: ./gradlew --no-daemon :app:assembleRelease :app:assembleDebug :app:bundleRelease
       - name: APK dosyalarını adlandır
         run: |
           mkdir -p out
           cp app/build/outputs/apk/release/app-release.apk out/Note-${{ github.run_number }}.apk
           cp app/build/outputs/apk/debug/app-debug.apk out/Note-debug-${{ github.run_number }}.apk
+          cp app/build/outputs/bundle/release/app-release.aab out/Note-${{ github.run_number }}.aab
       - uses: actions/upload-artifact@v4
         with:
           name: Note-apk-${{ github.run_number }}
-          path: out/*.apk
+          path: |
+            out/*.apk
+            out/*.aab
       - name: Tablete kolay indirme için sürüm yayınla
         uses: softprops/action-gh-release@v2
         with:

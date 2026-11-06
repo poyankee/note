@@ -83,6 +83,31 @@ object Exporter {
         dest: File,
         loadImage: (String) -> Bitmap?,
         progress: (Int, Int) -> Unit,
+    ) = export(context, nb, dir, pages, dest, loadImage, 0, 0, progress)
+
+    /** Sayfa altı yazısı: sayfa no (ve sayfanın oluşturulduğu tarih). */
+    fun footerText(mode: Int, index: Int, page: Page): String {
+        if (mode < 2) return "${index + 1}"
+        val d = java.text.SimpleDateFormat("dd.MM.yyyy", java.util.Locale.US).format(java.util.Date(page.id / 1000))
+        return "${index + 1}  -  $d"
+    }
+
+    /** Öğenin rengi (çözüm katmanı için). */
+    fun colorOf(it: Item): Int? = when (it) { is InkItem -> it.color; is ShapeItem -> it.color; is TextItem -> it.color; else -> null }
+
+    /**
+     * [footer]: sayfa altına numara/tarih (0 = yok). [hideColor]: bu renkteki öğeler (çözümler) yazılmaz (0 = hepsi yazılır).
+     */
+    fun export(
+        context: Context,
+        nb: Notebook,
+        dir: File,
+        pages: List<Page>,
+        dest: File,
+        loadImage: (String) -> Bitmap?,
+        footer: Int,
+        hideColor: Int,
+        progress: (Int, Int) -> Unit,
     ) {
         init(context)
         val srcFile = nb.pdfFile?.let { File(dir, it) }
@@ -136,9 +161,19 @@ object Exporter {
                         cs.saveGraphicsState()
                         cs.transform(pageMatrix(pd, page))
                         if (bg is Background.Paper) drawPaper(cs, page, bg)
-                        val items = page.items
+                        val hc = hideColor or 0xFF000000.toInt()
+                        val items = if (hideColor == 0) page.items else page.items.filter { x -> colorOf(x)?.let { (it or 0xFF000000.toInt()) == hc } != true }
                         for (it in items) if (it is InkItem && it.tool == InkTool.HIGHLIGHTER) drawItem(out, cs, it, loadImage)
                         for (it in items) if (!(it is InkItem && it.tool == InkTool.HIGHLIGHTER)) drawItem(out, cs, it, loadImage)
+                        if (footer > 0) try {
+                            val font = PDType1Font.HELVETICA
+                            val t = footerText(footer, n, page)
+                            val w = font.getStringWidth(t) / 1000f * 9f
+                            cs.setNonStrokingColor(0.6f, 0.64f, 0.7f)
+                            cs.beginText(); cs.setFont(font, 9f)
+                            cs.setTextMatrix(Matrix(1f, 0f, 0f, -1f, page.width - 14f - w, page.height - 12f))
+                            cs.showText(t); cs.endText()
+                        } catch (_: Exception) {}
                         cs.restoreGraphicsState()
                     }
                     progress(n + 1, pages.size)

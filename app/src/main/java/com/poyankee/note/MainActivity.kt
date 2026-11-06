@@ -94,7 +94,10 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val systemDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-            val wantDark = when (settings.themeValue) { ThemeMode.DARK -> true; ThemeMode.LIGHT -> false; ThemeMode.SYSTEM -> systemDark }
+            val wantDark = settings.eyeComfort.value || when (settings.themeValue) { ThemeMode.DARK -> true; ThemeMode.LIGHT -> false; ThemeMode.SYSTEM -> systemDark }
+            val sc = listOf(0.88f, 1f, 1.15f, 1.32f)[settings.uiSize.value.coerceIn(0, 3)]
+            if (UI.scale != sc) UI.scale = sc
+            if (UI.warm != settings.eyeComfort.value) UI.warm = settings.eyeComfort.value
             if (UI.dark != wantDark) UI.dark = wantDark
             val pal = try { com.poyankee.note.ui.Palette.valueOf(settings.colorTheme.value) } catch (_: Exception) { com.poyankee.note.ui.Palette.DEFAULT }
             if (UI.palette != pal) UI.palette = pal
@@ -143,9 +146,18 @@ class MainActivity : ComponentActivity() {
                             onRestoreTrash = { id -> store.restoreFromTrash(id); refresh() },
                             onPurge = { id -> store.purge(id); trash = trash.filter { it.first.id != id } },
                             onEmptyTrash = { store.emptyTrash(); trash = emptyList() },
-                            onOpenTodo = { id, page -> settings.setLastPage(id, page); openById(id) },
+                            onOpenTodo = { id, page -> if (page >= 0) settings.setLastPage(id, page); openById(id) },
+                            onSaveTemplate = { id -> saveTemplate(id) },
+                            onFromTemplate = { id -> fromTemplate(id) },
                             onMerge = { ids -> mergeNotebooks(ids) },
                             onFromImages = { pickImages.launch("image/*") },
+                            onForgotPin = { nb -> forgotPin(nb) },
+                            onWrongBook = {
+                                bg.execute {
+                                    val id = com.poyankee.note.data.WrongBook.ensure(store, settings)
+                                    runOnUiThread { refresh(); open(id) }
+                                }
+                            },
                             onMove = { id, f -> store.setFolder(id, f); notebooks = notebooks.map { if (it.id == id) it.copy(folder = f) else it } },
                             onCreateFolder = { name -> addFolder(name) },
                             onRenameFolder = { old, new -> renameFolder(old, new) },
@@ -159,7 +171,7 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     pinFor?.let { nb ->
-                        PinDialog("Kilitli defter", "\"${nb.name}\" defterini açmak için PIN girin", onDismiss = { pinFor = null }) { pin ->
+                        PinDialog("Kilitli defter", "\"${nb.name}\" defterini açmak için PIN girin", onForgot = { pinFor = null; forgotPin(nb) }, onDismiss = { pinFor = null }) { pin ->
                             if (Lock.check(nb.id, pin, nb.lockHash)) { pinFor = null; open(nb.id); true } else false
                         }
                     }
@@ -182,11 +194,38 @@ class MainActivity : ComponentActivity() {
             return true
         }
         val ed = editor
+        // klavye kısayolları (klavye bağlıyken): Ctrl+Z geri al, Ctrl+Y yinele, Ctrl+C/X/V, Ctrl+D çoğalt, Sayfa yukarı/aşağı, Del, Esc
+        if (ed != null && event.action == KeyEvent.ACTION_DOWN && handleShortcut(ed, event)) return true
         if (ed != null && PenKeys.isPenKey(code, settings.penKeyCodeSet())) {
             if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) ed.onPenKey()
             return true
         }
         return super.dispatchKeyEvent(event)
+    }
+
+    private fun handleShortcut(ed: EditorController, e: KeyEvent): Boolean {
+        val v = ed.view ?: return false
+        if (e.isCtrlPressed) {
+            when (e.keyCode) {
+                KeyEvent.KEYCODE_Z -> { if (e.isShiftPressed) ed.redo() else ed.undo(); return true }
+                KeyEvent.KEYCODE_Y -> { ed.redo(); return true }
+                KeyEvent.KEYCODE_C -> if (ed.hasSelection) { v.selectionCopy(); return true }
+                KeyEvent.KEYCODE_X -> if (ed.hasSelection) { v.selectionCut(); return true }
+                KeyEvent.KEYCODE_V -> if (ed.clipboardCount > 0) { ed.paste(); return true }
+                KeyEvent.KEYCODE_D -> { if (ed.hasSelection) v.selectionDuplicate(); return true }
+            }
+            return false
+        }
+        when (e.keyCode) {
+            KeyEvent.KEYCODE_PAGE_DOWN -> { ed.goToPage(ed.currentPage + 1, false); return true }
+            KeyEvent.KEYCODE_PAGE_UP -> { ed.goToPage(ed.currentPage - 1, false); return true }
+            KeyEvent.KEYCODE_FORWARD_DEL -> if (ed.hasSelection) { v.selectionDelete(); return true }
+            KeyEvent.KEYCODE_ESCAPE -> {
+                if (ed.hasSelection) { v.clearSelection(); return true }
+                if (ed.presentation) { ed.presentation = false; return true }
+            }
+        }
+        return false
     }
 
     /* ---------- klasörler ---------- */
@@ -310,6 +349,32 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /* ---------- kilit kurtarma: cihazın ekran kilidiyle ---------- */
+    private var forgotFor: NotebookInfo? = null
+    private val confirmCredential = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
+        val nb = forgotFor ?: return@registerForActivityResult
+        forgotFor = null
+        if (r.resultCode == RESULT_OK) {
+            store.setLock(nb.id, "")
+            notebooks = notebooks.map { if (it.id == nb.id) it.copy(lockHash = "") else it }
+            com.poyankee.note.ui.PinGuard.success()
+            android.widget.Toast.makeText(this, "Kilit kaldırıldı", android.widget.Toast.LENGTH_SHORT).show()
+            open(nb.id)
+        }
+    }
+
+    private fun forgotPin(nb: NotebookInfo) {
+        val km = getSystemService(android.app.KeyguardManager::class.java)
+        if (km == null || !km.isDeviceSecure) {
+            android.widget.Toast.makeText(this, "Cihazınızda ekran kilidi olmadığı için PIN kurtarılamıyor. Ekran kilidi ekleyip tekrar deneyin.", android.widget.Toast.LENGTH_LONG).show()
+            return
+        }
+        @Suppress("DEPRECATION")
+        val i = km.createConfirmDeviceCredentialIntent("Defter kilidini kaldır", "\"${nb.name}\" için cihazınızın ekran kilidini girin") ?: return
+        forgotFor = nb
+        confirmCredential.launch(i)
+    }
+
     private fun insertPdfInto(id: String, uri: Uri, after: Int) {
         closeEditor(keepTab = true)
         var ok = false
@@ -328,6 +393,32 @@ class MainActivity : ComponentActivity() {
             val nb = com.poyankee.note.data.PdfOps.extract(applicationContext, store, id, indices, name)
             "\"${nb.name}\" oluşturuldu (${nb.pages.size} sayfa)"
         })
+    }
+
+    private fun saveTemplate(id: String) {
+        addFolder(com.poyankee.note.ui.TEMPLATE_FOLDER)
+        runOp("Şablon kaydediliyor...", {
+            store.flush()
+            val src = store.load(id)
+            val nb = com.poyankee.note.data.PdfOps.extract(applicationContext, store, id, src.pages.indices.toList(), "Şablon: " + src.name.removePrefix("Şablon: "))
+            store.setFolder(nb.id, com.poyankee.note.ui.TEMPLATE_FOLDER)
+            store.flush()
+            "\"${src.name}\" şablon olarak kaydedildi (Şablonlar klasörü)"
+        })
+    }
+
+    private fun fromTemplate(id: String) {
+        val f = folder?.takeIf { it != com.poyankee.note.ui.FAVORITES && it != com.poyankee.note.ui.TRASH && it != com.poyankee.note.ui.TEMPLATE_FOLDER } ?: ""
+        var created: String? = null
+        runOp("Defter hazırlanıyor...", {
+            store.flush()
+            val src = store.load(id)
+            val nb = com.poyankee.note.data.PdfOps.extract(applicationContext, store, id, src.pages.indices.toList(), src.name.removePrefix("Şablon: "))
+            store.setFolder(nb.id, f)
+            store.flush()
+            created = nb.id
+            null
+        }) { created?.let { open(it) } }
     }
 
     private fun mergeNotebooks(ids: List<String>) {

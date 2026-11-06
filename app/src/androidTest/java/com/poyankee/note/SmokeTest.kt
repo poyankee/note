@@ -622,6 +622,68 @@ class SmokeTest {
     }
 
     @Test
+    fun finalBatch() {
+        val v = newNotebook()
+        val c = v.controller
+        val ctx = rule.activity
+        val st = com.poyankee.note.data.Settings.get(ctx)
+        val w = v.width.toFloat(); val h = v.height.toFloat()
+
+        // bilgi kutusu ve konu özeti
+        main { c.selectTool(Tool.PEN) }
+        penLine(v, w * 0.3f, h * 0.3f, w * 0.5f, h * 0.32f)
+        penLine(v, w * 0.3f, h * 0.36f, w * 0.45f, h * 0.38f)
+        main { c.selectTool(Tool.LASSO) }
+        penPath(v, listOf(w * 0.25f to h * 0.25f, w * 0.6f to h * 0.25f, w * 0.6f to h * 0.45f, w * 0.25f to h * 0.45f, w * 0.25f to h * 0.26f))
+        assertTrue(main { c.hasSelection })
+        main { c.makeInfoBox(EditorController.InfoBox.RULE) }
+        assertTrue(items(c).any { it is com.poyankee.note.core.TextItem && it.text.startsWith(com.poyankee.note.editor.BOX_MARK) })
+        shot("26-bilgi-kutusu")
+        val pagesBefore = main { c.nb.pages.size }
+        assertEquals(1, main { c.buildSummary() })
+        assertEquals(pagesBefore + 1, main { c.nb.pages.size })
+        shot("27-konu-ozeti")
+        main { c.goToPage(0) }
+
+        // hareketli geometri: üçgen seçiliyken ölçüler
+        main { c.selectTool(Tool.POLYGON); c.polygonSides = 3 }
+        penLine(v, w * 0.6f, h * 0.7f, w * 0.6f, h * 0.55f)
+        val tri = items(c).last() as ShapeItem
+        main { c.selectTool(Tool.LASSO); v.select(0, listOf(tri)) }
+        val m = com.poyankee.note.core.Measure.polygon((tri.geom as Geom.Polyline).pts)
+        assertEquals(180f, m.angles.sum(), 0.5f)
+        shot("28-canli-olcu")
+        main { v.clearSelection() }
+
+        // sayfa no + tarih, çözüm katmanı (kırmızı çözümler gizlenir)
+        main { st.pageFooter.value = 2; c.selectTool(Tool.PEN); c.setColor(0xFFD32F2F.toInt()) }
+        penLine(v, w * 0.2f, h * 0.8f, w * 0.5f, h * 0.82f)
+        main { st.hideSolutions.value = true; v.refreshAll() }
+        shot("29-sayfa-no-cozum-gizli")
+        val out = File(ctx.cacheDir, "soru-kagidi.pdf")
+        val pages = main { c.nb.pages.toList() }
+        Exporter.export(ctx, c.nb, c.store.dir(c.nb.id), pages, out, { null }, 2, st.solutionColor.value) { _, _ -> }
+        assertTrue(out.length() > 500)
+        main { st.hideSolutions.value = false; st.pageFooter.value = 0; c.setColor(0xFF1A1A1A.toInt()); v.refreshAll() }
+
+        // arayüz boyutu ve göz dostu mod
+        main { st.uiSize.value = 3 }
+        shot("30-cok-buyuk-arayuz")
+        main { st.uiSize.value = 1; st.eyeComfort.value = true }
+        shot("31-goz-dostu")
+        main { st.eyeComfort.value = false }
+
+        // PIN deneme sınırı
+        repeat(5) { com.poyankee.note.ui.PinGuard.fail() }
+        assertTrue(com.poyankee.note.ui.PinGuard.waitSeconds() > 0)
+        com.poyankee.note.ui.PinGuard.success()
+        assertEquals(0, com.poyankee.note.ui.PinGuard.waitSeconds())
+
+        // ayarlar yedeğe girer
+        assertTrue(c.store.exportSettings().contains("pageFooter"))
+    }
+
+    @Test
     fun pdfOperations() {
         val ctx = rule.activity
         val src = File(ctx.cacheDir, "ornek3.pdf")

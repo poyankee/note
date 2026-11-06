@@ -178,6 +178,15 @@ Kenarda açılır "Kütüphane" paneli, kategorilere ayrılmış, aranabilir; ek
 - F arama (metin kutuları, formüller, PDF yazısı); soru alanları kütüphanede (Genel)
 - O1 yazdır, O2 depolama yönetimi, O3 hata kaydı (cihazda; paylaşmak isteğe bağlı)
 - Seçim çubuğunda renkler ve "Kütüphaneye kaydet"
+- Yanlış defteri sol menüde; Ders programı; Şablon defterler
+- I1 hareketli geometri (seçili şeklin kenar/açı/alan/çevre canlı ölçümü), I2 bilgi kutuları + konu özeti
+- F sayfa no + tarih, çözüm katmanı (renge göre gizle; soru kağıdı olarak dışa aktar), basınç eğrisi
+- M5 arayüz boyutu (Çok büyük = erişilebilirlik), M8 göz dostu mod
+- P güvenlik: internet izni kesin kapalı, Android bulut yedeği kapalı, FileProvider yalnız geçici dosyalar, yedek geri yüklemede klasör dışı/zip bombası koruması, PDF boyut sınırı, PIN deneme sınırı, file:// açma kapalı
+- R kilit kurtarma: cihazın ekran kilidiyle
+- Q hakkında, gizlilik politikası (docs/GIZLILIK.md), lisanslar, ayarların yedeğe girmesi, AAB (CI'da), telefonda daraltılabilir sol panel
+- S klavye kısayolları; T elle çalıştırılan "Cihaz uyumluluğu" iş akışı (Android 10 telefon, 12 ve 14 tablet)
+- Kontrol listesi: docs/KONTROL_LISTESI.md
 - A2'nin ilk adımı: Ayarlar › Kalem ve el › "Kalem testi" ekranı. Kullanıcı Focus Pen Pro ile deneyip sonucu bildirecek; sonuca göre çift dokunuş bağlanacak.
 - C10 küçük menüde kalem + silgi
 - M1 kaldığın sayfadan açılma

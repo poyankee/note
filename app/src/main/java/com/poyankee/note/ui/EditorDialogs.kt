@@ -288,6 +288,8 @@ fun ExportDialog(ctl: EditorController, onDismiss: () -> Unit) {
     var what by remember { mutableIntStateOf(0) } // 0 tüm defter pdf, 1 bu sayfa pdf, 2 bu sayfa png
     var progress by remember { mutableStateOf<Float?>(null) }
     var pending by remember { mutableStateOf<File?>(null) }
+    var noSolutions by remember { mutableStateOf(ctl.settings.hideSolutions.value) }
+    var footer by remember { mutableIntStateOf(ctl.settings.pageFooter.value) }
     val baseName = ctl.nb.name.replace(Regex("[\\\\/:*?\"<>|]"), "_").take(60).ifBlank { "Note" }
 
     suspend fun build(): File? = withContext(Dispatchers.IO) {
@@ -310,7 +312,8 @@ fun ExportDialog(ctl: EditorController, onDismiss: () -> Unit) {
                 val f = File(dir, if (what == 1) "$baseName - s${ctl.currentPage + 1}.pdf" else "$baseName.pdf")
                 val pages = if (what == 1) listOf(cur) else ctl.nb.pages.toList()
                 val snaps = pages.map { p -> Page(p.id, p.background, p.width, p.height).also { it.items.addAll(p.items) } }
-                Exporter.export(context, ctl.nb, ctl.store.dir(ctl.nb.id), snaps, f, { ctl.loadImageBlocking(it) }) { d, t ->
+                val hide = if (noSolutions) ctl.settings.solutionColor.value else 0
+                Exporter.export(context, ctl.nb, ctl.store.dir(ctl.nb.id), snaps, f, { ctl.loadImageBlocking(it) }, footer, hide) { d, t ->
                     progress = d.toFloat() / t
                 }
                 f
@@ -366,6 +369,18 @@ fun ExportDialog(ctl: EditorController, onDismiss: () -> Unit) {
                         Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(if (what == i) Color(0xFFD6E4F5) else Color.Transparent)
                             .combinedClickable(onClick = { what = i }).padding(10.dp),
                     ) { Text(n) }
+                }
+                if (what != 2) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+                        Text("Çözümleri gizle (soru kağıdı)", modifier = Modifier.weight(1f))
+                        androidx.compose.material3.Switch(noSolutions, { noSolutions = it }, enabled = ctl.settings.solutionColor.value != 0)
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Sayfa numarası", modifier = Modifier.weight(1f))
+                        listOf("Yok", "No", "No + tarih").forEachIndexed { i, t ->
+                            TextButton(onClick = { footer = i }) { Text(t, fontWeight = if (footer == i) FontWeight.Bold else FontWeight.Normal) }
+                        }
+                    }
                 }
                 Text(
                     "Yazılarınız PDF'e vektör olarak eklenir: yakınlaştırınca bulanıklaşmaz, orijinal PDF bozulmaz.",

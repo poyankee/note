@@ -62,6 +62,14 @@ class Settings(context: Context) {
 
     // Kalem
     val pressure = bool("pressure", true)
+    /** Basınç eğrisi: 0 çok yumuşak … 2 normal … 4 sert. */
+    val pressureCurve = int("pressureCurve", 2)
+    /** Sayfa altına: 0 hiçbir şey, 1 sayfa no, 2 sayfa no + tarih (ekranda ve dışa aktarmada). */
+    val pageFooter = int("pageFooter", 0)
+    /** Çözüm katmanı: bu renkle yazılanlar "çözüm" sayılır (0 = kapalı). */
+    val solutionColor = int("solutionColor", 0xFFD32F2F.toInt())
+    /** Çözümler gizli mi (ekranda). */
+    val hideSolutions = bool("hideSolutions", false)
     val smoothing = int("smoothing", 2)
     val prediction = bool("prediction", true)
     /** Silgiyle sildikten sonra önceki araca (kaleme) kendiliğinden dön. */
@@ -102,6 +110,10 @@ class Settings(context: Context) {
     // Görünüm
     val theme = str("theme", ThemeMode.SYSTEM.name)
     val colorTheme = str("colorTheme", "DEFAULT")
+    /** Arayüz boyutu: 0 küçük, 1 normal, 2 büyük, 3 çok büyük (erişilebilirlik). */
+    val uiSize = int("uiSize", 1)
+    /** Göz dostu mod: koyu tema + sıcak renk filtresi. */
+    val eyeComfort = bool("eyeComfort", false)
     val dockCollapsed = bool("dockCollapsed", false)
     val dockX = float("dockX", 0f)
     val dockY = float("dockY", 0f)
@@ -109,6 +121,9 @@ class Settings(context: Context) {
     val navY = float("navY", 0f)
     val presX = float("presX", 0f)
     val presY = float("presY", 0f)
+
+    /** Ders programı: "gün|saat|ders|defterKimliği" kayıtları, ayraç \u0001. */
+    val timetable = str("timetable", "")
 
     /** Yanlış defterinin kimliği (boş = henüz yok). */
     val wrongNotebook = str("wrongNotebook", "")

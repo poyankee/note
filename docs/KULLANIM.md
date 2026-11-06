@@ -166,6 +166,16 @@ Sol paneldeki **Yapılacaklar** (defterin içinde üst çubuktaki ✓ listesi si
 ### Depolama ve hata kaydı
 Ayarlar › **Depolama**: defterlerin kapladığı alan, geçici dosyaları ve kullanılmayan görselleri silme. Ayarlar › **Hata kayıtları**: uygulama beklenmedik şekilde kapanırsa nedeni cihazda kaydedilir; isterseniz paylaşırsınız, hiçbir şey kendiliğinden gönderilmez.
 
+### Son eklenenler
+- **Hareketli geometri:** tek bir şekli seçin; kenar uzunlukları (cm), açılar, alan ve çevre görünür. Köşeyi sürükleyince anında değişir. Alttaki **Ölçü** ile açıp kapatın.
+- **Bilgi kutusu:** yazıyı seçin › **Kutu** › Kural / Tanım / Örnek / Dikkat / Formül / Özet. ⋮ › **Konu özeti oluştur** bütün kutuları sona eklenen özet sayfasında toplar.
+- **Çözüm katmanı:** Ayarlar › Sayfalar › Çözüm rengi. O renkle yazdıklarınız ⋮ › Çözümleri gizle ile saklanır; dışa aktarırken "Çözümleri gizle" ile soru kağıdı çıkar.
+- **Sayfa numarası / tarih:** Ayarlar › Sayfalar › Sayfa altında.
+- **Ders programı**, **Şablondan yeni defter**, **Yanlış defteri**: sol panelde.
+- **Kilit kurtarma:** PIN'i unutursanız "PIN'i unuttum" › cihazınızın ekran kilidi.
+- **Arayüz boyutu** ve **Göz dostu mod**: Ayarlar › Görünüm.
+- **Klavye:** Ctrl+Z / Ctrl+Y, Ctrl+C / X / V, Ctrl+D (çoğalt), Sayfa yukarı / aşağı, Del (seçimi sil), Esc.
+
 ## Bilinen sınırlar (şimdilik)
 
 - Kalem tuşlarının Xiaomi kalemde nasıl bildirildiği cihazda denenmeli; çalışmazsa Ayarlar'dan değiştirilebilir veya bildirin.

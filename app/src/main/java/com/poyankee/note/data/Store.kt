@@ -55,6 +55,8 @@ class Store(context: Context) {
 
     fun dir(id: String) = File(root, id)
 
+    companion object { const val MAX_PDF = 1L shl 30 }
+
     private fun readInfo(d: File): NotebookInfo? {
         val f = File(d, "notebook.bin")
         if (!f.exists()) return null
@@ -120,7 +122,15 @@ class Store(context: Context) {
         val pdf = File(d, "source.pdf")
         context.contentResolver.openInputStream(uri).use { inp ->
             requireNotNull(inp) { "Dosya açılamadı" }
-            FileOutputStream(pdf).use { inp.copyTo(it, 1 shl 16) }
+            FileOutputStream(pdf).use { out ->
+                val buf = ByteArray(1 shl 16); var total = 0L
+                while (true) {
+                    val n = inp.read(buf); if (n < 0) break
+                    total += n
+                    if (total > MAX_PDF) { d.deleteRecursively(); throw IllegalStateException("PDF çok büyük (en fazla 1 GB)") }
+                    out.write(buf, 0, n)
+                }
+            }
         }
         val now = System.currentTimeMillis()
         val nb = Notebook(id, displayName(context, uri) ?: "PDF", now, now, "source.pdf", 0, Background.Paper(Template.GRID), PageSize.A4_PORTRAIT, folder)
@@ -253,6 +263,10 @@ class Store(context: Context) {
             zip.putNextEntry(java.util.zip.ZipEntry("note-yedek.txt"))
             zip.write("Note yedeği\nsürüm=1\n".toByteArray())
             zip.closeEntry()
+            // ayarlar (cihaza özel olanlar hariç)
+            zip.putNextEntry(java.util.zip.ZipEntry("ayarlar.txt"))
+            zip.write(exportSettings().toByteArray())
+            zip.closeEntry()
             root.walkTopDown().filter { it.isFile && !it.name.endsWith(".tmp") }.forEach { f ->
                 val rel = f.relativeTo(root).path.replace(File.separatorChar, '/')
                 zip.putNextEntry(java.util.zip.ZipEntry("notebooks/$rel"))
@@ -260,6 +274,32 @@ class Store(context: Context) {
                 zip.closeEntry()
             }
         }
+    }
+
+    private fun prefs() = appContext.getSharedPreferences("settings", Context.MODE_PRIVATE)
+    private fun deviceOnly(k: String) = k == "backupTree" || k == "lastBackup" || k.startsWith("dock") || k.startsWith("nav") || k.startsWith("pres")
+
+    /** Ayarları satır satır metne çevirir: anahtar, tür, değer (sekmeyle ayrılmış). */
+    fun exportSettings(): String = prefs().all.entries.filter { !deviceOnly(it.key) }.mapNotNull { (k, v) ->
+        val t = when (v) { is Boolean -> "b"; is Int -> "i"; is Long -> "l"; is Float -> "f"; is String -> "s"; else -> return@mapNotNull null }
+        k + "\t" + t + "\t" + v.toString().replace("\\", "\\\\").replace("\n", "\\n").replace("\t", "\\t")
+    }.joinToString("\n")
+
+    /** Yedekteki ayarları uygular (uygulama yeniden açılınca etkin olur). */
+    fun importSettings(text: String) {
+        val e = prefs().edit()
+        for (line in text.split('\n')) {
+            val p = line.split('\t', limit = 3)
+            if (p.size < 3 || deviceOnly(p[0])) continue
+            val v = p[2].replace("\\t", "\t").replace("\\n", "\n").replace("\\\\", "\\")
+            try {
+                when (p[1]) {
+                    "b" -> e.putBoolean(p[0], v.toBoolean()); "i" -> e.putInt(p[0], v.toInt()); "l" -> e.putLong(p[0], v.toLong())
+                    "f" -> e.putFloat(p[0], v.toFloat()); "s" -> e.putString(p[0], v)
+                }
+            } catch (_: Exception) {}
+        }
+        e.apply()
     }
 
     /**
@@ -270,16 +310,40 @@ class Store(context: Context) {
         flush()
         val tmp = File(root.parentFile, "restore_tmp").apply { deleteRecursively(); mkdirs() }
         var valid = false
-        java.util.zip.ZipInputStream(java.io.BufferedInputStream(inp, 1 shl 16)).use { zip ->
-            while (true) {
-                val e = zip.nextEntry ?: break
-                if (e.name == "note-yedek.txt") valid = true
-                if (e.isDirectory || !e.name.startsWith("notebooks/") || e.name.contains("..")) continue
-                val f = File(tmp, e.name.removePrefix("notebooks/"))
-                f.parentFile?.mkdirs()
-                FileOutputStream(f).use { zip.copyTo(it, 1 shl 16) }
+        var settingsText: String? = null
+        // güvenlik: klasör dışına yazma (../), aşırı büyük veya çok sayıda dosya (zip bombası) reddedilir
+        val maxTotal = 4L shl 30; val maxEntries = 50_000
+        var total = 0L; var entries = 0
+        val tmpCanon = tmp.canonicalPath + File.separator
+        try {
+            java.util.zip.ZipInputStream(java.io.BufferedInputStream(inp, 1 shl 16)).use { zip ->
+                val buf = ByteArray(1 shl 16)
+                while (true) {
+                    val e = zip.nextEntry ?: break
+                    if (++entries > maxEntries) throw IllegalStateException("Yedek dosyası geçersiz (çok fazla dosya)")
+                    if (e.name == "note-yedek.txt") valid = true
+                    if (e.name == "ayarlar.txt") {
+                        val bytes = java.io.ByteArrayOutputStream()
+                        while (true) { val n = zip.read(buf); if (n < 0 || bytes.size() > (1 shl 20)) break; bytes.write(buf, 0, n) }
+                        settingsText = bytes.toString("UTF-8")
+                        continue
+                    }
+                    if (e.isDirectory || !e.name.startsWith("notebooks/") || e.name.contains("..") || e.name.contains('\\')) continue
+                    val f = File(tmp, e.name.removePrefix("notebooks/"))
+                    if (!f.canonicalPath.startsWith(tmpCanon)) continue
+                    f.parentFile?.mkdirs()
+                    FileOutputStream(f).use { out ->
+                        while (true) {
+                            val n = zip.read(buf)
+                            if (n < 0) break
+                            total += n
+                            if (total > maxTotal) throw IllegalStateException("Yedek dosyası çok büyük")
+                            out.write(buf, 0, n)
+                        }
+                    }
+                }
             }
-        }
+        } catch (e: Exception) { tmp.deleteRecursively(); throw e }
         if (!valid) { tmp.deleteRecursively(); throw IllegalStateException("Bu dosya bir Note yedeği değil") }
         var count = 0
         tmp.listFiles()?.forEach { d ->
@@ -295,6 +359,7 @@ class Store(context: Context) {
             val merged = (folders() + f.readLines().map { it.trim() }.filter { it.isNotEmpty() }).distinct()
             foldersFile.writeText(merged.joinToString("\n"))
         }
+        settingsText?.let { try { importSettings(it) } catch (_: Exception) {} }
         // kullanıcı kütüphanesini ekle
         File(tmp, "library").listFiles()?.forEach { f -> try { f.copyTo(File(root, "library/${f.name}"), overwrite = true) } catch (_: Exception) {} }
         // yapılacaklar listesini birleştir

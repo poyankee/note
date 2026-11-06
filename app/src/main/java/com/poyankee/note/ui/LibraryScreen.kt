@@ -36,6 +36,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Menu
+import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.AssignmentLate
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Checklist
 import androidx.compose.material.icons.rounded.Close
@@ -127,7 +130,13 @@ fun LibraryScreen(
     onOpenTodo: (String, Int) -> Unit = { _, _ -> },
     onMerge: (List<String>) -> Unit = {},
     onFromImages: () -> Unit = {},
+    onWrongBook: () -> Unit = {},
+    onForgotPin: (NotebookInfo) -> Unit = {},
+    onSaveTemplate: (String) -> Unit = {},
+    onFromTemplate: (String) -> Unit = {},
 ) {
+    var showTemplates by remember { mutableStateOf(false) }
+    var showTimetable by remember { mutableStateOf(false) }
     var showTodos by remember { mutableStateOf(false) }
     val todos = com.poyankee.note.data.TodoList.get(androidx.compose.ui.platform.LocalContext.current)
     var query by remember { mutableStateOf("") }
@@ -157,9 +166,12 @@ fun LibraryScreen(
 
     BoxWithConstraints(Modifier.fillMaxSize().background(UI.Bg)) {
         val wide = maxWidth > 720.dp
+        // telefonda (dar ekran) kenar çubuğu gizli; üstteki ☰ ile açılır
+        val narrow = maxWidth < 600.dp
+        var sideOpen by remember { mutableStateOf(false) }
         Row(Modifier.fillMaxSize()) {
             // ---------- kenar çubuğu ----------
-            Column(
+            if (!narrow || sideOpen) Column(
                 Modifier.width(if (wide) 264.dp else 210.dp).fillMaxHeight().background(UI.Surface)
                     .padding(horizontal = 14.dp, vertical = 18.dp),
             ) {
@@ -187,10 +199,13 @@ fun LibraryScreen(
                     shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, UI.Border),
                 ) { Icon(Icons.Rounded.FlashOn, null, tint = Color(0xFFF59E0B)); Spacer(Modifier.width(6.dp)); Text("Hızlı not", color = UI.Text) }
                 TextButton(onClick = onFromImages, modifier = Modifier.fillMaxWidth()) { Text("Fotoğraflardan defter", color = UI.TextSoft, fontSize = 13.sp) }
+                TextButton(onClick = { showTemplates = true }, modifier = Modifier.fillMaxWidth()) { Text("Şablondan yeni defter", color = UI.TextSoft, fontSize = 13.sp) }
 
                 Spacer(Modifier.height(20.dp))
                 NavItem(Icons.Rounded.LibraryBooks, "Tüm defterler", notebooks.size, folder == null) { onSelectFolder(null) }
                 NavItem(Icons.Rounded.Star, "Favoriler", notebooks.count { it.favorite }, isFav) { onSelectFolder(FAVORITES) }
+                NavItem(Icons.Rounded.AssignmentLate, "Yanlış defteri", null, false) { onWrongBook() }
+                NavItem(Icons.Rounded.CalendarMonth, "Ders programı", null, showTimetable) { showTimetable = true }
                 NavItem(Icons.Rounded.Checklist, "Yapılacaklar", todos.items.count { !it.done }, showTodos) { showTodos = !showTodos }
                 NavItem(Icons.Rounded.Delete, "Çöp kutusu", trash.size, isTrash) { onSelectFolder(TRASH) }
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 8.dp, top = 18.dp, bottom = 4.dp)) {
@@ -259,6 +274,7 @@ fun LibraryScreen(
                         Text("Sil", color = if (enabled) UI.Danger else UI.TextFaint)
                     }
                 } else Row(Modifier.fillMaxWidth().padding(start = 32.dp, end = 32.dp, top = 26.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    if (narrow) IconButton(onClick = { sideOpen = !sideOpen }) { Icon(Icons.Rounded.Menu, "Menü", tint = UI.Text) }
                     Column(Modifier.weight(1f)) {
                         Text(if (isFav) "Favoriler" else folder ?: "Tüm defterler", style = TextStyle(fontSize = 28.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.6).sp), color = UI.Text)
                         val count = notebooks.count { matches(it, folder) }
@@ -282,7 +298,7 @@ fun LibraryScreen(
                     Spacer(Modifier.width(8.dp))
                     Pill("Seç", false) { selection = emptySet() }
                     Spacer(Modifier.width(10.dp))
-                    SearchField(query) { query = it }
+                    SearchField(query, if (narrow) 120.dp else 280.dp) { query = it }
                 }
                 val filtered = notebooks.filter { matches(it, folder) && (query.isBlank() || it.name.contains(query, ignoreCase = true)) }
                 val sorted = when (sort) {
@@ -305,6 +321,7 @@ fun LibraryScreen(
                             onLongPress = { val s0 = selection; selection = (s0 ?: emptySet()) + nb.id },
                             onRename = { renameTarget = nb }, onMove = { moveTarget = nb }, onDelete = { deleteTarget = nb },
                             onFavorite = { onFavorite(nb.id, !nb.favorite) }, onLock = { lockTarget = nb },
+                            onTemplate = { onSaveTemplate(nb.id) },
                         )
                     }
                     if (view == com.poyankee.note.data.LibraryView.LIST) {
@@ -353,11 +370,11 @@ fun LibraryScreen(
     }
     lockTarget?.let { nb ->
         if (nb.locked) {
-            PinDialog("Kilidi kaldır", "Defterin PIN kodunu girin", onDismiss = { lockTarget = null }) { pin ->
+            PinDialog("Kilidi kaldır", "Defterin PIN kodunu girin", onForgot = { lockTarget = null; onForgotPin(nb) }, onDismiss = { lockTarget = null }) { pin ->
                 if (com.poyankee.note.data.Lock.check(nb.id, pin, nb.lockHash)) { onLock(nb.id, ""); lockTarget = null; true } else false
             }
         } else {
-            PinDialog("Defteri kilitle", "4-8 haneli bir PIN belirleyin. PIN'i unutursanız defter açılamaz.", confirmTwice = true, onDismiss = { lockTarget = null }) { pin ->
+            PinDialog("Defteri kilitle", "4-8 haneli bir PIN belirleyin. Unutursanız cihazınızın ekran kilidiyle (desen, PIN, parmak izi) kilidi kaldırabilirsiniz.", confirmTwice = true, onDismiss = { lockTarget = null }) { pin ->
                 onLock(nb.id, com.poyankee.note.data.Lock.hash(nb.id, pin)); lockTarget = null; true
             }
         }
@@ -373,6 +390,24 @@ fun LibraryScreen(
             bulkMove = false; ids.forEach { onMove(it, f) }; selection = null
         }
     }
+    if (showTemplates) {
+        val templates = notebooks.filter { it.folder == TEMPLATE_FOLDER }
+        AlertDialog(
+            onDismissRequest = { showTemplates = false }, containerColor = UI.Surface,
+            title = { Text("Şablondan yeni defter") },
+            text = {
+                Column {
+                    if (templates.isEmpty()) Text(
+                        "Henüz şablon yok. Bir defterin ⋯ menüsünden \"Şablon olarak kaydet\"i seçin; sayfa düzeni ve içindekiler şablon olur (\"$TEMPLATE_FOLDER\" klasöründe durur).",
+                        color = UI.TextSoft, fontSize = 14.sp,
+                    )
+                    templates.forEach { t -> FolderRow(t.name.removePrefix("Şablon: "), false) { showTemplates = false; onFromTemplate(t.id) } }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showTemplates = false }) { Text("Kapat") } },
+        )
+    }
+    if (showTimetable) TimetableDialog(notebooks.filter { it.folder != TEMPLATE_FOLDER }, onOpen = { id -> showTimetable = false; onOpenTodo(id, -1) }) { showTimetable = false }
     if (confirmEmpty) ConfirmDialog("Çöp kutusunu boşalt", "Çöp kutusundaki ${trash.size} defter kalıcı olarak silinecek. Bu geri alınamaz.", "Sil", onEmptyTrash) { confirmEmpty = false }
     purgeTarget?.let { nb ->
         ConfirmDialog("Kalıcı olarak sil", "\"${nb.name}\" kalıcı olarak silinecek. Bu geri alınamaz.", "Sil", { onPurge(nb.id) }) { purgeTarget = null }
@@ -409,9 +444,9 @@ private fun NavItem(icon: ImageVector, text: String, count: Int?, selected: Bool
 }
 
 @Composable
-private fun SearchField(value: String, onChange: (String) -> Unit) {
+private fun SearchField(value: String, width: androidx.compose.ui.unit.Dp = 280.dp, onChange: (String) -> Unit) {
     Row(
-        Modifier.width(280.dp).height(42.dp).clip(RoundedCornerShape(21.dp)).background(UI.Surface)
+        Modifier.width(width).height(42.dp).clip(RoundedCornerShape(21.dp)).background(UI.Surface)
             .border(1.dp, UI.Border, RoundedCornerShape(21.dp)).padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -443,7 +478,7 @@ private val dateFmt = SimpleDateFormat("d MMM yyyy", Locale.forLanguageTag("tr")
 
 private class CardActions(
     val onOpen: () -> Unit, val onLongPress: () -> Unit, val onRename: () -> Unit, val onMove: () -> Unit, val onDelete: () -> Unit,
-    val onFavorite: () -> Unit, val onLock: () -> Unit,
+    val onFavorite: () -> Unit, val onLock: () -> Unit, val onTemplate: () -> Unit = {},
 )
 
 @Composable
@@ -463,6 +498,7 @@ private fun NotebookMenu(nb: NotebookInfo, open: Boolean, onClose: () -> Unit, a
         DropdownMenuItem(text = { Text("Klasöre taşı") }, onClick = { onClose(); a.onMove() })
         DropdownMenuItem(text = { Text(if (nb.favorite) "Favorilerden çıkar" else "Favorilere ekle") }, onClick = { onClose(); a.onFavorite() })
         DropdownMenuItem(text = { Text(if (nb.locked) "Kilidi kaldır" else "Kilitle") }, onClick = { onClose(); a.onLock() })
+        if (!nb.locked) DropdownMenuItem(text = { Text("Şablon olarak kaydet") }, onClick = { onClose(); a.onTemplate() })
         DropdownMenuItem(text = { Text("Sil", color = UI.Danger) }, onClick = { onClose(); a.onDelete() })
     }
 }
@@ -597,7 +633,12 @@ fun NameDialog(
         confirmButton = {
             Button(onClick = { onDone(text.trim()) }, shape = RoundedCornerShape(10.dp)) { Text(confirm) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Vazgeç", color = UI.TextSoft) } },
+        dismissButton = {
+            Row {
+                if (onForgot != null) TextButton(onClick = onForgot) { Text("PIN'i unuttum", color = UI.TextSoft) }
+                TextButton(onClick = onDismiss) { Text("Vazgeç", color = UI.TextSoft) }
+            }
+        },
     )
 }
 
@@ -692,6 +733,9 @@ private fun TrashView(items: List<Pair<NotebookInfo, Long>>, onRestore: (String)
     }
 }
 
+/** Şablon defterlerin durduğu klasör. */
+const val TEMPLATE_FOLDER = "Şablonlar"
+
 /** Kenar çubuğunda "Çöp kutusu" seçimi için özel değer. */
 const val TRASH = "\u0000cop"
 
@@ -704,9 +748,21 @@ private fun matches(nb: NotebookInfo, folder: String?) = when (folder) {
     else -> nb.folder == folder
 }
 
+/** Yanlış PIN denemelerini sınırlar: 5 yanlıştan sonra giderek artan bekleme. */
+object PinGuard {
+    private var failures = 0
+    private var lockedUntil = 0L
+    fun waitSeconds(): Int = ((lockedUntil - System.currentTimeMillis()) / 1000).toInt().coerceAtLeast(0)
+    fun fail() {
+        failures++
+        if (failures >= 5) lockedUntil = System.currentTimeMillis() + 30_000L * (1L shl (failures - 5).coerceAtMost(6))
+    }
+    fun success() { failures = 0; lockedUntil = 0L }
+}
+
 /** PIN girişi. [onPin] true dönerse pencere kapanır, false ise "yanlış PIN" gösterilir. */
 @Composable
-fun PinDialog(title: String, text: String, confirmTwice: Boolean = false, onDismiss: () -> Unit, onPin: (String) -> Boolean) {
+fun PinDialog(title: String, text: String, confirmTwice: Boolean = false, onForgot: (() -> Unit)? = null, onDismiss: () -> Unit, onPin: (String) -> Boolean) {
     var pin by remember { mutableStateOf("") }
     var pin2 by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
@@ -740,10 +796,13 @@ fun PinDialog(title: String, text: String, confirmTwice: Boolean = false, onDism
         },
         confirmButton = {
             Button(onClick = {
+                val wait = PinGuard.waitSeconds()
                 when {
+                    !confirmTwice && wait > 0 -> error = "Çok fazla yanlış deneme. $wait saniye sonra tekrar deneyin."
                     pin.length < 4 -> error = "En az 4 hane"
                     confirmTwice && pin != pin2 -> error = "PIN'ler aynı değil"
-                    !onPin(pin) -> error = "PIN yanlış"
+                    !onPin(pin) -> { if (!confirmTwice) PinGuard.fail(); error = "PIN yanlış" }
+                    else -> if (!confirmTwice) PinGuard.success()
                 }
             }, shape = RoundedCornerShape(10.dp)) { Text("Tamam") }
         },
