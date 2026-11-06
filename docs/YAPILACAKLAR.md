@@ -91,7 +91,7 @@ Kenarda açılır "Kütüphane" paneli, kategorilere ayrılmış, aranabilir; ek
 4. **Yakınlaştırma kilidi + "sayfaya sığdır"**: kilitliyken parmak hareketi yakınlaştırmaz (sadece kaydırır); tek dokunuşla sayfa genişliğine dönme.
 5. **Arayüz boyutu**: küçük / normal / büyük (düğmeler, yazılar, menüler).
 6. **Silgiden otomatik dönüş**: silgiyle sildikten sonra kaleme kendiliğinden döner; Ayarlar'dan kapatılabilir.
-7. **Odak modu (sunum moduyla birleşik)**: tek dokunuşla bütün menüler gizlenir; kenara alınabilen küçük panelde sadece kalem, silgi, geri al (+ lazer, renkler). Mevcut "sunum modu" bu modla değiştirilir; projeksiyonda zaten ikinci ekran temiz görünüyor. (Öneri: birleştirilsin — kullanıcı onayı bekleniyor.)
+7. **Odak modu (sunum moduyla birleşik)**: tek dokunuşla bütün menüler gizlenir; kenara alınabilen küçük panelde sadece kalem, silgi, geri al (+ lazer, renkler). Mevcut "sunum modu" bu modla değiştirildi (kullanıcı onayladı, yapıldı).
 8. **Göz dostu ayarlar**: gece kağıdı + sıcak tonlu masa, koyu kağıtta okunaklı kalem renk seti, koyu temayla birlikte otomatik.
 
 9. **Sağ kenarda sayfa çubuğu (otomatik gizlenen)**: normalde görünmez; sayfa kaydırılmaya başlanınca sağ kenarda belirir, sürüklenerek hızlı gezinilir (sayfa numarası balonuyla), kaydırma bitince birkaç saniyede kaybolur.
@@ -156,7 +156,14 @@ Kenarda açılır "Kütüphane" paneli, kategorilere ayrılmış, aranabilir; ek
 - A3 yeni defter / hızlı not / yeni sayfa her zaman düz beyaz
 - B4 yeni defter ad sormadan açılır
 - B8 "Kaydedildi" bildirimi
-- B6'nın bir kısmı: kapaklar küçültüldü (görünüm seçenekleri hâlâ yapılacak)
+- B5 toplu seçim (uzun bas veya "Seç": toplu sil / klasöre taşı / favori)
+- B6 görünüm seçenekleri (küçük / orta / büyük ızgara, liste)
+- B7 klasör renkleri
+- C9 üstteki renk çubuğu kaldırıldı; seçili araca tekrar dokununca seçenekler penceresi açılır
+- C11 + M7 odak modu (sunum modunun yerini aldı); panel sağ/sol kenarda dikey durur
+- C12 sayfa boyutu (A4 dikey/yatay, 16:9, tam ekran)
+- C13'ün bir kısmı: özel kağıt rengi (masa rengi hâlâ yapılacak)
+- A2'nin ilk adımı: Ayarlar › Kalem ve el › "Kalem testi" ekranı. Kullanıcı Focus Pen Pro ile deneyip sonucu bildirecek; sonuca göre çift dokunuş bağlanacak.
 - C10 küçük menüde kalem + silgi
 - M1 kaldığın sayfadan açılma
 - M6 silgiden otomatik dönüş (Ayarlar'dan kapatılabilir)

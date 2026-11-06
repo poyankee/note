@@ -73,8 +73,8 @@ Kalemle bir çizgi/çember/üçgen çizip kalemi kaldırmadan bir an bekleyin: d
 
 ## Ders anlatımı
 
-- **Sunum modu** (tam ekran simgesi): araç çubukları ve sistem çubukları gizlenir, köşede küçük bir araç paneli kalır.
-- **Projeksiyon / HDMI**: tablet harici bir ekrana bağlandığında projeksiyonda **yalnızca sayfa** görünür, menüler sadece tablette kalır (Ayarlar → İkinci ekran). Kablosuz yansıtma tüm ekranı gösterir; o durumda sunum modunu kullanın.
+- **Odak modu** (üst çubuktaki tam ekran simgesi): bütün menüler ve sistem çubukları gizlenir; köşede yalnızca kalem, fosforlu, silgi, lazer, 4 renk, geri al ve yeni sayfa bulunan küçük bir panel kalır. Paneli ⠿ tutamaktan ekranın sağ ya da sol kenarına taşırsanız dikey, diğer yerlerde yatay durur. Çıkmak için paneldeki çıkış simgesi.
+- **Projeksiyon / HDMI**: tablet harici bir ekrana bağlandığında projeksiyonda **yalnızca sayfa** görünür, menüler sadece tablette kalır (Ayarlar → İkinci ekran). Kablosuz yansıtma tüm ekranı gösterir; o durumda odak modunu kullanın.
 - **Ders kaydı** (kırmızı daire): sayfa görünümü + mikrofon sesi MP4 olarak kaydedilir. Duraklatılabilir. Bitince video **Galeri › Movies/Note** klasörüne kaydedilir.
 
 ## Dışa aktarma
@@ -86,9 +86,10 @@ Yazılar PDF'e vektör olarak eklenir; yakınlaştırınca bulanıklaşmaz.
 ## Yeni eklenenler (sürüm 10+)
 
 ### Paneller
-- **Araç menüsünü taşıma:** menünün üstündeki ⠿ tutamaktan sürükleyin. Sayfa gezgini ve sunum modundaki panel de soldaki ⠿ tutamaktan taşınır. Konumlar hatırlanır (Ayarlar › Görünüm › Sıfırla ile eski yerine döner).
+- **Araç menüsünü taşıma:** menünün üstündeki ⠿ tutamaktan sürükleyin. Sayfa gezgini ve odak modundaki panel de soldaki ⠿ tutamaktan taşınır. Konumlar hatırlanır (Ayarlar › Görünüm › Sıfırla ile eski yerine döner).
 - **Menüyü daraltma:** menünün altındaki ˄ ile daraltın; sadece seçili araç görünür, ˅ ile açın.
-- **Renkleri değiştirme:** üstteki renk sırasının sonundaki ✎ düğmesi (veya renge uzun basma) → bir yuvaya dokunun → hazır renklerden ya da ton/doygunluk/parlaklık kaydırıcılarından yeni rengi seçin. Fosforlu kalem renkleri de ayrıca düzenlenir.
+- **Araç seçenekleri:** üstte artık renk çubuğu yok. Seçili araca (ör. Kalem) **bir kez daha dokunun**: renkler, kalınlık ve kayıtlı kalemler küçük bir pencerede açılır. Silgide boyut, kısmi silme ve "sayfayı temizle"; geometride şekil seçenekleri de buradadır.
+- **Renkleri değiştirme:** araç seçeneklerindeki renklerin sonundaki ✎ düğmesi (veya renge uzun basma) → bir yuvaya dokunun → hazır renklerden ya da ton/doygunluk/parlaklık kaydırıcılarından yeni rengi seçin. Fosforlu kalem renkleri de ayrıca düzenlenir.
 - **Kalem hazır ayarları:** kalemde "+ Kalemi kaydet" ile renk+kalınlık kaydedilir; tek dokunuşla geri seçilir, uzun basınca silinir.
 - **Sekmeler:** birden fazla defter açınca en üstte sekmeler belirir.
 - **Koyu tema:** Ayarlar › Görünüm › Tema (Sistem / Açık / Koyu).
@@ -97,11 +98,13 @@ Yazılar PDF'e vektör olarak eklenir; yakınlaştırınca bulanıklaşmaz.
 - **Yeni sayfalar düz beyaz** gelir (Ayarlar › Sayfalar ile "önceki sayfa gibi" yapılabilir). "Sayfa" panelindeki "Bu desenle yeni sayfa ekle" seçili desenle ekler.
 - Sayfa silme, ekleme, taşıma ve döndürme artık **Geri al** ile geri alınır.
 - **Yeni desenler:** sayı doğrusu, birim çember, kutupsal, Cornell not, çift sütun.
+- **Sayfa boyutu:** "Sayfa" paneli › Sayfa boyutu: A4 dikey, A4 yatay, 16:9 veya **Tam ekran** (tabletin ekran oranında, kenar boşluksuz). "Tüm sayfalara uygula" açıksa bütün sayfalar değişir. Geri al ile geri alınır.
+- **Özel kağıt rengi:** "Sayfa" paneli › Kağıt rengi › **Diğer**.
 - **Resimden desen:** "Sayfa" paneli › "Resim / PDF'ten desen": kendi çalışma kağıdınızı zemin yapın.
 - **PDF sayfa işlemleri:** Sayfalar paneli › sayfaya uzun bas › "90° döndür" / "Kırp". Yazılar sayfayla birlikte döner/kayar. Dışa aktarılan PDF de döndürülmüş/kırpılmış olur.
 
 ### Düzenleme
-- **Kopyala / Kes / Yapıştır:** seçim çubuğunda. Yapıştır: Seçim aracı seçiliyken üstte ya da ⋮ menüsünde. Başka deftere de yapıştırılabilir.
+- **Kopyala / Kes / Yapıştır:** seçim çubuğunda. Yapıştır: Seçim aracına tekrar dokununca açılan pencerede ya da ⋮ menüsünde. Başka deftere de yapıştırılabilir.
 - **Şekli sonradan düzenleme:** tek bir şekli seçince köşelerinde kareler çıkar; sürükleyerek köşeyi taşıyın (çember için yarıçap).
 - **Doldur:** seçili şeklin içini kalem renginin açık tonuyla boyar (tekrar basınca kaldırır). Geometri seçeneklerinde "İçini doldur" açıksa yeni şekiller dolu çizilir.
 - **Köşe harfleri ve ölçüler:** Geometri seçenekleri (veya Ayarlar) › "Köşelere harf", "Ölçüleri yaz".
@@ -119,11 +122,16 @@ Yazılar PDF'e vektör olarak eklenir; yakınlaştırınca bulanıklaşmaz.
 
 ### Ana sayfa
 - **Favoriler** (kapaktaki ⋯ › Favorilere ekle), **sıralama** (son düzenlenen / ad / oluşturma), **defter kilidi** (⋯ › Kilitle, PIN ile).
+- **Toplu seçim:** bir deftere uzun basın (veya üstteki **Seç**). Defterlere dokunarak seçin; üstteki çubuktan **Tümünü seç, Favori, Klasöre taşı, Sil**. Çıkmak için ✕ veya geri.
+- **Görünüm:** üstteki ▦ düğmesi: küçük, orta, büyük kapak veya liste.
+- **Klasör rengi:** sol paneldeki klasöre uzun basın › Renk.
 - **Hızlı not:** sol paneldeki düğme veya ana ekranda uygulama simgesine uzun basıp "Hızlı not".
 - **Yedekleme:** Ayarlar › Yedekleme. "Şimdi yedekle" tek bir .zip dosyası oluşturur (Drive'a kaydedebilirsiniz). "Otomatik yedek" için bir klasör seçin; uygulama açılınca günde bir yedek alır, son 5'ini tutar.
 
 ### Kalem çift dokunuşu
 Ayarlar › Kalem ve el › "Tuşu öğret" → kalemde çift dokunun. Algılanırsa seçtiğiniz işi yapar (Silgi ↔ kalem, Geri al, Lazer…). Algılanmazsa kalem bu hareketi uygulamalara iletmiyordur.
+
+**Kalem testi** (Ayarlar › Kalem ve el › Kalem testi): soldaki alana yazın, kaleme çift dokunun, yan tuşa basın. Uygulamaya ulaşan her olay sağda listelenir. Çift dokununca hiçbir satır eklenmiyorsa bu hareketi sistem (HyperOS) kullanıyordur. Gelen satırların ekran görüntüsünü gönderirseniz çift dokunuşu ona göre bağlayabilirim.
 
 ## Bilinen sınırlar (şimdilik)
 
