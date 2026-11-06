@@ -180,7 +180,7 @@ fun LibraryScreen(
         Row(Modifier.fillMaxSize()) {
             // ---------- sade sol şerit: tek "+" düğmesi ve birkaç bölüm ----------
             Column(
-                Modifier.width(96.dp).fillMaxHeight().background(UI.Surface).padding(vertical = 14.dp),
+                Modifier.width(96.dp).fillMaxHeight().background(UI.BarBg).padding(vertical = 14.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Box(
@@ -192,10 +192,11 @@ fun LibraryScreen(
                 Box {
                     var addMenu by remember { mutableStateOf(false) }
                     Box(
-                        Modifier.size(58.dp).shadow(6.dp, RoundedCornerShape(18.dp)).clip(RoundedCornerShape(18.dp)).background(UI.Primary)
+                        Modifier.size(58.dp).shadow(6.dp, RoundedCornerShape(UI.radius.dp + 2.dp)).clip(RoundedCornerShape(UI.radius.dp + 2.dp))
+                            .background(if (UI.style == UiStyle.VIVID) Color.White else UI.Primary)
                             .clickable { addMenu = true }.testTag("add"),
                         contentAlignment = Alignment.Center,
-                    ) { Icon(Icons.Rounded.Add, L.t("Yeni"), tint = Color.White, modifier = Modifier.size(30.dp)) }
+                    ) { Icon(Icons.Rounded.Add, L.t("Yeni"), tint = if (UI.style == UiStyle.VIVID) UI.Primary else Color.White, modifier = Modifier.size(30.dp)) }
                     DropdownMenu(addMenu, { addMenu = false }) {
                         DropdownMenuItem(text = { Text(L.t("Yeni defter")) }, leadingIcon = { Icon(Icons.Rounded.LibraryBooks, null) }, onClick = { addMenu = false; onCreate("") })
                         DropdownMenuItem(text = { Text(L.t("Hızlı not")) }, leadingIcon = { Icon(Icons.Rounded.FlashOn, null, tint = Color(0xFFF59E0B)) }, onClick = { addMenu = false; onQuickNote() })
@@ -432,17 +433,17 @@ fun LibraryScreen(
 private fun RailItem(icon: ImageVector, text: String, selected: Boolean, badge: Int = 0, onClick: () -> Unit) {
     Column(
         Modifier.width(84.dp).padding(vertical = 3.dp).clip(RoundedCornerShape(14.dp))
-            .background(if (selected) UI.PrimarySoft else Color.Transparent).clickable(onClick = onClick).padding(vertical = 8.dp),
+            .background(if (selected) UI.ToolSelBg else Color.Transparent).clickable(onClick = onClick).padding(vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box {
-            Icon(icon, null, tint = if (selected) UI.Primary else UI.TextSoft, modifier = Modifier.size(24.dp))
+            Icon(icon, null, tint = if (selected) UI.ToolSelFg else UI.BarFgSoft, modifier = Modifier.size(24.dp))
             if (badge > 0) Box(
                 Modifier.align(Alignment.TopEnd).offset(x = 10.dp, y = (-6).dp).clip(CircleShape).background(UI.Primary).padding(horizontal = 5.dp, vertical = 1.dp),
             ) { Text("$badge", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
         }
         Spacer(Modifier.height(4.dp))
-        Text(text, fontSize = 12.sp, color = if (selected) UI.PrimaryText else UI.TextSoft, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+        Text(text, fontSize = 12.sp, color = if (selected) UI.ToolSelFg else UI.BarFgSoft, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
             maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
     }
 }

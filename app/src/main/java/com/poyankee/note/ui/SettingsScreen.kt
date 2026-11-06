@@ -100,6 +100,32 @@ fun SettingsScreen(
             Column(Modifier.widthIn(max = 720.dp).fillMaxWidth().padding(horizontal = 24.dp, vertical = 12.dp)) {
                 Group(L.t("Görünüm")) {
                     Column(Modifier.padding(vertical = 10.dp)) {
+                        Text(L.t("Arayüz stili"), fontSize = 16.sp, color = UI.Text)
+                        Text(L.t("Sade: ferah ve sakin · Canlı: renkli çubuklar · Koyu: koyu masa, cam görünümlü araçlar"), fontSize = 13.sp, color = UI.TextSoft)
+                        Spacer(Modifier.height(10.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            com.poyankee.note.ui.UiStyle.entries.forEach { st ->
+                                val sel = UI.style == st
+                                Column(
+                                    Modifier.clip(RoundedCornerShape(14.dp)).border(if (sel) 2.5.dp else 1.dp, if (sel) UI.Primary else UI.Border, RoundedCornerShape(14.dp))
+                                        .clickable { s.uiStyle.value = st.name }.padding(8.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                ) {
+                                    StylePreview(st)
+                                    Text(L.t(st.title), fontSize = 13.sp, fontWeight = if (sel) FontWeight.SemiBold else FontWeight.Normal, color = if (sel) UI.Primary else UI.Text, modifier = Modifier.padding(top = 6.dp))
+                                }
+                            }
+                        }
+                    }
+                    Column(Modifier.padding(vertical = 10.dp)) {
+                        Text(L.t("Araç çubuğu"), fontSize = 16.sp, color = UI.Text)
+                        Spacer(Modifier.height(8.dp))
+                        PillRow {
+                            Pill(L.t("Üstte şerit"), s.toolbarPos.value != "LEFT") { s.toolbarPos.value = "TOP" }
+                            Pill(L.t("Solda yüzen menü"), s.toolbarPos.value == "LEFT") { s.toolbarPos.value = "LEFT" }
+                        }
+                    }
+                    Column(Modifier.padding(vertical = 10.dp)) {
                         Text("Dil / Language", fontSize = 16.sp, color = UI.Text)
                         Spacer(Modifier.height(8.dp))
                         val act = ctx as? android.app.Activity
@@ -412,5 +438,19 @@ private fun SliderRow(title: String, valueText: String, value: Float, range: Clo
             Text(valueText, fontSize = 14.sp, color = UI.Primary, fontWeight = FontWeight.SemiBold)
         }
         Slider(value, onChange, valueRange = range, steps = steps, colors = SliderDefaults.colors(thumbColor = UI.Primary, activeTrackColor = UI.Primary))
+    }
+}
+
+/** Arayüz stilinin küçük önizlemesi: üst çubuk, araçlar ve sayfa. */
+@Composable
+private fun StylePreview(st: com.poyankee.note.ui.UiStyle) {
+    val bar = when (st) { com.poyankee.note.ui.UiStyle.CLEAN -> androidx.compose.ui.graphics.Color.White; com.poyankee.note.ui.UiStyle.VIVID -> UI.Primary; else -> androidx.compose.ui.graphics.Color(0xFF171A20) }
+    val desk = when (st) { com.poyankee.note.ui.UiStyle.DARK -> androidx.compose.ui.graphics.Color(0xFF0B0D10); com.poyankee.note.ui.UiStyle.VIVID -> UI.PrimarySoft; else -> androidx.compose.ui.graphics.Color(0xFFE9EBEF) }
+    val dot = when (st) { com.poyankee.note.ui.UiStyle.CLEAN -> UI.Primary; else -> androidx.compose.ui.graphics.Color.White }
+    Column(Modifier.width(110.dp).height(78.dp).clip(RoundedCornerShape(8.dp)).background(desk)) {
+        Row(Modifier.fillMaxWidth().height(16.dp).background(bar).padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            repeat(5) { k -> Box(Modifier.size(6.dp).clip(androidx.compose.foundation.shape.CircleShape).background(if (k == 0) dot else dot.copy(alpha = 0.45f))) }
+        }
+        Box(Modifier.padding(start = 22.dp, top = 8.dp).width(66.dp).height(46.dp).clip(RoundedCornerShape(3.dp)).background(androidx.compose.ui.graphics.Color.White))
     }
 }

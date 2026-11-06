@@ -131,6 +131,9 @@ class EditorController(
     val instruments = mutableStateListOf<InstrumentKind>()
     var secondScreenActive by mutableStateOf(false)
     var pagesVersion by mutableIntStateOf(0)
+    /** Üstteki araç şeridinin altındaki seçenek şeridi açık mı. */
+    var optionsBarOpen by mutableStateOf(true)
+
     /** Aşağı kaydırınca üst çubuk gizlenir, yukarı çekince geri gelir. */
     var topBarHidden by mutableStateOf(false)
 

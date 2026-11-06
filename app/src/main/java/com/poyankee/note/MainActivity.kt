@@ -99,7 +99,9 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val systemDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-            val wantDark = settings.eyeComfort.value || when (settings.themeValue) { ThemeMode.DARK -> true; ThemeMode.LIGHT -> false; ThemeMode.SYSTEM -> systemDark }
+            val st = try { com.poyankee.note.ui.UiStyle.valueOf(settings.uiStyle.value) } catch (_: Exception) { com.poyankee.note.ui.UiStyle.CLEAN }
+            if (UI.style != st) UI.style = st
+            val wantDark = settings.eyeComfort.value || st == com.poyankee.note.ui.UiStyle.DARK || when (settings.themeValue) { ThemeMode.DARK -> true; ThemeMode.LIGHT -> false; ThemeMode.SYSTEM -> systemDark }
             val sc = listOf(0.88f, 1f, 1.15f, 1.32f)[settings.uiSize.value.coerceIn(0, 3)]
             if (UI.scale != sc) UI.scale = sc
             if (UI.warm != settings.eyeComfort.value) UI.warm = settings.eyeComfort.value

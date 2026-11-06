@@ -696,3 +696,15 @@ Tümü	All
 Klasör	Folder
 Kaydırınca üst çubuğu gizle	Hide the top bar while scrolling
 Defterde aşağı kaydırınca üst çubuk gizlenir, yukarı çekince geri gelir	Scrolling down in a notebook hides the top bar; scrolling up brings it back
+Arayüz stili	Interface style
+Sade: ferah ve sakin · Canlı: renkli çubuklar · Koyu: koyu masa, cam görünümlü araçlar	Clean: airy and calm · Vivid: colorful bars · Dark: dark desk, glass-like tools
+Sade	Clean
+Canlı	Vivid
+Koyu	Dark
+Araç çubuğu	Toolbar
+Üstte şerit	Strip at the top
+Solda yüzen menü	Floating menu on the left
+Seçmek istediğiniz yazının etrafını çizin	Draw around the writing you want to select
+Kalemle gösterin; iz birkaç saniyede kaybolur	Point with the pen; the trail fades in a few seconds
+Kalemin gösterdiği yer aydınlanır	The spot under the pen is lit
+Yapıştır	Paste

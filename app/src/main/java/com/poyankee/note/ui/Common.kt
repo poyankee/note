@@ -54,7 +54,24 @@ enum class Palette(val title: String, val c: LongArray) {
     CONTRAST(L.t("Yüksek kontrast"), longArrayOf(0xFF1D00B8, 0xFFFFE600, 0xFFDCD6FF, 0xFF3A3400, 0xFF12007A, 0xFFFFF59D, 0xFFFFFFFF, 0xFF000000, 0xFFDDDDDD, 0xFF000000)),
 }
 
+/** Arayüz stili: Sade (ferah, sakin), Canlı (renkli çubuklar), Koyu (koyu masa, cam görünümlü araçlar). */
+enum class UiStyle(val title: String) { CLEAN("Sade"), VIVID("Canlı"), DARK("Koyu") }
+
 object UI {
+    /** Arayüz stili (MainActivity ayarlardan okur). */
+    var style by mutableStateOf(UiStyle.CLEAN)
+    /** Üst çubuk zemini ve yazı rengi. */
+    val BarBg get() = when (style) { UiStyle.CLEAN -> Surface; UiStyle.VIVID -> Primary; UiStyle.DARK -> Color(0xF2171A20) }
+    val BarFg get() = when (style) { UiStyle.CLEAN -> Text; UiStyle.VIVID -> Color.White; UiStyle.DARK -> Color(0xFFE7E9EE) }
+    val BarFgSoft get() = when (style) { UiStyle.CLEAN -> TextSoft; UiStyle.VIVID -> Color(0xD9FFFFFF); UiStyle.DARK -> Color(0xFFA3AAB8) }
+    /** Seçili aracın zemini ve simge rengi (üst çubuktaki araçlar için). */
+    val ToolSelBg get() = when (style) { UiStyle.CLEAN -> PrimarySoft; UiStyle.VIVID -> Color.White; UiStyle.DARK -> Color(0x33FFFFFF) }
+    val ToolSelFg get() = when (style) { UiStyle.CLEAN -> Primary; UiStyle.VIVID -> Primary; UiStyle.DARK -> Color.White }
+    /** Seçenek şeridi ve yüzen paneller (Koyu'da yarı saydam cam). */
+    val Panel get() = when (style) { UiStyle.DARK -> Color(0xE61E2229); else -> Surface }
+    /** Köşe yuvarlaklığı. */
+    val radius get() = when (style) { UiStyle.CLEAN -> 16; UiStyle.VIVID -> 20; UiStyle.DARK -> 14 }
+
     /** Koyu tema açık mı (MainActivity ayarlar). Okuyan her ekran tema değişince yeniden çizilir. */
     var dark by mutableStateOf(false)
     /** Renk teması (MainActivity ayarlardan okur). */
@@ -156,10 +173,10 @@ fun FloatingCard(modifier: Modifier = Modifier, radius: Int = 18, content: @Comp
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(radius.dp),
-        color = UI.Surface,
-        shadowElevation = 10.dp,
+        color = UI.Panel,
+        shadowElevation = if (UI.style == UiStyle.DARK) 4.dp else 10.dp,
         tonalElevation = 0.dp,
-        border = BorderStroke(1.dp, Color(0x0F101828)),
+        border = BorderStroke(1.dp, if (UI.style == UiStyle.DARK) Color(0x1FFFFFFF) else Color(0x0F101828)),
         content = content,
     )
 }

@@ -179,7 +179,7 @@ class SmokeTest {
         // 0) Arayüz görünür olmalı: sayfa çizimi üst çubuğun ve araç menüsünün üzerine taşmamalı
         val topWhite = whiteRatio("topbar")
         assertTrue("üst çubuk görünmüyor (beyaz oranı $topWhite)", topWhite > 0.5f)
-        assertTrue("araç menüsü görünmüyor", whiteRatio("dock") > 0.3f)
+        assertTrue("araç seçenekleri şeridi görünmüyor", whiteRatio("options") > 0.3f)
 
         // 0b) Sayfa stili: desen, renk, aralık, saydamlık
         main { c.setPageStyle(0, Background.Paper(Template.ISOMETRIC, PaperColors.CREAM, 14f, 0.3f)) }
@@ -680,6 +680,13 @@ class SmokeTest {
         main { st.uiSize.value = 1; st.eyeComfort.value = true }
         shot("31-goz-dostu")
         main { st.eyeComfort.value = false }
+
+        // arayüz stilleri: Canlı ve Koyu (üstte araç şeridi)
+        main { st.uiStyle.value = "VIVID"; c.selectTool(Tool.PEN) }
+        shot("33-stil-canli")
+        main { st.uiStyle.value = "DARK" }
+        shot("34-stil-koyu")
+        main { st.uiStyle.value = "CLEAN" }
 
         // PIN deneme sınırı
         repeat(5) { com.poyankee.note.ui.PinGuard.fail() }

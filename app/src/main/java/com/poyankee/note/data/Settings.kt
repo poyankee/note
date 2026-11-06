@@ -116,6 +116,10 @@ class Settings(context: Context) {
     // Görünüm
     val theme = str("theme", ThemeMode.SYSTEM.name)
     val colorTheme = str("colorTheme", "DEFAULT")
+    /** Arayüz stili: CLEAN (Sade), VIVID (Canlı), DARK (Koyu). */
+    val uiStyle = str("uiStyle", "CLEAN")
+    /** Araç çubuğu: TOP (üstte şerit) veya LEFT (solda yüzen menü). */
+    val toolbarPos = str("toolbarPos", "TOP")
     /** Uygulama dili: "tr" veya "en". */
     val language = str("language", "tr")
     /** İlk açılış tanıtımı gösterildi mi. */
