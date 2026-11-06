@@ -178,7 +178,7 @@ Kenarda açılır "Kütüphane" paneli, kategorilere ayrılmış, aranabilir; ek
 - F arama (metin kutuları, formüller, PDF yazısı); soru alanları kütüphanede (Genel)
 - O1 yazdır, O2 depolama yönetimi, O3 hata kaydı (cihazda; paylaşmak isteğe bağlı)
 - Seçim çubuğunda renkler ve "Kütüphaneye kaydet"
-- Yanlış defteri sol menüde; Ders programı; Şablon defterler
+- Yanlış defteri sol menüde; Şablon defterler (ders programı kullanıcı isteğiyle kaldırıldı)
 - I1 hareketli geometri (seçili şeklin kenar/açı/alan/çevre canlı ölçümü), I2 bilgi kutuları + konu özeti
 - F sayfa no + tarih, çözüm katmanı (renge göre gizle; soru kağıdı olarak dışa aktar), basınç eğrisi
 - M5 arayüz boyutu (Çok büyük = erişilebilirlik), M8 göz dostu mod
@@ -196,3 +196,8 @@ Kenarda açılır "Kütüphane" paneli, kategorilere ayrılmış, aranabilir; ek
 ## L. Kontrol
 - Her değişiklikten sonra emülatör testi ve ekran görüntüsü incelemesi.
 - Yeni özellikler için duman testleri.
+
+## Son istekler (yapıldı)
+- Defter/PDF'te aşağı kaydırınca üst çubuk gizlenir, yukarı çekince gelir (Ayarlar'dan kapatılabilir)
+- Ana sayfa sadeleşti: solda dar şerit (tek + düğmesi ve 4 bölüm), klasörler defterlerin üstünde sekme; sol taraf kaydırılabilir
+- Ders programı kaldırıldı

@@ -104,6 +104,8 @@ class Settings(context: Context) {
     val autoNewPage = bool("autoNewPage", true)
     /** Parmakla yakınlaştırmayı kilitle (sadece kaydırma). */
     val zoomLock = bool("zoomLock", false)
+    /** Defterde aşağı kaydırınca üst çubuk gizlensin, yukarı çekince gelsin. */
+    val autoHideBar = bool("autoHideBar", true)
     /** Sayfa dışındaki masa rengi (0 = temaya göre). */
     val deskColor = int("deskColor", 0)
     val sortMode = str("sortMode", SortMode.UPDATED.name)
@@ -130,8 +132,6 @@ class Settings(context: Context) {
     val presX = float("presX", 0f)
     val presY = float("presY", 0f)
 
-    /** Ders programı: "gün|saat|ders|defterKimliği" kayıtları, ayraç \u0001. */
-    val timetable = str("timetable", "")
 
     /** Yanlış defterinin kimliği (boş = henüz yok). */
     val wrongNotebook = str("wrongNotebook", "")

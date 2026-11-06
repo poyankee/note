@@ -131,6 +131,9 @@ class EditorController(
     val instruments = mutableStateListOf<InstrumentKind>()
     var secondScreenActive by mutableStateOf(false)
     var pagesVersion by mutableIntStateOf(0)
+    /** Aşağı kaydırınca üst çubuk gizlenir, yukarı çekince geri gelir. */
+    var topBarHidden by mutableStateOf(false)
+
     /** Parmakla kaydırıldıkça artar (sağ kenardaki sayfa çubuğunu göstermek için). */
     var scrollTick by mutableIntStateOf(0)
     var bookmarksVersion by mutableIntStateOf(0)

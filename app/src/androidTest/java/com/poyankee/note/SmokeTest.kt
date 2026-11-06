@@ -13,6 +13,7 @@ import android.view.ViewGroup
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -144,7 +145,8 @@ class SmokeTest {
     private fun newNotebook(): InkView {
         shot("01-ana-sayfa")
         // testlerde silgi sildikten sonra kaleme dönmesin (adımlar silgiyle devam ediyor)
-        main { com.poyankee.note.data.Settings.get(rule.activity).eraserReturn.value = false }
+        main { com.poyankee.note.data.Settings.get(rule.activity).eraserReturn.value = false; com.poyankee.note.data.Settings.get(rule.activity).autoHideBar.value = false }
+        rule.onNodeWithTag("add").performClick()
         rule.onNodeWithText("Yeni defter").performClick()
         return ink()
     }
@@ -494,6 +496,12 @@ class SmokeTest {
         assertEquals(pagesBefore + 1, main { c.nb.pages.size })
         main { c.undo(); c.undo() }
         assertEquals(pagesBefore, main { c.nb.pages.size })
+        // aşağı kaydırınca üst çubuk gizlenir
+        main { c.topBarHidden = true }
+        rule.waitForIdle()
+        assertTrue(rule.onAllNodesWithTag("topbar").fetchSemanticsNodes().isEmpty())
+        main { c.topBarHidden = false }
+        rule.waitForIdle()
         // kaydırınca sağda sayfa çubuğu
         main { c.scrollTick++ }
         shot("16b-sayfa-cubugu")
@@ -529,7 +537,7 @@ class SmokeTest {
         val st = com.poyankee.note.data.Settings.get(rule.activity)
         newNotebook()
         main { rule.activity.onBackPressedDispatcher.onBackPressed() }
-        rule.waitUntil(5000) { rule.onAllNodesWithText("Yeni defter").fetchSemanticsNodes().isNotEmpty() }
+        rule.waitUntil(5000) { rule.onAllNodesWithTag("add").fetchSemanticsNodes().isNotEmpty() }
         main { st.libraryView.value = "LIST" }
         shot("18-liste-gorunumu")
         rule.onNodeWithText("Seç").performClick()
@@ -686,7 +694,7 @@ class SmokeTest {
         com.poyankee.note.core.L.dict = ctx.assets.open("i18n/en.tsv").bufferedReader().use { com.poyankee.note.core.L.parse(it.readText()) }
         main { com.poyankee.note.core.L.english = true }
         main { rule.activity.onBackPressedDispatcher.onBackPressed() }
-        rule.waitUntil(5000) { rule.onAllNodesWithText("New notebook").fetchSemanticsNodes().isNotEmpty() }
+        rule.waitUntil(5000) { rule.onAllNodesWithText("Notebooks").fetchSemanticsNodes().isNotEmpty() }
         shot("32-ingilizce")
         main { com.poyankee.note.core.L.english = false }
     }

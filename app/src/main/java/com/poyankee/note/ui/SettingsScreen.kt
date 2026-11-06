@@ -194,6 +194,7 @@ fun SettingsScreen(
                 }
                 Group(L.t("Yazı")) {
                     Toggle(L.t("Basınç duyarlılığı"), L.t("Kalemi bastırdıkça çizgi kalınlaşır"), s.pressure.value) { s.pressure.value = it }
+                    Toggle(L.t("Kaydırınca üst çubuğu gizle"), L.t("Defterde aşağı kaydırınca üst çubuk gizlenir, yukarı çekince geri gelir"), s.autoHideBar.value) { s.autoHideBar.value = it }
                     Toggle(L.t("Yazarken otomatik yeni sayfa"), L.t("Son sayfanın alt kısmına yazınca yeni düz sayfa eklenir"), s.autoNewPage.value) { s.autoNewPage.value = it }
                     Toggle(L.t("Yakınlaştırma kilidi"), L.t("İki parmak sayfayı yakınlaştırmaz, sadece kaydırır"), s.zoomLock.value) { s.zoomLock.value = it }
                     Toggle(L.t("Silgiden kaleme otomatik dön"), L.t("Silgiyle sildikten sonra önceki araca geri geçer"), s.eraserReturn.value) { s.eraserReturn.value = it }

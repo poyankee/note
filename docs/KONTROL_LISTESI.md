@@ -9,25 +9,21 @@ Kurulum: GitHub › Releases › en yeni **Note sürüm N** › `Note-N.apk` (es
 - [ ] İlk açılışta 5 sayfalık kısa tanıtım (Geç / İleri / Başla); Ayarlar › Hakkında › Tanıtımı göster ile tekrar açılıyor
 
 ## 1. Ana sayfa
-- [ ] Uygulama açılıyor, sol panel görünüyor (Yeni defter, PDF aç, Hızlı not, Fotoğraflardan defter, Şablondan yeni defter)
-- [ ] **Yeni defter** ad sormadan düz beyaz açılıyor
-- [ ] Geri dönünce "Kaydedildi" bildirimi çıkıyor
-- [ ] **PDF aç** ile bir PDF açılıyor
-- [ ] **Hızlı not**: sol panelden ve ana ekranda uygulama simgesine uzun basınca
+- [ ] Solda sade bir şerit: büyük **+** düğmesi, Defterler, Yanlış defteri, Yapılacaklar, Çöp kutusu, Ayarlar (küçük ekranda da kayıyor)
+- [ ] **+** menüsü: Yeni defter, Hızlı not, PDF aç, Fotoğraflardan defter, Şablondan yeni defter, Yeni klasör
+- [ ] **Yeni defter** ad sormadan düz beyaz açılıyor; geri dönünce "Kaydedildi" bildirimi
+- [ ] Hızlı not: ana ekranda uygulama simgesine uzun basınca da var
+- [ ] **Klasörler defterlerin üstünde sekme**: Tümü, ★ Favoriler, klasörler, "Klasör" ile yeni klasör; klasör sekmesine uzun bas → Yeniden adlandır / Renk / Sil
 - [ ] Görünüm (▦): küçük / orta / büyük kapak / liste
 - [ ] Sıralama: son düzenlenen / ada göre / oluşturma tarihi
 - [ ] Arama kutusu
 - [ ] **Seç** (veya deftere uzun bas): toplu seçim → Tümünü seç, Favori, Klasöre taşı, Sil, **Birleştir** (2+ defter)
 - [ ] Defter ⋯ menüsü: Aç, Seç, Yeniden adlandır, Klasöre taşı, Favori, Kilitle, **Şablon olarak kaydet**, Sil
-- [ ] Klasör oluştur, klasöre uzun bas → Yeniden adlandır / **Renk** / Sil
-- [ ] Favoriler bölümü
-- [ ] **Yanlış defteri** (sol panel) açılıyor
-- [ ] **Ders programı** (sol panel): bir hücreye uzun bas → ders adı + defter seç; dokununca defter açılıyor; bugünün sütunu renkli
-- [ ] **Yapılacaklar** (sol panel): görev ekle, dokununca tamamlandı, ⋮ renk / sıra / sil, "Tamamlananları temizle"
+- [ ] **Yanlış defteri** (sol şerit) açılıyor
+- [ ] **Yapılacaklar** (sol şerit): görev ekle, dokununca tamamlandı, ⋮ renk / sıra / sil, "Tamamlananları temizle"
 - [ ] **Çöp kutusu**: silinen defter burada; Geri getir; Kalıcı sil; Boşalt
 - [ ] **Şablondan yeni defter**: kaydettiğiniz şablon listede, seçince yeni defter açılıyor
 - [ ] **Fotoğraflardan defter**: birkaç fotoğraf seç → her biri bir sayfa
-- [ ] Telefonda (varsa): sol panel ☰ ile açılıp kapanıyor
 
 ## 2. Defter kilidi
 - [ ] ⋯ › Kilitle → PIN (iki kez) → kapakta kilit
@@ -64,6 +60,7 @@ Kurulum: GitHub › Releases › en yeni **Note sürüm N** › `Note-N.apk` (es
 - [ ] ⋮ › **Konu özeti oluştur**: bütün kutular sona eklenen "Konu özeti" sayfasında
 
 ## 6. Sayfa
+- [ ] **Aşağı kaydırınca üst çubuk gizleniyor**, yukarı çekince geri geliyor (Ayarlar › Yazı'dan kapatılabilir)
 - [ ] **Sayfa** paneli: desenler (kareli, izometrik, koordinat, birim çember…), görünürlük, aralık
 - [ ] Kağıt rengi + **Diğer** (özel renk)
 - [ ] **Masa rengi**

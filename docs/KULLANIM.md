@@ -171,7 +171,7 @@ Ayarlar › **Depolama**: defterlerin kapladığı alan, geçici dosyaları ve k
 - **Bilgi kutusu:** yazıyı seçin › **Kutu** › Kural / Tanım / Örnek / Dikkat / Formül / Özet. ⋮ › **Konu özeti oluştur** bütün kutuları sona eklenen özet sayfasında toplar.
 - **Çözüm katmanı:** Ayarlar › Sayfalar › Çözüm rengi. O renkle yazdıklarınız ⋮ › Çözümleri gizle ile saklanır; dışa aktarırken "Çözümleri gizle" ile soru kağıdı çıkar.
 - **Sayfa numarası / tarih:** Ayarlar › Sayfalar › Sayfa altında.
-- **Ders programı**, **Şablondan yeni defter**, **Yanlış defteri**: sol panelde.
+- **Şablondan yeni defter**: sol şeritteki **+** menüsünde. **Yanlış defteri**: sol şeritte.
 - **Kilit kurtarma:** PIN'i unutursanız "PIN'i unuttum" › cihazınızın ekran kilidi.
 - **Arayüz boyutu** ve **Göz dostu mod**: Ayarlar › Görünüm.
 - **Klavye:** Ctrl+Z / Ctrl+Y, Ctrl+C / X / V, Ctrl+D (çoğalt), Sayfa yukarı / aşağı, Del (seçimi sil), Esc.

@@ -261,8 +261,9 @@ fun EditorScreen(
 
     val dockLeft = !s.leftHanded.value
     Column(Modifier.fillMaxSize().background(UI.Desk)) {
-        if (!ctl.presentation && tabs.size > 1) TabsRow(tabs, ctl.nb.id, onTab, onCloseTab)
-        if (!ctl.presentation) {
+        AnimatedVisibility(!ctl.presentation && !ctl.topBarHidden, enter = androidx.compose.animation.expandVertically() + fadeIn(), exit = androidx.compose.animation.shrinkVertically() + fadeOut()) {
+          Column {
+            if (tabs.size > 1) TabsRow(tabs, ctl.nb.id, onTab, onCloseTab)
             EditorTopBar(
                 ctl, secondActive, recState, recTime, panel,
                 onClose = onClose, onRename = { showRename = true },
@@ -289,6 +290,7 @@ fun EditorScreen(
                     }
                 },
             )
+          }
         }
         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth().clipToBounds()) {
             val areaW = maxWidth; val areaH = maxHeight

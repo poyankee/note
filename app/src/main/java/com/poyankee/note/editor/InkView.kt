@@ -933,7 +933,22 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
             lastCx = f[0].x; lastCy = f[0].y
         }
         clampScroll(); invalidate(); updateCurrentPage(); scheduleSharp()
-        if (g == null) ctl.scrollTick++
+        if (g == null) { ctl.scrollTick++; trackBarScroll() }
+    }
+
+    /* üst çubuğu kaydırma yönüne göre gizle / göster */
+    private var barRefSy = Float.NaN
+
+    private fun trackBarScroll() {
+        if (!settings.autoHideBar.value) { if (ctl.topBarHidden) ctl.topBarHidden = false; return }
+        if (barRefSy.isNaN()) { barRefSy = sy; return }
+        val d = (sy - barRefSy) * zoom
+        val step = 48f * density
+        when {
+            sy <= -margin + 1f -> { if (ctl.topBarHidden) ctl.topBarHidden = false; barRefSy = sy }
+            d > step -> { if (!ctl.topBarHidden) ctl.topBarHidden = true; barRefSy = sy }
+            d < -step -> { if (ctl.topBarHidden) ctl.topBarHidden = false; barRefSy = sy }
+        }
     }
 
     private fun fingerUp(e: MotionEvent, idx: Int, canceled: Boolean) {
@@ -986,6 +1001,7 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
             if (bsx != sx && bsy != sy) scroller.forceFinished(true)
             updateCurrentPage()
             ctl.scrollTick++
+            trackBarScroll()
             postInvalidateOnAnimation()
             if (scroller.isFinished) scheduleSharp()
         }
