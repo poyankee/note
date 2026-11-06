@@ -1,5 +1,7 @@
 package com.poyankee.note.data
 
+import com.poyankee.note.core.L
+
 import android.content.Context
 import androidx.compose.runtime.mutableStateOf
 import com.poyankee.note.core.PageSize
@@ -9,7 +11,7 @@ enum class ButtonAction(val title: String) { ERASER("Silgi"), LASSO("Kement seç
 
 /** Kalemin çift dokunuşu / tuşu ile yapılacak iş. */
 enum class PenAction(val title: String) {
-    ERASER_TOGGLE("Silgi ↔ kalem"), UNDO("Geri al"), LASER_TOGGLE("Lazer ↔ kalem"), PEN_HIGHLIGHTER("Kalem ↔ fosforlu"), NONE("Hiçbir şey")
+    ERASER_TOGGLE(L.t("Silgi ↔ kalem")), UNDO(L.t("Geri al")), LASER_TOGGLE(L.t("Lazer ↔ kalem")), PEN_HIGHLIGHTER(L.t("Kalem ↔ fosforlu")), NONE(L.t("Hiçbir şey"))
 }
 
 enum class ThemeMode(val title: String) { SYSTEM("Sistem"), LIGHT("Açık"), DARK("Koyu") }
@@ -112,6 +114,8 @@ class Settings(context: Context) {
     // Görünüm
     val theme = str("theme", ThemeMode.SYSTEM.name)
     val colorTheme = str("colorTheme", "DEFAULT")
+    /** Uygulama dili: "tr" veya "en". */
+    val language = str("language", "tr")
     /** İlk açılış tanıtımı gösterildi mi. */
     val introShown = bool("introShown", false)
     /** Arayüz boyutu: 0 küçük, 1 normal, 2 büyük, 3 çok büyük (erişilebilirlik). */

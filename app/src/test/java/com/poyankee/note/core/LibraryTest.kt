@@ -93,3 +93,24 @@ class ConnectorsTest {
         assertTrue(r.none { it.first.id == 4L })
     }
 }
+
+class LanguageTest {
+    @Test
+    fun dictionary() {
+        val m = L.parse("# yorum\nYeni defter\tNew notebook\nA\\nB\tC\\nD\n")
+        assertEquals("New notebook", m["Yeni defter"]); assertEquals("C\nD", m["A\nB"])
+        L.dict = m
+        L.english = false; assertEquals("Yeni defter", L.t("Yeni defter"))
+        L.english = true; assertEquals("New notebook", L.t("Yeni defter")); assertEquals("Bilinmeyen", L.t("Bilinmeyen"))
+        L.english = false
+        // uygulamanın sözlüğü (modül klasöründen çalışırken)
+        val f = java.io.File("src/main/assets/i18n/en.tsv")
+        if (f.exists()) {
+            val d = L.parse(f.readText())
+            assertTrue(d.size > 500)
+            assertEquals("New notebook", d["Yeni defter"])
+            assertEquals("Unit circle", d["Birim çember"])
+            assertTrue(d.values.none { it.isBlank() })
+        }
+    }
+}

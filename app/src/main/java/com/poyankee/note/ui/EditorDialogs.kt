@@ -2,6 +2,8 @@
 
 package com.poyankee.note.ui
 
+import com.poyankee.note.core.L
+
 import android.Manifest
 import android.app.Activity
 import android.content.Intent
@@ -145,7 +147,7 @@ fun GotoDialog(ctl: EditorController, onDismiss: () -> Unit) {
     LaunchedEffect(Unit) { delay(150); try { focus.requestFocus() } catch (_: Exception) {} }
     fun go() {
         val n = number.trim().toIntOrNull()
-        if (n == null) { error = "Bir sayı yazın"; return }
+        if (n == null) { error = L.t("Bir sayı yazın"); return }
         if (bookMode) {
             if (ctl.goToBookPage(n)) onDismiss() else error = "Kitapta $n. sayfa bulunamadı"
         } else {
@@ -154,12 +156,12 @@ fun GotoDialog(ctl: EditorController, onDismiss: () -> Unit) {
     }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Sayfaya git") },
+        title = { Text(L.t("Sayfaya git")) },
         text = {
             Column {
                 OutlinedTextField(
                     number, { number = it.filter { ch -> ch.isDigit() }; error = null },
-                    label = { Text(if (bookMode) "Kitaptaki sayfa numarası" else "Sayfa numarası (1 - ${nb.pages.size})") },
+                    label = { Text(if (bookMode) L.t("Kitaptaki sayfa numarası") else "Sayfa numarası (1 - ${nb.pages.size})") },
                     singleLine = true, isError = error != null,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { go() }, onGo = { go() }),
@@ -169,34 +171,34 @@ fun GotoDialog(ctl: EditorController, onDismiss: () -> Unit) {
                 if (hasPdf) {
                     Spacer(Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(!bookMode, { bookMode = false }, { Text("Defter / PDF sayfası") })
-                        FilterChip(bookMode, { bookMode = true }, { Text("Kitap sayfası") })
+                        FilterChip(!bookMode, { bookMode = false }, { Text(L.t("Defter / PDF sayfası")) })
+                        FilterChip(bookMode, { bookMode = true }, { Text(L.t("Kitap sayfası")) })
                     }
                     Text(
-                        "Kitabın sayfa numarası PDF'in sayfa sırasından farklıysa (kapak, önsöz...), aşağıdan bir kez ayarlayın.",
+                        L.t("Kitabın sayfa numarası PDF'in sayfa sırasından farklıysa (kapak, önsöz...), aşağıdan bir kez ayarlayın."),
                         fontSize = 12.sp, color = Color(0xFF607D8B), modifier = Modifier.padding(top = 6.dp),
                     )
-                    TextButton(onClick = { showOffset = !showOffset }) { Text("Kitap sayfa numarasını ayarla") }
+                    TextButton(onClick = { showOffset = !showOffset }) { Text(L.t("Kitap sayfa numarasını ayarla")) }
                     if (showOffset) {
                         val cur = nb.pages.getOrNull(ctl.currentPage)
                         if (cur?.background is Background.PdfPage) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 OutlinedTextField(
                                     offsetInput, { offsetInput = it.filter { ch -> ch.isDigit() || ch == '-' } },
-                                    label = { Text("Şu an açık sayfa kitapta kaçıncı sayfa?") }, singleLine = true,
+                                    label = { Text(L.t("Şu an açık sayfa kitapta kaçıncı sayfa?")) }, singleLine = true,
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f),
                                 )
                                 TextButton(onClick = {
                                     val b = offsetInput.toIntOrNull()
                                     if (b != null && ctl.setBookNumberForCurrent(b)) { showOffset = false; bookMode = true; error = null }
-                                }) { Text("Ayarla") }
+                                }) { Text(L.t("Ayarla")) }
                             }
-                        } else Text("Önce bir PDF sayfasına gidin.", fontSize = 12.sp)
+                        } else Text(L.t("Önce bir PDF sayfasına gidin."), fontSize = 12.sp)
                     }
                 }
                 val bms = ctl.nb.bookmarks
                 if (bms.isNotEmpty()) {
-                    Text("Yer imleri", fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 8.dp))
+                    Text(L.t("Yer imleri"), fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 8.dp))
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         bms.forEach { b ->
                             val idx = nb.indexOfPage(b.pageId)
@@ -206,8 +208,8 @@ fun GotoDialog(ctl: EditorController, onDismiss: () -> Unit) {
                 }
             }
         },
-        confirmButton = { TextButton(onClick = { go() }) { Text("Git") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Vazgeç") } },
+        confirmButton = { TextButton(onClick = { go() }) { Text(L.t("Git")) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(L.t("Vazgeç")) } },
     )
 }
 
@@ -226,21 +228,21 @@ fun BookmarksDialog(ctl: EditorController, onDismiss: () -> Unit) {
     }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Yer imleri") },
+        title = { Text(L.t("Yer imleri")) },
         text = {
             Column {
                 if (pdfFile != null) {
                     TabRow(selectedTabIndex = tab) {
-                        Tab(tab == 0, { tab = 0 }, text = { Text("Yer imlerim") })
-                        Tab(tab == 1, { tab = 1 }, text = { Text("PDF içindekiler") })
+                        Tab(tab == 0, { tab = 0 }, text = { Text(L.t("Yer imlerim")) })
+                        Tab(tab == 1, { tab = 1 }, text = { Text(L.t("PDF içindekiler")) })
                     }
                 }
                 if (tab == 0) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        OutlinedTextField(title, { title = it }, label = { Text("Bu sayfaya yer imi (ör. Türev, Test 3)") }, singleLine = true, modifier = Modifier.weight(1f))
-                        TextButton(onClick = { ctl.addBookmark(title); title = "" }) { Text("Ekle") }
+                        OutlinedTextField(title, { title = it }, label = { Text(L.t("Bu sayfaya yer imi (ör. Türev, Test 3)")) }, singleLine = true, modifier = Modifier.weight(1f))
+                        TextButton(onClick = { ctl.addBookmark(title); title = "" }) { Text(L.t("Ekle")) }
                     }
-                    if (ctl.nb.bookmarks.isEmpty()) Text("Henüz yer imi yok.", color = Color(0xFF78909C), modifier = Modifier.padding(8.dp))
+                    if (ctl.nb.bookmarks.isEmpty()) Text(L.t("Henüz yer imi yok."), color = Color(0xFF78909C), modifier = Modifier.padding(8.dp))
                     LazyColumn(Modifier.heightIn(max = 420.dp)) {
                         items(ctl.nb.bookmarks.toList()) { b ->
                             val idx = ctl.nb.indexOfPage(b.pageId)
@@ -252,7 +254,7 @@ fun BookmarksDialog(ctl: EditorController, onDismiss: () -> Unit) {
                                 Spacer(Modifier.width(8.dp))
                                 Text(b.title, Modifier.weight(1f))
                                 Text("s. ${idx + 1}", color = Color(0xFF78909C))
-                                IconButton(onClick = { ctl.removeBookmark(b) }) { Icon(Icons.Filled.Delete, "Sil") }
+                                IconButton(onClick = { ctl.removeBookmark(b) }) { Icon(Icons.Filled.Delete, L.t("Sil")) }
                             }
                         }
                     }
@@ -260,7 +262,7 @@ fun BookmarksDialog(ctl: EditorController, onDismiss: () -> Unit) {
                     val list = toc
                     when {
                         list == null -> CircularProgressIndicator(Modifier.padding(16.dp))
-                        list.isEmpty() -> Text("Bu PDF'te içindekiler bilgisi yok.", color = Color(0xFF78909C), modifier = Modifier.padding(8.dp))
+                        list.isEmpty() -> Text(L.t("Bu PDF'te içindekiler bilgisi yok."), color = Color(0xFF78909C), modifier = Modifier.padding(8.dp))
                         else -> LazyColumn(Modifier.heightIn(max = 460.dp)) {
                             items(list) { (t, pdfIdx, level) ->
                                 val idx = ctl.nb.pages.indexOfFirst { (it.background as? Background.PdfPage)?.index == pdfIdx }
@@ -277,7 +279,7 @@ fun BookmarksDialog(ctl: EditorController, onDismiss: () -> Unit) {
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Kapat") } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(L.t("Kapat")) } },
     )
 }
 
@@ -291,7 +293,7 @@ fun ExportDialog(ctl: EditorController, onDismiss: () -> Unit) {
     var noSolutions by remember { mutableStateOf(ctl.settings.hideSolutions.value) }
     var footer by remember { mutableIntStateOf(ctl.settings.pageFooter.value) }
     var compress by remember { mutableStateOf(false) }
-    val baseName = ctl.nb.name.replace(Regex("[\\\\/:*?\"<>|]"), "_").take(60).ifBlank { "Note" }
+    val baseName = ctl.nb.name.replace(Regex("[\\\\/:*?\"<>|]"), "_").take(60).ifBlank { L.t("Note") }
 
     suspend fun build(): File? = withContext(Dispatchers.IO) {
         val dir = File(context.cacheDir, "export").apply { mkdirs(); listFiles()?.forEach { it.delete() } }
@@ -337,7 +339,7 @@ fun ExportDialog(ctl: EditorController, onDismiss: () -> Unit) {
             scope.launch(Dispatchers.IO) {
                 try {
                     context.contentResolver.openOutputStream(uri)?.use { out -> f.inputStream().use { it.copyTo(out) } }
-                    withContext(Dispatchers.Main) { ctl.message = "Kaydedildi" }
+                    withContext(Dispatchers.Main) { ctl.message = L.t("Kaydedildi") }
                 } catch (e: Exception) { withContext(Dispatchers.Main) { ctl.message = "Kaydedilemedi: ${e.message}" } }
             }
         }
@@ -357,7 +359,7 @@ fun ExportDialog(ctl: EditorController, onDismiss: () -> Unit) {
                     putExtra(Intent.EXTRA_STREAM, uri)
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
-                context.startActivity(Intent.createChooser(i, "Paylaş"))
+                context.startActivity(Intent.createChooser(i, L.t("Paylaş")))
                 onDismiss()
             } else {
                 pending = f
@@ -368,10 +370,10 @@ fun ExportDialog(ctl: EditorController, onDismiss: () -> Unit) {
 
     AlertDialog(
         onDismissRequest = { if (progress == null) onDismiss() },
-        title = { Text("Dışa aktar") },
+        title = { Text(L.t("Dışa aktar")) },
         text = {
             Column {
-                listOf("Tüm defter (PDF)", "Bu sayfa (PDF)", "Bu sayfa (resim, PNG)").forEachIndexed { i, n ->
+                listOf(L.t("Tüm defter (PDF)"), L.t("Bu sayfa (PDF)"), L.t("Bu sayfa (resim, PNG)")).forEachIndexed { i, n ->
                     Row(
                         Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(if (what == i) Color(0xFFD6E4F5) else Color.Transparent)
                             .combinedClickable(onClick = { what = i }).padding(10.dp),
@@ -379,25 +381,25 @@ fun ExportDialog(ctl: EditorController, onDismiss: () -> Unit) {
                 }
                 if (what != 2) {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
-                        Text("Çözümleri gizle (soru kağıdı)", modifier = Modifier.weight(1f))
+                        Text(L.t("Çözümleri gizle (soru kağıdı)"), modifier = Modifier.weight(1f))
                         androidx.compose.material3.Switch(noSolutions, { noSolutions = it }, enabled = ctl.settings.solutionColor.value != 0)
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text("Küçük dosya (sıkıştır)")
-                            Text("Sayfalar görüntüye çevrilir; büyük PDF'ler küçülür, metin seçilemez", fontSize = 11.sp, color = Color(0xFF607D8B))
+                            Text(L.t("Küçük dosya (sıkıştır)"))
+                            Text(L.t("Sayfalar görüntüye çevrilir; büyük PDF'ler küçülür, metin seçilemez"), fontSize = 11.sp, color = Color(0xFF607D8B))
                         }
                         androidx.compose.material3.Switch(compress, { compress = it })
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Sayfa numarası", modifier = Modifier.weight(1f))
-                        listOf("Yok", "No", "No + tarih").forEachIndexed { i, t ->
+                        Text(L.t("Sayfa numarası"), modifier = Modifier.weight(1f))
+                        listOf(L.t("Yok"), L.t("No"), L.t("No + tarih")).forEachIndexed { i, t ->
                             TextButton(onClick = { footer = i }) { Text(t, fontWeight = if (footer == i) FontWeight.Bold else FontWeight.Normal) }
                         }
                     }
                 }
                 Text(
-                    "Yazılarınız PDF'e vektör olarak eklenir: yakınlaştırınca bulanıklaşmaz, orijinal PDF bozulmaz.",
+                    L.t("Yazılarınız PDF'e vektör olarak eklenir: yakınlaştırınca bulanıklaşmaz, orijinal PDF bozulmaz."),
                     fontSize = 12.sp, color = Color(0xFF607D8B), modifier = Modifier.padding(top = 8.dp),
                 )
                 progress?.let {
@@ -408,11 +410,11 @@ fun ExportDialog(ctl: EditorController, onDismiss: () -> Unit) {
         },
         confirmButton = {
             Row {
-                OutlinedButton(onClick = { run(false) }, enabled = progress == null) { Text("Dosyaya kaydet") }
+                OutlinedButton(onClick = { run(false) }, enabled = progress == null) { Text(L.t("Dosyaya kaydet")) }
                 Spacer(Modifier.width(8.dp))
-                OutlinedButton(onClick = { run(true) }, enabled = progress == null) { Text("Paylaş") }
+                OutlinedButton(onClick = { run(true) }, enabled = progress == null) { Text(L.t("Paylaş")) }
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss, enabled = progress == null) { Text("Kapat") } },
+        dismissButton = { TextButton(onClick = onDismiss, enabled = progress == null) { Text(L.t("Kapat")) } },
     )
 }

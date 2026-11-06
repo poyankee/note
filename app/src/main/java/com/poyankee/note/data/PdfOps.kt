@@ -1,5 +1,7 @@
 package com.poyankee.note.data
 
+import com.poyankee.note.core.L
+
 import android.content.Context
 import android.net.Uri
 import android.os.ParcelFileDescriptor
@@ -78,7 +80,7 @@ object PdfOps {
             try { out?.close() } catch (_: Exception) {}
             opened.forEach { try { it.close() } catch (_: Exception) {} }
         }
-        if (nb.pages.isEmpty()) { dir.deleteRecursively(); throw IllegalStateException("Sayfa seçilmedi") }
+        if (nb.pages.isEmpty()) { dir.deleteRecursively(); throw IllegalStateException(L.t("Sayfa seçilmedi")) }
         store.saveAllNow(nb)
         return nb
     }
@@ -86,7 +88,7 @@ object PdfOps {
     /** Defterleri sırayla birleştirip yeni bir defter yapar (asıllar değişmez). */
     fun merge(context: Context, store: Store, ids: List<String>, name: String): Notebook {
         val parts = ids.map { store.load(it) }.map { it to it.pages.indices.toList() }
-        if (parts.isEmpty()) throw IllegalStateException("Defter seçilmedi")
+        if (parts.isEmpty()) throw IllegalStateException(L.t("Defter seçilmedi"))
         return assemble(context, store, parts, name, parts.first().first.folder)
     }
 
@@ -106,7 +108,7 @@ object PdfOps {
         val dir = store.dir(id)
         val incoming = File(dir, "incoming.tmp")
         context.contentResolver.openInputStream(uri).use { inp ->
-            requireNotNull(inp) { "Dosya açılamadı" }
+            requireNotNull(inp) { L.t("Dosya açılamadı") }
             FileOutputStream(incoming).use { inp.copyTo(it, 1 shl 16) }
         }
         try {
@@ -115,7 +117,7 @@ object PdfOps {
             ParcelFileDescriptor.open(incoming, ParcelFileDescriptor.MODE_READ_ONLY).use { fd ->
                 PdfRenderer(fd).use { r -> for (i in 0 until r.pageCount) r.openPage(i).use { p -> sizes += p.width.toFloat() to p.height.toFloat() } }
             }
-            if (sizes.isEmpty()) throw IllegalStateException("PDF'te sayfa yok")
+            if (sizes.isEmpty()) throw IllegalStateException(L.t("PDF'te sayfa yok"))
             val newName = "source_${System.currentTimeMillis()}.pdf"
             val oldFile = nb.pdfFile?.let { File(dir, it) }?.takeIf { it.exists() }
             var offset = 0
@@ -156,7 +158,7 @@ object PdfOps {
         } catch (e: Exception) {
             if (nb.pages.isEmpty()) { store.dir(id).deleteRecursively(); throw e }
         }
-        if (nb.pages.isEmpty()) { store.dir(id).deleteRecursively(); throw IllegalStateException("Fotoğraf okunamadı") }
+        if (nb.pages.isEmpty()) { store.dir(id).deleteRecursively(); throw IllegalStateException(L.t("Fotoğraf okunamadı")) }
         store.saveAllNow(nb)
         return nb
     }

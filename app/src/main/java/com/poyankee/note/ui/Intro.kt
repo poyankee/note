@@ -1,5 +1,7 @@
 package com.poyankee.note.ui
 
+import com.poyankee.note.core.L
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -40,11 +42,11 @@ private class Slide(val tool: Tool, val title: String, val text: String)
 @Composable
 fun IntroDialog(onDone: () -> Unit) {
     val slides = listOf(
-        Slide(Tool.PEN, "Kalemle yazın, eliniz yazmaz", "Avucunuzu ekrana koyabilirsiniz; yalnızca kalem yazar. İki parmakla dokunmak geri alır, iki parmakla kaydırıp yakınlaştırırsınız."),
-        Slide(Tool.HIGHLIGHTER, "Seçili araca tekrar dokunun", "Kalem, fosforlu, silgi veya geometri aracına ikinci kez dokununca renkler, kalınlık ve diğer seçenekler açılır."),
-        Slide(Tool.SHAPE, "Geometri ve hazır kütüphane", "Çizip bekleyince şekil düzelir. Üstteki Kütüphane'de birim çember, üçgenler, açınımlar, formül kartları ve daha fazlası tek dokunuşla eklenir."),
-        Slide(Tool.LASSO, "PDF, yanlış defteri, ders anlatımı", "PDF açıp üzerine yazın, sayfa numarasına atlayın. Soruyu dikdörtgenle seçip yanlış defterine ekleyin. Odak modu ve projeksiyonla temiz bir sayfa gösterin."),
-        Slide(Tool.TEXT, "Her şey cihazınızda kalır", "Note internete bağlanmaz, reklam yoktur. Yedeği Ayarlar › Yedekleme'den siz alırsınız."),
+        Slide(Tool.PEN, L.t("Kalemle yazın, eliniz yazmaz"), L.t("Avucunuzu ekrana koyabilirsiniz; yalnızca kalem yazar. İki parmakla dokunmak geri alır, iki parmakla kaydırıp yakınlaştırırsınız.")),
+        Slide(Tool.HIGHLIGHTER, L.t("Seçili araca tekrar dokunun"), L.t("Kalem, fosforlu, silgi veya geometri aracına ikinci kez dokununca renkler, kalınlık ve diğer seçenekler açılır.")),
+        Slide(Tool.SHAPE, L.t("Geometri ve hazır kütüphane"), L.t("Çizip bekleyince şekil düzelir. Üstteki Kütüphane'de birim çember, üçgenler, açınımlar, formül kartları ve daha fazlası tek dokunuşla eklenir.")),
+        Slide(Tool.LASSO, L.t("PDF, yanlış defteri, ders anlatımı"), L.t("PDF açıp üzerine yazın, sayfa numarasına atlayın. Soruyu dikdörtgenle seçip yanlış defterine ekleyin. Odak modu ve projeksiyonla temiz bir sayfa gösterin.")),
+        Slide(Tool.TEXT, L.t("Her şey cihazınızda kalır"), L.t("Note internete bağlanmaz, reklam yoktur. Yedeği Ayarlar › Yedekleme'den siz alırsınız.")),
     )
     var i by remember { mutableIntStateOf(0) }
     Dialog(onDismissRequest = onDone, properties = DialogProperties(usePlatformDefaultWidth = false)) {
@@ -62,12 +64,12 @@ fun IntroDialog(onDone: () -> Unit) {
                     slides.indices.forEach { k -> Box(Modifier.size(if (k == i) 10.dp else 8.dp).clip(CircleShape).background(if (k == i) UI.Primary else UI.Border)) }
                 }
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    TextButton(onClick = onDone) { Text("Geç", color = UI.TextSoft) }
+                    TextButton(onClick = onDone) { Text(L.t("Geç"), color = UI.TextSoft) }
                     Spacer(Modifier.weight(1f))
-                    if (i > 0) TextButton(onClick = { i-- }) { Text("Geri") }
+                    if (i > 0) TextButton(onClick = { i-- }) { Text(L.t("Geri")) }
                     Spacer(Modifier.width(6.dp))
                     Button(onClick = { if (i < slides.lastIndex) i++ else onDone() }, shape = RoundedCornerShape(12.dp)) {
-                        Text(if (i < slides.lastIndex) "İleri" else "Başla")
+                        Text(if (i < slides.lastIndex) L.t("İleri") else L.t("Başla"))
                     }
                 }
             }

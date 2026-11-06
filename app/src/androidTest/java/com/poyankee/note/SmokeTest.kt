@@ -681,6 +681,14 @@ class SmokeTest {
 
         // ayarlar yedeğe girer
         assertTrue(c.store.exportSettings().contains("pageFooter"))
+
+        // İngilizce arayüz (sözlükten)
+        com.poyankee.note.core.L.dict = ctx.assets.open("i18n/en.tsv").bufferedReader().use { com.poyankee.note.core.L.parse(it.readText()) }
+        main { com.poyankee.note.core.L.english = true }
+        main { rule.activity.onBackPressedDispatcher.onBackPressed() }
+        rule.waitUntil(5000) { rule.onAllNodesWithText("New notebook").fetchSemanticsNodes().isNotEmpty() }
+        shot("32-ingilizce")
+        main { com.poyankee.note.core.L.english = false }
     }
 
     @Test

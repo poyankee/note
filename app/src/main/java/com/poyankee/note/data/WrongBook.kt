@@ -1,5 +1,7 @@
 package com.poyankee.note.data
 
+import com.poyankee.note.core.L
+
 import android.graphics.Bitmap
 import com.poyankee.note.core.Background
 import com.poyankee.note.core.Ids
@@ -54,9 +56,9 @@ object WrongBook {
         page.items += ImageItem(Ids.next(), 30f, 66f, iw, ih, file)
         page.items += ShapeItem(Ids.next(), Geom.Polyline(floatArrayOf(30f, 66f, 30f + iw, 66f, 30f + iw, 66f + ih, 30f, 66f + ih), true), 0xFFD0D5DD.toInt(), 1f)
         val sy = 66f + ih + 22f
-        page.items += TextItem(Ids.next(), 30f, sy, "Çözüm:", 13f, blue)
+        page.items += TextItem(Ids.next(), 30f, sy, L.t("Çözüm:"), 13f, blue)
         page.items += ShapeItem(Ids.next(), Geom.Polyline(floatArrayOf(30f, sy + 20f, pw - 30f, sy + 20f), false), 0xFFD0D5DD.toInt(), 1f)
-        page.items += TextItem(Ids.next(), 30f, ph - 40f, "☐ Çözüldü      ☐ Tekrar et      Konu: ", 12f, gray)
+        page.items += TextItem(Ids.next(), 30f, ph - 40f, L.t("☐ Çözüldü      ☐ Tekrar et      Konu: "), 12f, gray)
         store.saveAllNow(nb)
         settings.setWrongSource(page.id, srcId, srcPage)
         return nb.pages.indexOf(page)

@@ -45,11 +45,11 @@ object Library {
         }
         /** (x,y) sol üst köşe. */
         fun text(x: Float, y: Float, s: String, size: Float = 12f, color: Int = INK, bg: Int = 0) {
-            items += TextItem(Ids.next(), x, y, s, size, color, 0f, bg)
+            items += TextItem(Ids.next(), x, y, L.t(s), size, color, 0f, bg)
         }
         /** (cx,cy) metnin ortası. */
         fun textC(cx: Float, cy: Float, s: String, size: Float = 12f, color: Int = INK) {
-            val lines = s.split('\n')
+            val lines = L.t(s).split('\n')
             val w = (lines.maxOfOrNull { it.length } ?: 1) * size * 0.6f
             val h = lines.size * size * 1.25f
             text(cx - w / 2f, cy - h / 2f, s, size, color)
@@ -129,8 +129,8 @@ object Library {
             textC(-9f, 10f, "O", 10f, GRAY)
         }
         fun card(title: String, body: String, color: Int, fill: Int) {
-            val lines = body.split('\n')
-            val w = maxOf(title.length * 15f * 0.6f, (lines.maxOfOrNull { it.length } ?: 1) * 13f * 0.6f) + 28f
+            val lines = L.t(body).split('\n')
+            val w = maxOf(L.t(title).length * 15f * 0.6f, (lines.maxOfOrNull { it.length } ?: 1) * 13f * 0.6f) + 28f
             val h = 34f + lines.size * 13f * 1.25f + 14f
             poly(0f, 0f, w, 0f, w, h, 0f, h, color = color, fill = fill, w = 1.6f)
             text(14f, 10f, title, 15f, color)

@@ -2,6 +2,8 @@
 
 package com.poyankee.note.ui
 
+import com.poyankee.note.core.L
+
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -70,9 +72,9 @@ import kotlin.math.roundToInt
 
 private val FORMULA_KEYS = listOf(
     "a/b" to "\\frac{}{}", "x²" to "^{2}", "xⁿ" to "^{}", "xₙ" to "_{}", "√" to "\\sqrt{}", "∛" to "\\sqrt[3]{}",
-    "π" to "\\pi ", "α" to "\\alpha ", "β" to "\\beta ", "θ" to "\\theta ", "Δ" to "\\Delta ", "∑" to "\\sum_{}^{}",
-    "∫" to "\\int_{}^{}", "lim" to "\\lim_{x \\to }", "≤" to "\\le ", "≥" to "\\ge ", "≠" to "\\neq ", "±" to "\\pm ",
-    "·" to "\\cdot ", "×" to "\\times ", "∞" to "\\infty ", "°" to "^{\\circ}", "∠" to "\\angle ", "△" to "\\triangle ",
+    "π" to L.t("\\pi "), "α" to L.t("\\alpha "), "β" to L.t("\\beta "), "θ" to L.t("\\theta "), "Δ" to L.t("\\Delta "), "∑" to "\\sum_{}^{}",
+    "∫" to "\\int_{}^{}", "lim" to L.t("\\lim_{x \\to }"), "≤" to L.t("\\le "), "≥" to L.t("\\ge "), "≠" to L.t("\\neq "), "±" to L.t("\\pm "),
+    "·" to L.t("\\cdot "), "×" to L.t("\\times "), "∞" to L.t("\\infty "), "°" to "^{\\circ}", "∠" to L.t("\\angle "), "△" to L.t("\\triangle "),
 )
 
 @Composable
@@ -99,7 +101,7 @@ fun FormulaDialog(ctl: EditorController, req: FormulaRequest) {
     AlertDialog(
         onDismissRequest = { ctl.formulaRequest = null },
         containerColor = UI.Surface,
-        title = { Text(if (req.existing != null) "Formülü düzenle" else "Formül ekle") },
+        title = { Text(if (req.existing != null) L.t("Formülü düzenle") else L.t("Formül ekle")) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 Box(
@@ -108,11 +110,11 @@ fun FormulaDialog(ctl: EditorController, req: FormulaRequest) {
                     contentAlignment = Alignment.Center,
                 ) {
                     if (preview != null) Image(preview, null)
-                    else Text("Önizleme burada görünür", color = Color(0xFF98A2B3))
+                    else Text(L.t("Önizleme burada görünür"), color = Color(0xFF98A2B3))
                 }
                 Spacer(Modifier.height(10.dp))
                 OutlinedTextField(
-                    value, { value = it }, label = { Text("Formül (ör. \\frac{a}{b}, x^{2}, \\sqrt{x})") },
+                    value, { value = it }, label = { Text(L.t("Formül (ör. \\frac{a}{b}, x^{2}, \\sqrt{x})")) },
                     textStyle = androidx.compose.ui.text.TextStyle(fontFamily = FontFamily.Monospace, fontSize = 15.sp),
                     modifier = Modifier.fillMaxWidth().focusRequester(focus),
                 )
@@ -125,12 +127,12 @@ fun FormulaDialog(ctl: EditorController, req: FormulaRequest) {
                         ) { Text(label, fontSize = 16.sp, color = UI.Text) }
                     }
                 }
-                SectionTitle("Boyut")
+                SectionTitle(L.t("Boyut"))
                 PillRow { for (sz in listOf(14f, 18f, 22f, 30f, 40f)) Pill("${sz.toInt()}", size == sz) { size = sz } }
             }
         },
-        confirmButton = { Button(onClick = { ctl.finishFormula(req, value.text, size) }, shape = RoundedCornerShape(10.dp)) { Text("Ekle") } },
-        dismissButton = { TextButton(onClick = { ctl.formulaRequest = null }) { Text("Vazgeç", color = UI.TextSoft) } },
+        confirmButton = { Button(onClick = { ctl.finishFormula(req, value.text, size) }, shape = RoundedCornerShape(10.dp)) { Text(L.t("Ekle")) } },
+        dismissButton = { TextButton(onClick = { ctl.formulaRequest = null }) { Text(L.t("Vazgeç"), color = UI.TextSoft) } },
     )
 }
 
@@ -146,10 +148,10 @@ fun PlotDialog(ctl: EditorController, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = UI.Surface,
-        title = { Text("Fonksiyon grafiği") },
+        title = { Text(L.t("Fonksiyon grafiği")) },
         text = {
             Column {
-                Text("Grafik, ekrandaki sayfanın koordinat sistemine çizilir (koordinat düzlemi deseninde eksenlerle birlikte).", fontSize = 13.sp, color = UI.TextSoft)
+                Text(L.t("Grafik, ekrandaki sayfanın koordinat sistemine çizilir (koordinat düzlemi deseninde eksenlerle birlikte)."), fontSize = 13.sp, color = UI.TextSoft)
                 Spacer(Modifier.height(8.dp))
                 for (k in 0 until 3) {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
@@ -160,13 +162,13 @@ fun PlotDialog(ctl: EditorController, onDismiss: () -> Unit) {
                         Spacer(Modifier.width(10.dp))
                         OutlinedTextField(
                             exprs[k], { exprs[k] = it; error = null; active = k },
-                            label = { Text("y = ") }, singleLine = true,
+                            label = { Text(L.t("y = ")) }, singleLine = true,
                             modifier = Modifier.weight(1f),
                         )
                     }
                 }
                 error?.let { Text(it, color = UI.Danger, fontSize = 13.sp) }
-                SectionTitle("Örnekler")
+                SectionTitle(L.t("Örnekler"))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     for (ex in listOf("x^2", "2x+1", "-x^2+4", "x^3-3x", "sin(x)", "cos(x)", "1/x", "√x", "abs(x)", "2^x", "ln(x)")) {
                         Pill(ex, false) {
@@ -175,16 +177,16 @@ fun PlotDialog(ctl: EditorController, onDismiss: () -> Unit) {
                         }
                     }
                 }
-                Text("Kullanılabilir: + − × ÷ ^ ( ) √ sin cos tan ln log abs π e  •  örtük çarpma: 2x, 3sin(x)", fontSize = 12.sp, color = UI.TextFaint, modifier = Modifier.padding(top = 8.dp))
+                Text(L.t("Kullanılabilir: + − × ÷ ^ ( ) √ sin cos tan ln log abs π e  •  örtük çarpma: 2x, 3sin(x)"), fontSize = 12.sp, color = UI.TextFaint, modifier = Modifier.padding(top = 8.dp))
             }
         },
         confirmButton = {
             Button(onClick = {
                 val err = ctl.plotFunctions(exprs.indices.map { exprs[it] to colors[it] })
                 if (err == null) onDismiss() else error = err
-            }, shape = RoundedCornerShape(10.dp)) { Text("Çiz") }
+            }, shape = RoundedCornerShape(10.dp)) { Text(L.t("Çiz")) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Vazgeç", color = UI.TextSoft) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(L.t("Vazgeç"), color = UI.TextSoft) } },
     )
 }
 
@@ -195,11 +197,11 @@ private class Stamp(val text: String, val color: Int, val bg: Int)
 private val STAMPS = listOf(
     Stamp("✓", 0xFF16A34A.toInt(), 0), Stamp("✗", 0xFFDC2626.toInt(), 0), Stamp("★", 0xFFF59E0B.toInt(), 0),
     Stamp("!", 0xFFDC2626.toInt(), 0), Stamp("?", 0xFF2563EB.toInt(), 0), Stamp("♥", 0xFFE11D48.toInt(), 0),
-    Stamp("Dikkat!", 0xFFB91C1C.toInt(), 0xFFFEE2E2.toInt()), Stamp("Önemli", 0xFF92400E.toInt(), 0xFFFEF3C7.toInt()),
-    Stamp("Formül", 0xFF1E40AF.toInt(), 0xFFDBEAFE.toInt()), Stamp("Ödev", 0xFF6B21A8.toInt(), 0xFFF3E8FF.toInt()),
-    Stamp("Sınavda çıkar", 0xFF9F1239.toInt(), 0xFFFFE4E6.toInt()), Stamp("Tekrar et", 0xFF115E59.toInt(), 0xFFCCFBF1.toInt()),
-    Stamp("Aferin!", 0xFF166534.toInt(), 0xFFDCFCE7.toInt()), Stamp("Örnek", 0xFF334155.toInt(), 0xFFE2E8F0.toInt()),
-    Stamp("Tanım", 0xFF0E7490.toInt(), 0xFFCFFAFE.toInt()), Stamp("İpucu", 0xFF854D0E.toInt(), 0xFFFEF9C3.toInt()),
+    Stamp(L.t("Dikkat!"), 0xFFB91C1C.toInt(), 0xFFFEE2E2.toInt()), Stamp(L.t("Önemli"), 0xFF92400E.toInt(), 0xFFFEF3C7.toInt()),
+    Stamp(L.t("Formül"), 0xFF1E40AF.toInt(), 0xFFDBEAFE.toInt()), Stamp(L.t("Ödev"), 0xFF6B21A8.toInt(), 0xFFF3E8FF.toInt()),
+    Stamp(L.t("Sınavda çıkar"), 0xFF9F1239.toInt(), 0xFFFFE4E6.toInt()), Stamp(L.t("Tekrar et"), 0xFF115E59.toInt(), 0xFFCCFBF1.toInt()),
+    Stamp(L.t("Aferin!"), 0xFF166534.toInt(), 0xFFDCFCE7.toInt()), Stamp(L.t("Örnek"), 0xFF334155.toInt(), 0xFFE2E8F0.toInt()),
+    Stamp(L.t("Tanım"), 0xFF0E7490.toInt(), 0xFFCFFAFE.toInt()), Stamp(L.t("İpucu"), 0xFF854D0E.toInt(), 0xFFFEF9C3.toInt()),
 )
 
 @Composable
@@ -207,7 +209,7 @@ fun StampDialog(ctl: EditorController, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = UI.Surface,
-        title = { Text("Damga ekle") },
+        title = { Text(L.t("Damga ekle")) },
         text = {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 STAMPS.forEach { st ->
@@ -219,7 +221,7 @@ fun StampDialog(ctl: EditorController, onDismiss: () -> Unit) {
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Kapat", color = UI.TextSoft) } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(L.t("Kapat"), color = UI.TextSoft) } },
     )
 }
 
@@ -231,10 +233,10 @@ fun TimerDialog(ctl: EditorController, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = UI.Surface,
-        title = { Text("Sayaç") },
+        title = { Text(L.t("Sayaç")) },
         text = {
             Column {
-                Text("Geri sayım ekranın sağ üstünde, projeksiyonda ve ders kaydında da görünür.", fontSize = 13.sp, color = UI.TextSoft)
+                Text(L.t("Geri sayım ekranın sağ üstünde, projeksiyonda ve ders kaydında da görünür."), fontSize = 13.sp, color = UI.TextSoft)
                 Spacer(Modifier.height(10.dp))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     for (m in listOf(1, 2, 3, 5, 10, 15, 20, 30)) Pill("$m dk", false) { ctl.startTimer(m * 60); onDismiss() }
@@ -242,17 +244,17 @@ fun TimerDialog(ctl: EditorController, onDismiss: () -> Unit) {
                 Spacer(Modifier.height(10.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     OutlinedTextField(
-                        custom, { custom = it.filter { c -> c.isDigit() }.take(3) }, label = { Text("Dakika") }, singleLine = true,
+                        custom, { custom = it.filter { c -> c.isDigit() }.take(3) }, label = { Text(L.t("Dakika")) }, singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.width(140.dp),
                     )
                     Spacer(Modifier.width(10.dp))
-                    TextButton(onClick = { custom.toIntOrNull()?.let { if (it > 0) { ctl.startTimer(it * 60); onDismiss() } } }) { Text("Başlat") }
+                    TextButton(onClick = { custom.toIntOrNull()?.let { if (it > 0) { ctl.startTimer(it * 60); onDismiss() } } }) { Text(L.t("Başlat")) }
                 }
             }
         },
         confirmButton = {
-            if (ctl.timerEnd > 0L) TextButton(onClick = { ctl.stopTimer(); onDismiss() }) { Text("Sayacı kapat", color = UI.Danger) }
-            else TextButton(onClick = onDismiss) { Text("Kapat", color = UI.TextSoft) }
+            if (ctl.timerEnd > 0L) TextButton(onClick = { ctl.stopTimer(); onDismiss() }) { Text(L.t("Sayacı kapat"), color = UI.Danger) }
+            else TextButton(onClick = onDismiss) { Text(L.t("Kapat"), color = UI.TextSoft) }
         },
     )
 }
@@ -272,10 +274,10 @@ fun CropDialog(ctl: EditorController, index: Int, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = UI.Surface,
-        title = { Text("Sayfayı kırp") },
+        title = { Text(L.t("Sayfayı kırp")) },
         text = {
             Column {
-                Text("Kenarlardan kesilecek payı ayarlayın (beyaz kenar boşluklarını atmak için). Yazılarınız yerinde kalır.", fontSize = 13.sp, color = UI.TextSoft)
+                Text(L.t("Kenarlardan kesilecek payı ayarlayın (beyaz kenar boşluklarını atmak için). Yazılarınız yerinde kalır."), fontSize = 13.sp, color = UI.TextSoft)
                 @Composable
                 fun side(name: String, v: Float, set: (Float) -> Unit) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -285,19 +287,19 @@ fun CropDialog(ctl: EditorController, index: Int, onDismiss: () -> Unit) {
                         Text("%${(v * 100).roundToInt()}", modifier = Modifier.width(44.dp), color = UI.TextSoft)
                     }
                 }
-                side("Üst", top) { top = it }
-                side("Alt", bottom) { bottom = it }
-                side("Sol", left) { left = it }
-                side("Sağ", right) { right = it }
+                side(L.t("Üst"), top) { top = it }
+                side(L.t("Alt"), bottom) { bottom = it }
+                side(L.t("Sol"), left) { left = it }
+                side(L.t("Sağ"), right) { right = it }
             }
         },
         confirmButton = {
-            Button(onClick = { ctl.setCrop(index, top, right, bottom, left); onDismiss() }, shape = RoundedCornerShape(10.dp)) { Text("Uygula") }
+            Button(onClick = { ctl.setCrop(index, top, right, bottom, left); onDismiss() }, shape = RoundedCornerShape(10.dp)) { Text(L.t("Uygula")) }
         },
         dismissButton = {
             Row {
-                TextButton(onClick = { ctl.setCrop(index, 0f, 0f, 0f, 0f); onDismiss() }) { Text("Kırpmayı kaldır") }
-                TextButton(onClick = onDismiss) { Text("Vazgeç", color = UI.TextSoft) }
+                TextButton(onClick = { ctl.setCrop(index, 0f, 0f, 0f, 0f); onDismiss() }) { Text(L.t("Kırpmayı kaldır")) }
+                TextButton(onClick = onDismiss) { Text(L.t("Vazgeç"), color = UI.TextSoft) }
             }
         },
     )
@@ -315,15 +317,15 @@ fun PaletteDialog(ctl: EditorController, highlighter: Boolean, onDismiss: () -> 
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = UI.Surface,
-        title = { Text(if (highlighter) "Fosforlu kalem renkleri" else "Kalem renkleri") },
+        title = { Text(if (highlighter) L.t("Fosforlu kalem renkleri") else L.t("Kalem renkleri")) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
-                Text("Değiştirmek istediğiniz renge dokunun, sonra yeni rengi seçin.", fontSize = 13.sp, color = UI.TextSoft)
+                Text(L.t("Değiştirmek istediğiniz renge dokunun, sonra yeni rengi seçin."), fontSize = 13.sp, color = UI.TextSoft)
                 Spacer(Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     colors.forEachIndexed { i, c -> ColorDot(c, i == slot, 44) { slot = i } }
                 }
-                SectionTitle("Hazır renkler")
+                SectionTitle(L.t("Hazır renkler"))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     PresetColors.forEach { c ->
                         ColorDot(c, (c or 0xFF000000.toInt()) == (current or 0xFF000000.toInt()), 36) {
@@ -332,14 +334,14 @@ fun PaletteDialog(ctl: EditorController, highlighter: Boolean, onDismiss: () -> 
                         }
                     }
                 }
-                SectionTitle("Özel renk")
+                SectionTitle(L.t("Özel renk"))
                 HsvPicker(current) { c ->
                     if (highlighter) s.setHighlighterColor(slot, c) else s.setPaletteColor(slot, c)
                 }
             }
         },
-        confirmButton = { Button(onClick = { ctl.setColor((if (highlighter) s.highlighterColors() else s.paletteColors()).getOrElse(slot) { current }); onDismiss() }, shape = RoundedCornerShape(10.dp)) { Text("Tamam") } },
-        dismissButton = { TextButton(onClick = { s.resetPalettes(); onDismiss() }) { Text("Varsayılana dön", color = UI.TextSoft) } },
+        confirmButton = { Button(onClick = { ctl.setColor((if (highlighter) s.highlighterColors() else s.paletteColors()).getOrElse(slot) { current }); onDismiss() }, shape = RoundedCornerShape(10.dp)) { Text(L.t("Tamam")) } },
+        dismissButton = { TextButton(onClick = { s.resetPalettes(); onDismiss() }) { Text(L.t("Varsayılana dön"), color = UI.TextSoft) } },
     )
 }
 
@@ -359,9 +361,9 @@ fun HsvPicker(color: Int, onChange: (Int) -> Unit) {
     val hues = (0..6).map { Color(android.graphics.Color.HSVToColor(floatArrayOf(it * 60f, 1f, 1f))) }
     Box(Modifier.fillMaxWidth().height(10.dp).padding(horizontal = 10.dp).clip(RoundedCornerShape(5.dp)).background(Brush.horizontalGradient(hues)))
     Slider(h, { h = it; onChange(out()) }, valueRange = 0f..360f, colors = SliderDefaults.colors(thumbColor = Color(android.graphics.Color.HSVToColor(floatArrayOf(h, 1f, 1f))), activeTrackColor = Color.Transparent, inactiveTrackColor = Color.Transparent))
-    Text("Doygunluk", fontSize = 12.sp, color = UI.TextSoft)
+    Text(L.t("Doygunluk"), fontSize = 12.sp, color = UI.TextSoft)
     Slider(sat, { sat = it; onChange(out()) }, colors = SliderDefaults.colors(thumbColor = UI.Primary, activeTrackColor = Color(out())))
-    Text("Parlaklık", fontSize = 12.sp, color = UI.TextSoft)
+    Text(L.t("Parlaklık"), fontSize = 12.sp, color = UI.TextSoft)
     Slider(v, { v = it; onChange(out()) }, colors = SliderDefaults.colors(thumbColor = UI.Primary, activeTrackColor = Color(out())))
 }
 
@@ -377,7 +379,7 @@ fun TextDialog(ctl: EditorController, req: TextRequest) {
     AlertDialog(
         onDismissRequest = { ctl.textRequest = null },
         containerColor = UI.Surface,
-        title = { Text(if (req.sticky) (if (req.existing != null) "Notu düzenle" else "Yapışkan not") else if (req.existing != null) "Metni düzenle" else "Metin ekle") },
+        title = { Text(if (req.sticky) (if (req.existing != null) L.t("Notu düzenle") else L.t("Yapışkan not")) else if (req.existing != null) L.t("Metni düzenle") else L.t("Metin ekle")) },
         text = {
             Column {
                 OutlinedTextField(
@@ -386,20 +388,20 @@ fun TextDialog(ctl: EditorController, req: TextRequest) {
                         .let { if (req.sticky) it.background(Color(note), RoundedCornerShape(6.dp)) else it },
                 )
                 if (req.sticky) {
-                    SectionTitle("Not rengi")
+                    SectionTitle(L.t("Not rengi"))
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         EditorController.STICKY_COLORS.forEach { c -> ColorDot(c, c == note, 36) { note = c } }
                     }
                 }
-                SectionTitle("Yazı boyutu")
+                SectionTitle(L.t("Yazı boyutu"))
                 PillRow { for (sz in listOf(10f, 14f, 18f, 24f, 36f)) Pill("${sz.toInt()}", size == sz) { size = sz } }
             }
         },
-        confirmButton = { Button(onClick = { ctl.finishText(req, text, size, note) }, shape = RoundedCornerShape(10.dp)) { Text("Tamam") } },
+        confirmButton = { Button(onClick = { ctl.finishText(req, text, size, note) }, shape = RoundedCornerShape(10.dp)) { Text(L.t("Tamam")) } },
         dismissButton = {
             Row {
-                if (req.existing != null) TextButton(onClick = { ctl.finishText(req, "", size) }) { Text("Sil", color = UI.Danger) }
-                TextButton(onClick = { ctl.textRequest = null }) { Text("Vazgeç", color = UI.TextSoft) }
+                if (req.existing != null) TextButton(onClick = { ctl.finishText(req, "", size) }) { Text(L.t("Sil"), color = UI.Danger) }
+                TextButton(onClick = { ctl.textRequest = null }) { Text(L.t("Vazgeç"), color = UI.TextSoft) }
             }
         },
     )

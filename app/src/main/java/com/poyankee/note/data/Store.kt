@@ -1,5 +1,7 @@
 package com.poyankee.note.data
 
+import com.poyankee.note.core.L
+
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -121,13 +123,13 @@ class Store(context: Context) {
         val d = dir(id).apply { mkdirs() }
         val pdf = File(d, "source.pdf")
         context.contentResolver.openInputStream(uri).use { inp ->
-            requireNotNull(inp) { "Dosya açılamadı" }
+            requireNotNull(inp) { L.t("Dosya açılamadı") }
             FileOutputStream(pdf).use { out ->
                 val buf = ByteArray(1 shl 16); var total = 0L
                 while (true) {
                     val n = inp.read(buf); if (n < 0) break
                     total += n
-                    if (total > MAX_PDF) { d.deleteRecursively(); throw IllegalStateException("PDF çok büyük (en fazla 1 GB)") }
+                    if (total > MAX_PDF) { d.deleteRecursively(); throw IllegalStateException(L.t("PDF çok büyük (en fazla 1 GB)")) }
                     out.write(buf, 0, n)
                 }
             }
@@ -144,9 +146,9 @@ class Store(context: Context) {
             }
         } catch (e: Exception) {
             d.deleteRecursively()
-            throw IllegalStateException("PDF açılamadı (şifreli veya bozuk olabilir)", e)
+            throw IllegalStateException(L.t("PDF açılamadı (şifreli veya bozuk olabilir)"), e)
         }
-        if (nb.pages.isEmpty()) { d.deleteRecursively(); throw IllegalStateException("PDF'te sayfa yok") }
+        if (nb.pages.isEmpty()) { d.deleteRecursively(); throw IllegalStateException(L.t("PDF'te sayfa yok")) }
         writeMetaNow(nb)
         return nb
     }
@@ -320,7 +322,7 @@ class Store(context: Context) {
                 val buf = ByteArray(1 shl 16)
                 while (true) {
                     val e = zip.nextEntry ?: break
-                    if (++entries > maxEntries) throw IllegalStateException("Yedek dosyası geçersiz (çok fazla dosya)")
+                    if (++entries > maxEntries) throw IllegalStateException(L.t("Yedek dosyası geçersiz (çok fazla dosya)"))
                     if (e.name == "note-yedek.txt") valid = true
                     if (e.name == "ayarlar.txt") {
                         val bytes = java.io.ByteArrayOutputStream()
@@ -337,14 +339,14 @@ class Store(context: Context) {
                             val n = zip.read(buf)
                             if (n < 0) break
                             total += n
-                            if (total > maxTotal) throw IllegalStateException("Yedek dosyası çok büyük")
+                            if (total > maxTotal) throw IllegalStateException(L.t("Yedek dosyası çok büyük"))
                             out.write(buf, 0, n)
                         }
                     }
                 }
             }
         } catch (e: Exception) { tmp.deleteRecursively(); throw e }
-        if (!valid) { tmp.deleteRecursively(); throw IllegalStateException("Bu dosya bir Note yedeği değil") }
+        if (!valid) { tmp.deleteRecursively(); throw IllegalStateException(L.t("Bu dosya bir Note yedeği değil")) }
         var count = 0
         tmp.listFiles()?.forEach { d ->
             if (d.isDirectory && File(d, "notebook.bin").exists()) {
@@ -405,7 +407,7 @@ class Store(context: Context) {
         while (opts.outWidth / sample > 2048 || opts.outHeight / sample > 2048) sample *= 2
         val bmp = context.contentResolver.openInputStream(uri).use {
             BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample })
-        } ?: throw IllegalStateException("Görsel okunamadı")
+        } ?: throw IllegalStateException(L.t("Görsel okunamadı"))
         val name = "img_${Ids.next()}.jpg"
         FileOutputStream(File(dir(nbId), name)).use { bmp.compress(Bitmap.CompressFormat.JPEG, 90, it) }
         val r = Triple(name, bmp.width, bmp.height)

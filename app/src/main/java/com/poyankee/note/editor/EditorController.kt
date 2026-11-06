@@ -1,5 +1,7 @@
 package com.poyankee.note.editor
 
+import com.poyankee.note.core.L
+
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -54,15 +56,15 @@ import kotlin.math.floor
 import kotlin.math.roundToInt
 
 enum class Tool(val title: String) {
-    PEN("Kalem"), HIGHLIGHTER("Fosforlu kalem"), ERASER("Silgi"), LASSO("Kement seçim"),
-    TEXT("Metin"), LASER("Lazer işaretçi"), TEMP("Geçici kalem"), SPOT("Spot ışığı"),
-    SHAPE("Şekil kalemi"), LINE("Doğru parçası"), ARROW("Ok"), POLYGON("Düzgün çokgen"),
-    COMPASS("Pergel"), MARK("Geometri işareti"), SOLID("3B şekil");
+    PEN(L.t("Kalem")), HIGHLIGHTER(L.t("Fosforlu kalem")), ERASER(L.t("Silgi")), LASSO(L.t("Kement seçim")),
+    TEXT(L.t("Metin")), LASER(L.t("Lazer işaretçi")), TEMP(L.t("Geçici kalem")), SPOT(L.t("Spot ışığı")),
+    SHAPE(L.t("Şekil kalemi")), LINE(L.t("Doğru parçası")), ARROW(L.t("Ok")), POLYGON(L.t("Düzgün çokgen")),
+    COMPASS(L.t("Pergel")), MARK(L.t("Geometri işareti")), SOLID(L.t("3B şekil"));
 
     val isGeometry get() = this in setOf(SHAPE, LINE, ARROW, POLYGON, COMPASS, MARK, SOLID)
 }
 
-enum class MarkKind(val title: String) { ANGLE("Açı / dik açı"), TICK("Eşit uzunluk çentiği"), PARALLEL("Paralel oku") }
+enum class MarkKind(val title: String) { ANGLE(L.t("Açı / dik açı")), TICK(L.t("Eşit uzunluk çentiği")), PARALLEL(L.t("Paralel oku")) }
 
 /** Bilgi kutusu başlığının işareti (konu özeti kutuları bununla bulur). */
 const val BOX_MARK = "▍"
@@ -150,10 +152,10 @@ class EditorController(
         if (t.isGeometry) lastGeometryTool = t
         settings.tool.value = t.name
         hint = when (t) {
-            Tool.COMPASS -> "Pergel: kalemi merkeze koyup yarıçap kadar çekin, sonra kalemi döndürerek yayı çizin."
-            Tool.MARK -> "İşaret: köşeye dokunun (açı/dik açı) veya kenara dokunun (çentik/paralel)."
-            Tool.POLYGON -> "Çokgen: merkezden bir köşeye doğru çekin."
-            Tool.SOLID -> "3B şekil: kalemle bir kutu çizer gibi çapraz çekin."
+            Tool.COMPASS -> L.t("Pergel: kalemi merkeze koyup yarıçap kadar çekin, sonra kalemi döndürerek yayı çizin.")
+            Tool.MARK -> L.t("İşaret: köşeye dokunun (açı/dik açı) veya kenara dokunun (çentik/paralel).")
+            Tool.POLYGON -> L.t("Çokgen: merkezden bir köşeye doğru çekin.")
+            Tool.SOLID -> L.t("3B şekil: kalemle bir kutu çizer gibi çapraz çekin.")
             else -> null
         }
         view?.invalidate()
@@ -189,7 +191,7 @@ class EditorController(
     fun saveCurrentAsPreset() {
         val hl = tool == Tool.HIGHLIGHTER
         settings.addPreset(PenPreset(hl, activeColor, activeWidth))
-        message = "Kalem kaydedildi"
+        message = L.t("Kalem kaydedildi")
     }
 
     /** Kalemin çift dokunuşu / tuşu. */
@@ -301,7 +303,7 @@ class EditorController(
     /** Panodaki öğeleri ekrandaki sayfaya yapıştırır ve seçer. */
     fun paste() {
         val items = Clipboard.items
-        if (items.isEmpty()) { message = "Pano boş"; return }
+        if (items.isEmpty()) { message = L.t("Pano boş"); return }
         val v = view ?: return
         val (pi, cx, cy) = v.visibleCenter()
         val page = nb.pages[pi]
@@ -390,7 +392,7 @@ class EditorController(
         undoStack.pageAdded(p, nb.pages.size - 1)
         store.savePage(nb.id, p)
         pagesChanged()
-        message = "Yeni sayfa eklendi"
+        message = L.t("Yeni sayfa eklendi")
     }
 
     fun duplicatePage(index: Int) {
@@ -404,13 +406,13 @@ class EditorController(
     }
 
     fun deletePage(index: Int) {
-        if (nb.pages.size <= 1) { message = "Son sayfa silinemez"; return }
+        if (nb.pages.size <= 1) { message = L.t("Son sayfa silinemez"); return }
         val p = nb.pages.removeAt(index)
         undoStack.pageRemoved(p, index)
         // sayfa dosyası silinmez: "Geri al" ile geri gelebilsin (defter açılırken artıklar temizlenir)
         history.clear()
         pagesChanged()
-        message = "Sayfa silindi — geri almak için ↶"
+        message = L.t("Sayfa silindi — geri almak için ↶")
     }
 
     fun movePage(index: Int, delta: Int) {
@@ -654,7 +656,7 @@ class EditorController(
     /** Grafikleri ekrandaki sayfaya çizer. Hata varsa açıklamasını döndürür. */
     fun plotFunctions(list: List<Pair<String, Int>>): String? {
         val pi = view?.visibleCenter()?.first ?: currentPage
-        val page = nb.pages.getOrNull(pi) ?: return "Sayfa yok"
+        val page = nb.pages.getOrNull(pi) ?: return L.t("Sayfa yok")
         val (ox, oy, unit) = plotFrame(page)
         val added = ArrayList<Item>()
         for ((src, color) in list) {
@@ -671,7 +673,7 @@ class EditorController(
                 added += TextItem(Ids.next(), x - 10f, y - 20f, label, 11f, color)
             }
         }
-        if (added.isEmpty()) return "Fonksiyon yazın"
+        if (added.isEmpty()) return L.t("Fonksiyon yazın")
         commit(page, emptyList(), added)
         if ((page.background as? Background.Paper)?.template != Template.COORDINATE) {
             message = "İpucu: \"Sayfa\" panelinden koordinat düzlemi deseni seçerseniz eksenler görünür."
@@ -705,8 +707,8 @@ class EditorController(
     /* ---------- bilgi kutuları ve konu özeti ---------- */
 
     enum class InfoBox(val title: String, val color: Int) {
-        RULE("Kural", 0xFF1565C0.toInt()), DEFINITION("Tanım", 0xFF2E7D32.toInt()), EXAMPLE("Örnek", 0xFFF57C00.toInt()),
-        WARNING("Dikkat", 0xFFD32F2F.toInt()), FORMULA("Formül", 0xFF6A1B9A.toInt()), SUMMARY("Özet", 0xFF00838F.toInt()),
+        RULE(L.t("Kural"), 0xFF1565C0.toInt()), DEFINITION(L.t("Tanım"), 0xFF2E7D32.toInt()), EXAMPLE(L.t("Örnek"), 0xFFF57C00.toInt()),
+        WARNING(L.t("Dikkat"), 0xFFD32F2F.toInt()), FORMULA(L.t("Formül"), 0xFF6A1B9A.toInt()), SUMMARY(L.t("Özet"), 0xFF00838F.toInt()),
     }
 
     /** Seçili yazıları renkli, başlıklı bir bilgi kutusuna alır (yazılar aynen kalır). */
@@ -730,7 +732,7 @@ class EditorController(
         class Found(val page: Int, val items: List<Item>, val box: com.poyankee.note.core.Box)
         val found = ArrayList<Found>()
         for ((pi, page) in nb.pages.withIndex()) {
-            if ((page.items.firstOrNull { it is TextItem && it.text.startsWith("Konu özeti") }) != null) continue
+            if ((page.items.firstOrNull { it is TextItem && (it.text.startsWith("Konu özeti") || it.text.startsWith(L.t("Konu özeti"))) }) != null) continue
             for (t in page.items.filterIsInstance<TextItem>().filter { it.text.startsWith(BOX_MARK) }) {
                 val frame = page.items.filterIsInstance<ShapeItem>().firstOrNull { f ->
                     val g = f.geom
@@ -741,11 +743,11 @@ class EditorController(
                 found += Found(pi, inside, fb)
             }
         }
-        if (found.isEmpty()) { message = "Defterde bilgi kutusu yok (seçim › Kutu ile oluşturun)"; return 0 }
+        if (found.isEmpty()) { message = L.t("Defterde bilgi kutusu yok (seçim › Kutu ile oluşturun)"); return 0 }
         val w = PageSizeW; val h = PageSizeH
         var page = Page(Ids.next(), Background.Paper(Template.BLANK, PaperColors.WHITE), w, h)
         val pages = arrayListOf(page)
-        page.items += TextItem(Ids.next(), 30f, 24f, "Konu özeti", 20f, 0xFF1D2330.toInt())
+        page.items += TextItem(Ids.next(), 30f, 24f, L.t("Konu özeti"), 20f, 0xFF1D2330.toInt())
         var y = 64f
         for (f in found) {
             val s = minOf(1f, (w - 60f) / f.box.width.coerceAtLeast(1f))
@@ -781,12 +783,12 @@ class EditorController(
     fun captureToWrongNotebook(pageIndex: Int, l: Float, t: Float, r: Float, b: Float) {
         captureMode = false
         val page = nb.pages.getOrNull(pageIndex) ?: return
-        if (nb.id == settings.wrongNotebook.value) { message = "Yanlış defterinin içinden soru eklenemez"; return }
-        if (r - l < 12f || b - t < 12f) { message = "Soruyu dikdörtgen içine alın"; return }
+        if (nb.id == settings.wrongNotebook.value) { message = L.t("Yanlış defterinin içinden soru eklenemez"); return }
+        if (r - l < 12f || b - t < 12f) { message = L.t("Soruyu dikdörtgen içine alın"); return }
         val snapshot = Page(page.id, page.background, page.width, page.height).also { it.items.addAll(page.items) }
         val scale = minOf(4f, 2600f / page.width, 1800f / (r - l)).coerceAtLeast(1f)
         val srcName = nb.name
-        message = "Yanlış defterine ekleniyor…"
+        message = L.t("Yanlış defterine ekleniyor…")
         val job: () -> Unit = {
             try {
                 val bg = (snapshot.background as? Background.PdfPage)?.let { pdf?.renderBlocking(it, scale) }
@@ -921,13 +923,13 @@ class EditorController(
 
     /** (x, y) noktalarını ekrandaki sayfanın koordinat düzlemine işler; istenirse birleştirir. */
     fun plotPoints(points: List<Pair<Float, Float>>, connect: Boolean, color: Int): String? {
-        if (points.isEmpty()) return "Değer girin"
+        if (points.isEmpty()) return L.t("Değer girin")
         val pi = view?.visibleCenter()?.first ?: currentPage
-        val page = nb.pages.getOrNull(pi) ?: return "Sayfa yok"
+        val page = nb.pages.getOrNull(pi) ?: return L.t("Sayfa yok")
         val (ox, oy, unit) = plotFrame(page)
         val added = ArrayList<Item>()
         val pts = points.map { (x, y) -> (ox + x * unit) to (oy - y * unit) }
-        if (pts.any { (x, y) -> x < 0f || y < 0f || x > page.width || y > page.height }) return "Bazı noktalar sayfanın dışında kalıyor"
+        if (pts.any { (x, y) -> x < 0f || y < 0f || x > page.width || y > page.height }) return L.t("Bazı noktalar sayfanın dışında kalıyor")
         if (connect && pts.size >= 2) {
             val arr = FloatArray(pts.size * 2); pts.forEachIndexed { i, (x, y) -> arr[2 * i] = x; arr[2 * i + 1] = y }
             added += ShapeItem(Ids.next(), Geom.Polyline(arr, false), color, 1.6f)

@@ -1,5 +1,7 @@
 package com.poyankee.note
 
+import com.poyankee.note.core.L
+
 import android.content.Intent
 import android.content.res.Configuration
 import android.net.Uri
@@ -75,6 +77,7 @@ class MainActivity : ComponentActivity() {
         )
         super.onCreate(savedInstanceState)
         com.poyankee.note.data.CrashLog.install(applicationContext)
+        applyLanguage(this)
         store = Store(applicationContext)
         settings = Settings.get(this)
         bg.execute { Exporter.init(applicationContext) }
@@ -85,7 +88,7 @@ class MainActivity : ComponentActivity() {
         // ana ekranda uygulama simgesine uzun basınca "Hızlı not" kısayolu
         try {
             val sc = androidx.core.content.pm.ShortcutInfoCompat.Builder(this, "quick_note")
-                .setShortLabel("Hızlı not")
+                .setShortLabel(L.t("Hızlı not"))
                 .setIcon(androidx.core.graphics.drawable.IconCompat.createWithResource(this, R.mipmap.ic_launcher))
                 .setIntent(Intent(this, MainActivity::class.java).setAction(ACTION_QUICK_NOTE))
                 .build()
@@ -174,7 +177,7 @@ class MainActivity : ComponentActivity() {
                     }
                     if (!settings.introShown.value && !introSuppressed) com.poyankee.note.ui.IntroDialog { settings.introShown.value = true }
                     pinFor?.let { nb ->
-                        PinDialog("Kilitli defter", "\"${nb.name}\" defterini açmak için PIN girin", onForgot = { pinFor = null; forgotPin(nb) }, onDismiss = { pinFor = null }) { pin ->
+                        PinDialog(L.t("Kilitli defter"), "\"${nb.name}\" defterini açmak için PIN girin", onForgot = { pinFor = null; forgotPin(nb) }, onDismiss = { pinFor = null }) { pin ->
                             if (Lock.check(nb.id, pin, nb.lockHash)) { pinFor = null; open(nb.id); true } else false
                         }
                     }
@@ -265,11 +268,11 @@ class MainActivity : ComponentActivity() {
     private fun toast(msg: String) = runOnUiThread { android.widget.Toast.makeText(this, msg, android.widget.Toast.LENGTH_LONG).show() }
 
     private fun backupTo(uri: Uri) {
-        busy = "Yedekleniyor..."
+        busy = L.t("Yedekleniyor...")
         bg.execute {
             try {
                 contentResolver.openOutputStream(uri)?.use { store.backupTo(it) }
-                toast("Yedek kaydedildi")
+                toast(L.t("Yedek kaydedildi"))
             } catch (e: Exception) { toast("Yedeklenemedi: ${e.message}") }
             runOnUiThread { busy = null }
         }
@@ -277,7 +280,7 @@ class MainActivity : ComponentActivity() {
 
     private fun restoreFrom(uri: Uri) {
         closeEditor()
-        busy = "Geri yükleniyor..."
+        busy = L.t("Geri yükleniyor...")
         bg.execute {
             try {
                 val n = contentResolver.openInputStream(uri)?.use { store.restoreFrom(it) } ?: 0
@@ -295,7 +298,7 @@ class MainActivity : ComponentActivity() {
         settings.autoBackup.value = true
         bg.execute {
             val ok = try { AutoBackup.runIfDue(applicationContext, store, settings, force = true) } catch (_: Exception) { false }
-            toast(if (ok) "Yedek klasörü ayarlandı, ilk yedek alındı" else "Bu klasöre yazılamadı; başka bir klasör seçin")
+            toast(if (ok) L.t("Yedek klasörü ayarlandı, ilk yedek alındı") else L.t("Bu klasöre yazılamadı; başka bir klasör seçin"))
         }
     }
 
@@ -361,7 +364,7 @@ class MainActivity : ComponentActivity() {
             store.setLock(nb.id, "")
             notebooks = notebooks.map { if (it.id == nb.id) it.copy(lockHash = "") else it }
             com.poyankee.note.ui.PinGuard.success()
-            android.widget.Toast.makeText(this, "Kilit kaldırıldı", android.widget.Toast.LENGTH_SHORT).show()
+            android.widget.Toast.makeText(this, L.t("Kilit kaldırıldı"), android.widget.Toast.LENGTH_SHORT).show()
             open(nb.id)
         }
     }
@@ -369,11 +372,11 @@ class MainActivity : ComponentActivity() {
     private fun forgotPin(nb: NotebookInfo) {
         val km = getSystemService(android.app.KeyguardManager::class.java)
         if (km == null || !km.isDeviceSecure) {
-            android.widget.Toast.makeText(this, "Cihazınızda ekran kilidi olmadığı için PIN kurtarılamıyor. Ekran kilidi ekleyip tekrar deneyin.", android.widget.Toast.LENGTH_LONG).show()
+            android.widget.Toast.makeText(this, L.t("Cihazınızda ekran kilidi olmadığı için PIN kurtarılamıyor. Ekran kilidi ekleyip tekrar deneyin."), android.widget.Toast.LENGTH_LONG).show()
             return
         }
         @Suppress("DEPRECATION")
-        val i = km.createConfirmDeviceCredentialIntent("Defter kilidini kaldır", "\"${nb.name}\" için cihazınızın ekran kilidini girin") ?: return
+        val i = km.createConfirmDeviceCredentialIntent(L.t("Defter kilidini kaldır"), "\"${nb.name}\" için cihazınızın ekran kilidini girin") ?: return
         forgotFor = nb
         confirmCredential.launch(i)
     }
@@ -381,7 +384,7 @@ class MainActivity : ComponentActivity() {
     private fun insertPdfInto(id: String, uri: Uri, after: Int) {
         closeEditor(keepTab = true)
         var ok = false
-        runOp("PDF sayfaları ekleniyor...", {
+        runOp(L.t("PDF sayfaları ekleniyor..."), {
             store.flush()
             val n = com.poyankee.note.data.PdfOps.insertPdf(applicationContext, store, id, uri, after)
             settings.setLastPage(id, after + 1)
@@ -391,7 +394,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun extractPages(id: String, indices: List<Int>, name: String) {
-        runOp("Yeni defter hazırlanıyor...", {
+        runOp(L.t("Yeni defter hazırlanıyor..."), {
             store.flush()
             val nb = com.poyankee.note.data.PdfOps.extract(applicationContext, store, id, indices, name)
             "\"${nb.name}\" oluşturuldu (${nb.pages.size} sayfa)"
@@ -400,10 +403,10 @@ class MainActivity : ComponentActivity() {
 
     private fun saveTemplate(id: String) {
         addFolder(com.poyankee.note.ui.TEMPLATE_FOLDER)
-        runOp("Şablon kaydediliyor...", {
+        runOp(L.t("Şablon kaydediliyor..."), {
             store.flush()
             val src = store.load(id)
-            val nb = com.poyankee.note.data.PdfOps.extract(applicationContext, store, id, src.pages.indices.toList(), "Şablon: " + src.name.removePrefix("Şablon: "))
+            val nb = com.poyankee.note.data.PdfOps.extract(applicationContext, store, id, src.pages.indices.toList(), L.t("Şablon: ") + src.name.removePrefix(L.t("Şablon: ")).removePrefix("Şablon: "))
             store.setFolder(nb.id, com.poyankee.note.ui.TEMPLATE_FOLDER)
             store.flush()
             "\"${src.name}\" şablon olarak kaydedildi (Şablonlar klasörü)"
@@ -413,10 +416,10 @@ class MainActivity : ComponentActivity() {
     private fun fromTemplate(id: String) {
         val f = folder?.takeIf { it != com.poyankee.note.ui.FAVORITES && it != com.poyankee.note.ui.TRASH && it != com.poyankee.note.ui.TEMPLATE_FOLDER } ?: ""
         var created: String? = null
-        runOp("Defter hazırlanıyor...", {
+        runOp(L.t("Defter hazırlanıyor..."), {
             store.flush()
             val src = store.load(id)
-            val nb = com.poyankee.note.data.PdfOps.extract(applicationContext, store, id, src.pages.indices.toList(), src.name.removePrefix("Şablon: "))
+            val nb = com.poyankee.note.data.PdfOps.extract(applicationContext, store, id, src.pages.indices.toList(), src.name.removePrefix(L.t("Şablon: ")).removePrefix("Şablon: "))
             store.setFolder(nb.id, f)
             store.flush()
             created = nb.id
@@ -425,9 +428,9 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun mergeNotebooks(ids: List<String>) {
-        runOp("Defterler birleştiriliyor...", {
+        runOp(L.t("Defterler birleştiriliyor..."), {
             store.flush()
-            val nb = com.poyankee.note.data.PdfOps.merge(applicationContext, store, ids, "Birleştirilmiş defter")
+            val nb = com.poyankee.note.data.PdfOps.merge(applicationContext, store, ids, L.t("Birleştirilmiş defter"))
             "\"${nb.name}\" oluşturuldu (${nb.pages.size} sayfa)"
         })
     }
@@ -436,8 +439,8 @@ class MainActivity : ComponentActivity() {
         if (uris.isNullOrEmpty()) return@registerForActivityResult
         val f = folder?.takeIf { it != com.poyankee.note.ui.FAVORITES && it != com.poyankee.note.ui.TRASH } ?: ""
         var created: String? = null
-        runOp("Fotoğraflar defter yapılıyor...", {
-            val nb = com.poyankee.note.data.PdfOps.fromImages(applicationContext, store, uris, "Fotoğraflardan defter", f)
+        runOp(L.t("Fotoğraflar defter yapılıyor..."), {
+            val nb = com.poyankee.note.data.PdfOps.fromImages(applicationContext, store, uris, L.t("Fotoğraflardan defter"), f)
             created = nb.id
             null
         }) { created?.let { open(it) } }
@@ -445,20 +448,20 @@ class MainActivity : ComponentActivity() {
 
     private fun importPdf(uri: Uri) {
         closeEditor()
-        busy = "PDF açılıyor..."
+        busy = L.t("PDF açılıyor...")
         val f = folder?.takeIf { it != com.poyankee.note.ui.FAVORITES && it != com.poyankee.note.ui.TRASH } ?: ""
         bg.execute {
             try {
                 val nb = store.importPdf(applicationContext, uri, f)
                 runOnUiThread { busy = null; showEditor(EditorController(this, store, settings, nb)); refresh() }
             } catch (e: Exception) {
-                runOnUiThread { busy = null; android.widget.Toast.makeText(this, e.message ?: "PDF açılamadı", android.widget.Toast.LENGTH_LONG).show() }
+                runOnUiThread { busy = null; android.widget.Toast.makeText(this, e.message ?: L.t("PDF açılamadı"), android.widget.Toast.LENGTH_LONG).show() }
             }
         }
     }
 
     private fun create(name: String, inFolder: String? = null) {
-        val title = name.ifBlank { "Adsız defter" }
+        val title = name.ifBlank { L.t("Adsız defter") }
         // yeni defter ve hızlı not her zaman düz beyaz açılır (desen defter içinden değiştirilir)
         val size = runCatching { PageSize.valueOf(settings.newSize.value) }.getOrDefault(PageSize.A4_PORTRAIT)
         val paper = Background.Paper(Template.BLANK, com.poyankee.note.core.PaperColors.WHITE)
@@ -473,7 +476,7 @@ class MainActivity : ComponentActivity() {
     private fun quickNote() {
         closeEditor()
         addFolder(QUICK_FOLDER)
-        val name = "Not " + java.text.SimpleDateFormat("d MMM HH:mm", java.util.Locale.forLanguageTag("tr")).format(java.util.Date())
+        val name = L.t("Not ") + java.text.SimpleDateFormat("d MMM HH:mm", java.util.Locale.forLanguageTag("tr")).format(java.util.Date())
         create(name, QUICK_FOLDER)
     }
 
@@ -519,7 +522,7 @@ class MainActivity : ComponentActivity() {
         if (!keepTab) tabs = tabs.filter { it.first != ed.nb.id }
         tabs = tabs.map { if (it.first == ed.nb.id) it.first to ed.nb.name else it }
         ed.close()
-        android.widget.Toast.makeText(this, "Kaydedildi", android.widget.Toast.LENGTH_SHORT).show()
+        android.widget.Toast.makeText(this, L.t("Kaydedildi"), android.widget.Toast.LENGTH_SHORT).show()
         refresh()
         bg.execute { Thread.sleep(800); runOnUiThread { refresh() } }
     }
@@ -538,5 +541,19 @@ class MainActivity : ComponentActivity() {
     companion object {
         const val ACTION_QUICK_NOTE = "com.poyankee.note.QUICK_NOTE"
         const val QUICK_FOLDER = "Hızlı notlar"
+
+        /** Seçili dili uygular (İngilizce ise sözlüğü yükler). */
+        fun applyLanguage(ctx: android.content.Context) {
+            val en = ctx.getSharedPreferences("settings", MODE_PRIVATE).getString("language", "tr") == "en"
+            if (en && L.dict.isEmpty()) L.dict = try { ctx.assets.open("i18n/en.tsv").bufferedReader().use { L.parse(it.readText()) } } catch (_: Exception) { emptyMap() }
+            L.english = en
+        }
+
+        /** Dil değişince uygulamayı yeniden başlatır (bütün yazılar yeni dille açılır). */
+        fun restart(activity: android.app.Activity) {
+            val i = android.content.Intent(activity, MainActivity::class.java).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            activity.startActivity(i)
+            Runtime.getRuntime().exit(0)
+        }
     }
 }

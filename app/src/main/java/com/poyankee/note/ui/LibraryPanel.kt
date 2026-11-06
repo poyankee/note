@@ -1,5 +1,7 @@
 package com.poyankee.note.ui
 
+import com.poyankee.note.core.L
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -88,8 +90,8 @@ fun ItemsPreview(items: List<Item>, modifier: Modifier) {
 @Composable
 fun LibraryPanel(onInsert: (List<Item>) -> Unit, onClose: () -> Unit) {
     val user = UserLibrary.get(LocalContext.current)
-    val mine = "Benim çizimlerim"
-    val fractions = "Kesir modelleri"
+    val mine = L.t("Benim çizimlerim")
+    val fractions = L.t("Kesir modelleri")
     val cats = Library.categories.take(5) + fractions + Library.categories.drop(5) + mine
     var cat by remember { mutableStateOf(cats.first()) }
     var query by remember { mutableStateOf("") }
@@ -98,8 +100,8 @@ fun LibraryPanel(onInsert: (List<Item>) -> Unit, onClose: () -> Unit) {
 
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 12.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("Kütüphane", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = UI.Text, modifier = Modifier.weight(1f))
-            IconButton(onClick = onClose) { Icon(Icons.Rounded.Close, "Kapat", tint = UI.TextSoft) }
+            Text(L.t("Kütüphane"), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = UI.Text, modifier = Modifier.weight(1f))
+            IconButton(onClick = onClose) { Icon(Icons.Rounded.Close, L.t("Kapat"), tint = UI.TextSoft) }
         }
         Row(
             Modifier.padding(horizontal = 16.dp).fillMaxWidth().height(40.dp).clip(RoundedCornerShape(20.dp)).background(UI.SurfaceAlt).padding(horizontal = 12.dp),
@@ -108,13 +110,13 @@ fun LibraryPanel(onInsert: (List<Item>) -> Unit, onClose: () -> Unit) {
             Icon(Icons.Rounded.Search, null, tint = UI.TextFaint, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
             Box(Modifier.weight(1f)) {
-                if (query.isEmpty()) Text("Ara (ör. üçgen, venn)", color = UI.TextFaint, fontSize = 14.sp)
+                if (query.isEmpty()) Text(L.t("Ara (ör. üçgen, venn)"), color = UI.TextFaint, fontSize = 14.sp)
                 BasicTextField(query, { query = it }, singleLine = true, textStyle = TextStyle(fontSize = 14.sp, color = UI.Text), modifier = Modifier.fillMaxWidth())
             }
         }
         if (query.isBlank()) {
             Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                cats.forEach { c -> Pill(c, c == cat) { cat = c } }
+                cats.forEach { c -> Pill(L.t(c), c == cat) { cat = c } }
             }
         } else Spacer(Modifier.height(10.dp))
 
@@ -127,29 +129,29 @@ fun LibraryPanel(onInsert: (List<Item>) -> Unit, onClose: () -> Unit) {
         ) {
             when {
                 q.isNotEmpty() -> {
-                    val found = Library.entries.filter { it.title.lowercase(tr).contains(q) || it.category.lowercase(tr).contains(q) }
-                    items(found, key = { it.id }) { e -> Tile(e.title, remember(e.id) { e.build() }) { onInsert(e.build()) } }
+                    val found = Library.entries.filter { it.title.lowercase(tr).contains(q) || it.category.lowercase(tr).contains(q) || L.t(it.title).lowercase().contains(q) }
+                    items(found, key = { it.id }) { e -> Tile(L.t(e.title), remember(e.id) { e.build() }) { onInsert(e.build()) } }
                     val u = user.entries.filter { it.name.lowercase(tr).contains(q) }
                     items(u, key = { it.id }) { e -> Tile(e.name, e.items) { onInsert(e.items) } }
                 }
                 cat == fractions -> {
                     item(span = { GridItemSpan(2) }) {
                         Column {
-                            Text("Pay ve paydayı seçin, sonra modele dokunun.", fontSize = 12.sp, color = UI.TextSoft)
+                            Text(L.t("Pay ve paydayı seçin, sonra modele dokunun."), fontSize = 12.sp, color = UI.TextSoft)
                             Spacer(Modifier.height(8.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Stepper("Pay", num, 0, 24) { num = it }
+                                Stepper(L.t("Pay"), num, 0, 24) { num = it }
                                 Spacer(Modifier.width(16.dp))
-                                Stepper("Payda", den, 1, 24) { den = it }
+                                Stepper(L.t("Payda"), den, 1, 24) { den = it }
                             }
                         }
                     }
-                    item { Tile("Pasta modeli", Library.fractionPie(num, den)) { onInsert(Library.fractionPie(num, den)) } }
-                    item { Tile("Çubuk modeli", Library.fractionBar(num, den)) { onInsert(Library.fractionBar(num, den)) } }
-                    item { Tile("Sayı doğrusunda", Library.fractionOnLine(num, den)) { onInsert(Library.fractionOnLine(num, den)) } }
+                    item { Tile(L.t("Pasta modeli"), Library.fractionPie(num, den)) { onInsert(Library.fractionPie(num, den)) } }
+                    item { Tile(L.t("Çubuk modeli"), Library.fractionBar(num, den)) { onInsert(Library.fractionBar(num, den)) } }
+                    item { Tile(L.t("Sayı doğrusunda"), Library.fractionOnLine(num, den)) { onInsert(Library.fractionOnLine(num, den)) } }
                     item {
                         val eq = Library.fractionBar(num * 2, den * 2)
-                        Tile("Denk kesir (×2)", eq) { onInsert(Library.fractionBar(num, den) + Library.place(eq, 0f, 110f, 999f, 999f)) }
+                        Tile(L.t("Denk kesir (×2)"), eq) { onInsert(Library.fractionBar(num, den) + Library.place(eq, 0f, 110f, 999f, 999f)) }
                     }
                 }
                 cat == mine -> {
@@ -164,14 +166,14 @@ fun LibraryPanel(onInsert: (List<Item>) -> Unit, onClose: () -> Unit) {
                         Box {
                             Tile(e.name, e.items, onLong = { menu = true }) { onInsert(e.items) }
                             DropdownMenu(menu, { menu = false }) {
-                                DropdownMenuItem(text = { Text("Sil", color = UI.Danger) }, onClick = { menu = false; user.delete(e) })
+                                DropdownMenuItem(text = { Text(L.t("Sil"), color = UI.Danger) }, onClick = { menu = false; user.delete(e) })
                             }
                         }
                     }
                 }
                 else -> {
                     val list = Library.entries.filter { it.category == cat }
-                    items(list, key = { it.id }) { e -> Tile(e.title, remember(e.id) { e.build() }) { onInsert(e.build()) } }
+                    items(list, key = { it.id }) { e -> Tile(L.t(e.title), remember(e.id) { e.build() }) { onInsert(e.build()) } }
                 }
             }
         }

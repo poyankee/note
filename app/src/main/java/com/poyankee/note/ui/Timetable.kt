@@ -1,5 +1,7 @@
 package com.poyankee.note.ui
 
+import com.poyankee.note.core.L
+
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -60,17 +62,17 @@ private fun encode(l: List<Slot>) = l.joinToString("\u0001") { "${it.day}|${it.h
 fun TimetableDialog(notebooks: List<NotebookInfo>, onOpen: (String) -> Unit, onDismiss: () -> Unit) {
     val s = Settings.get(LocalContext.current)
     val slots = decode(s.timetable.value)
-    val days = listOf("Pzt", "Sal", "Çar", "Per", "Cum", "Cmt")
+    val days = listOf(L.t("Pzt"), L.t("Sal"), L.t("Çar"), L.t("Per"), L.t("Cum"), L.t("Cmt"))
     val today = (Calendar.getInstance().get(Calendar.DAY_OF_WEEK) + 5) % 7 // Pazartesi = 0
     var edit by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     AlertDialog(
         onDismissRequest = onDismiss, containerColor = UI.Surface,
         properties = DialogProperties(usePlatformDefaultWidth = false),
         modifier = Modifier.padding(24.dp),
-        title = { Text("Ders programı") },
+        title = { Text(L.t("Ders programı")) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
-                Text("Derse dokunun: bağlı defter açılır. Uzun basın: ders adı ve defteri seçin.", fontSize = 13.sp, color = UI.TextSoft)
+                Text(L.t("Derse dokunun: bağlı defter açılır. Uzun basın: ders adı ve defteri seçin."), fontSize = 13.sp, color = UI.TextSoft)
                 Spacer(Modifier.height(10.dp))
                 Row {
                     Box(Modifier.width(34.dp))
@@ -104,7 +106,7 @@ fun TimetableDialog(notebooks: List<NotebookInfo>, onOpen: (String) -> Unit, onD
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Kapat") } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(L.t("Kapat")) } },
     )
     edit?.let { (d, h) ->
         val cur = slots.firstOrNull { it.day == d && it.hour == h }
@@ -115,11 +117,11 @@ fun TimetableDialog(notebooks: List<NotebookInfo>, onOpen: (String) -> Unit, onD
             title = { Text("${days[d]}, $h. ders") },
             text = {
                 Column {
-                    OutlinedTextField(label, { label = it.take(24) }, label = { Text("Ders / sınıf (ör. 9-A Matematik)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(label, { label = it.take(24) }, label = { Text(L.t("Ders / sınıf (ör. 9-A Matematik)")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                     Spacer(Modifier.height(8.dp))
-                    Text("Bağlı defter", fontSize = 13.sp, color = UI.TextSoft)
+                    Text(L.t("Bağlı defter"), fontSize = 13.sp, color = UI.TextSoft)
                     LazyColumn(Modifier.heightIn(max = 260.dp)) {
-                        item { FolderPick("Defter yok", nbId.isEmpty()) { nbId = "" } }
+                        item { FolderPick(L.t("Defter yok"), nbId.isEmpty()) { nbId = "" } }
                         items(notebooks, key = { it.id }) { n -> FolderPick(n.name, nbId == n.id) { nbId = n.id; if (label.isBlank()) label = n.name.take(24) } }
                     }
                 }
@@ -129,12 +131,12 @@ fun TimetableDialog(notebooks: List<NotebookInfo>, onOpen: (String) -> Unit, onD
                     val rest = slots.filter { !(it.day == d && it.hour == h) }
                     s.timetable.value = encode(if (label.isBlank()) rest else rest + Slot(d, h, label.trim(), nbId))
                     edit = null
-                }) { Text("Kaydet") }
+                }) { Text(L.t("Kaydet")) }
             },
             dismissButton = {
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    if (cur != null) TextButton(onClick = { s.timetable.value = encode(slots.filter { !(it.day == d && it.hour == h) }); edit = null }) { Text("Sil", color = UI.Danger) }
-                    TextButton(onClick = { edit = null }) { Text("Vazgeç", color = UI.TextSoft) }
+                    if (cur != null) TextButton(onClick = { s.timetable.value = encode(slots.filter { !(it.day == d && it.hour == h) }); edit = null }) { Text(L.t("Sil"), color = UI.Danger) }
+                    TextButton(onClick = { edit = null }) { Text(L.t("Vazgeç"), color = UI.TextSoft) }
                 }
             },
         )

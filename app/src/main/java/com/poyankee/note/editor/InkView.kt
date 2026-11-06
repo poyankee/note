@@ -1,5 +1,7 @@
 package com.poyankee.note.editor
 
+import com.poyankee.note.core.L
+
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Canvas
@@ -322,13 +324,13 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
             val hw = 46f * density * (vw / max(width.toFloat(), 1f))
             c.drawRoundRect(RectF(vw / 2 - hw, y - 2f * density, vw / 2 + hw, y + 14f * density), 8f * density, 8f * density, fillPaint)
             timerPaint.color = 0xFFFFFFFF.toInt(); timerPaint.textSize = 11f * density
-            c.drawText("perdeyi çekin", vw / 2, y + 9.5f * density, timerPaint)
+            c.drawText(L.t("perdeyi çekin"), vw / 2, y + 9.5f * density, timerPaint)
         }
         // sayaç (sağ üst)
         if (ctl.timerEnd > 0L) {
             val left = ctl.timerLeftMs()
             val sec = ((left + 999) / 1000).toInt()
-            val text = if (left <= 0L) "Süre doldu" else "%02d:%02d".format(sec / 60, sec % 60)
+            val text = if (left <= 0L) L.t("Süre doldu") else "%02d:%02d".format(sec / 60, sec % 60)
             val scale = vw / max(width.toFloat(), 1f)
             timerPaint.textSize = 28f * density * scale
             val tw = timerPaint.measureText(text) + 28f * density * scale
@@ -463,7 +465,7 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
                 if (!g.closed || n < 3) {
                     var len = 0f
                     for (i in 0 until n - 1) len += Geo.dist(p[2 * i], p[2 * i + 1], p[2 * i + 2], p[2 * i + 3])
-                    label((p[0] + p[2 * n - 2]) / 2f, (p[1] + p[2 * n - 1]) / 2f - ts, Measure.fmt(len / Measure.PT_PER_CM) + " cm", 0xE61565C0.toInt())
+                    label((p[0] + p[2 * n - 2]) / 2f, (p[1] + p[2 * n - 1]) / 2f - ts, Measure.fmt(len / Measure.PT_PER_CM) + L.t(" cm"), 0xE61565C0.toInt())
                     return
                 }
                 val m = Measure.polygon(p)
@@ -475,18 +477,18 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
                     val mx = (p[2 * i] + p[2 * j]) / 2f; val my = (p[2 * i + 1] + p[2 * j + 1]) / 2f
                     val d = Geo.dist(cx, cy, mx, my).coerceAtLeast(1f)
                     val o = 16f * density / z
-                    label(mx + (mx - cx) / d * o, my + (my - cy) / d * o, Measure.fmt(m.sides[i]) + " cm", 0xE61565C0.toInt())
+                    label(mx + (mx - cx) / d * o, my + (my - cy) / d * o, Measure.fmt(m.sides[i]) + L.t(" cm"), 0xE61565C0.toInt())
                     val vx = p[2 * i]; val vy = p[2 * i + 1]
                     val dv = Geo.dist(cx, cy, vx, vy).coerceAtLeast(1f)
                     val ov = 20f * density / z
                     label(vx - (vx - cx) / dv * ov, vy - (vy - cy) / dv * ov, Measure.fmt(m.angles[i]) + "°", 0xE6D32F2F.toInt())
                 }
-                label(cx, cy, "Alan " + Measure.fmt(m.area) + " cm²  ·  Çevre " + Measure.fmt(m.perimeter) + " cm", 0xE62E7D32.toInt())
+                label(cx, cy, L.t("Alan ") + Measure.fmt(m.area) + L.t(" cm²  ·  Çevre ") + Measure.fmt(m.perimeter) + L.t(" cm"), 0xE62E7D32.toInt())
             }
             is Geom.Circle -> {
                 val r = g.r / Measure.PT_PER_CM
-                label(g.cx, g.cy - ts, "r = " + Measure.fmt(r) + " cm", 0xE61565C0.toInt())
-                label(g.cx, g.cy + ts, "Alan " + Measure.fmt((Math.PI * r * r).toFloat()) + " cm²  ·  Çevre " + Measure.fmt((2 * Math.PI * r).toFloat()) + " cm", 0xE62E7D32.toInt())
+                label(g.cx, g.cy - ts, L.t("r = ") + Measure.fmt(r) + L.t(" cm"), 0xE61565C0.toInt())
+                label(g.cx, g.cy + ts, L.t("Alan ") + Measure.fmt((Math.PI * r * r).toFloat()) + L.t(" cm²  ·  Çevre ") + Measure.fmt((2 * Math.PI * r).toFloat()) + L.t(" cm"), 0xE62E7D32.toInt())
             }
             else -> {}
         }
@@ -626,7 +628,7 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
         val limit = img.bounds().bottom + 30f
         return page.items.filter { x ->
             x.bounds().top > limit && when (x) {
-                is com.poyankee.note.core.TextItem -> !(x.text.startsWith("Çözüm:") || x.text.startsWith("☐"))
+                is com.poyankee.note.core.TextItem -> !(x.text.startsWith("Çözüm:") || x.text.startsWith(L.t("Çözüm:")) || x.text.startsWith("☐"))
                 is com.poyankee.note.core.ImageItem -> true
                 else -> !(x is ShapeItem && (x.geom as? Geom.Polyline)?.let { g -> !g.closed && g.n == 2 && x.color == 0xFFD0D5DD.toInt() } == true)
             }
@@ -1509,7 +1511,7 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
                 if (!st.moved) {
                     val kind = when (ctl.markKind) { MarkKind.ANGLE -> Marks.Kind.ANGLE; MarkKind.TICK -> Marks.Kind.TICK; MarkKind.PARALLEL -> Marks.Kind.PARALLEL }
                     val geoms = Marks.create(page.items, st.ax, st.ay, kind, ctl.markCount, max(8f, 26f * density / zoom))
-                    if (geoms.isEmpty()) ctl.message = "Yakında bir şekil köşesi/kenarı bulunamadı"
+                    if (geoms.isEmpty()) ctl.message = L.t("Yakında bir şekil köşesi/kenarı bulunamadı")
                     else ctl.commit(page, emptyList(), geoms.map { ShapeItem(Ids.next(), it, ctl.penColor, min(ctl.penWidth, 1.4f)) as Item } + geoms.mapNotNull { ctl.angleLabel(it) })
                 }
             }
@@ -1534,7 +1536,7 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
                     val g: Geom = if (abs(sw) < 0.05f || abs(sw) >= Geo.TAU - 0.02f) Geom.Circle(cs.cx, cs.cy, cs.r) else Geom.Arc(cs.cx, cs.cy, cs.r, st.ax, sw)
                     ctl.commit(nb.pages[cs.page], emptyList(), listOf(ShapeItem(Ids.next(), g, st.color, max(st.width, 0.8f), st.dashed, fillFor(g, true))))
                     compass = null
-                    ctl.hint = "Pergel: kalemi merkeze koyup yarıçap kadar çekin, sonra kalemi döndürerek yayı çizin."
+                    ctl.hint = L.t("Pergel: kalemi merkeze koyup yarıçap kadar çekin, sonra kalemi döndürerek yayı çizin.")
                 }
             }
         }

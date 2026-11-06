@@ -1,5 +1,7 @@
 package com.poyankee.note.ui
 
+import com.poyankee.note.core.L
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -74,8 +76,8 @@ fun TodoPanel(todos: TodoList, link: TodoLink?, onOpen: (String, Int) -> Unit, o
     Surface(Modifier.width(340.dp).fillMaxHeight(), color = UI.Surface, shadowElevation = 16.dp) {
         Column(Modifier.fillMaxHeight()) {
             Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 14.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("Yapılacaklar", fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = UI.Text, modifier = Modifier.weight(1f))
-                IconButton(onClick = onClose) { Icon(Icons.Rounded.Close, "Kapat", tint = UI.TextSoft) }
+                Text(L.t("Yapılacaklar"), fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = UI.Text, modifier = Modifier.weight(1f))
+                IconButton(onClick = onClose) { Icon(Icons.Rounded.Close, L.t("Kapat"), tint = UI.TextSoft) }
             }
             // yeni görev
             Row(
@@ -83,7 +85,7 @@ fun TodoPanel(todos: TodoList, link: TodoLink?, onOpen: (String, Int) -> Unit, o
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(Modifier.weight(1f).padding(vertical = 12.dp)) {
-                    if (text.isEmpty()) Text("Yeni görev yazın", color = UI.TextFaint, fontSize = 15.sp)
+                    if (text.isEmpty()) Text(L.t("Yeni görev yazın"), color = UI.TextFaint, fontSize = 15.sp)
                     BasicTextField(
                         text, { text = it }, singleLine = true,
                         textStyle = TextStyle(fontSize = 15.sp, color = UI.Text),
@@ -92,7 +94,7 @@ fun TodoPanel(todos: TodoList, link: TodoLink?, onOpen: (String, Int) -> Unit, o
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
-                IconButton(onClick = { add() }) { Icon(Icons.Rounded.Add, "Ekle", tint = UI.Primary) }
+                IconButton(onClick = { add() }) { Icon(Icons.Rounded.Add, L.t("Ekle"), tint = UI.Primary) }
             }
             if (link != null) {
                 Row(
@@ -112,7 +114,7 @@ fun TodoPanel(todos: TodoList, link: TodoLink?, onOpen: (String, Int) -> Unit, o
             val list = todos.items
             if (list.isEmpty()) {
                 Text(
-                    "Ders hazırlığı, okunacak sayfalar, kontrol edilecek ödevler… Görevlerinizi buraya yazın. Bir göreve dokununca tamamlanır.",
+                    L.t("Ders hazırlığı, okunacak sayfalar, kontrol edilecek ödevler… Görevlerinizi buraya yazın. Bir göreve dokununca tamamlanır."),
                     fontSize = 13.sp, color = UI.TextFaint, modifier = Modifier.padding(20.dp),
                 )
             }
@@ -121,7 +123,7 @@ fun TodoPanel(todos: TodoList, link: TodoLink?, onOpen: (String, Int) -> Unit, o
             }
             if (list.any { it.done }) {
                 HorizontalDivider(color = UI.Border)
-                TextButton(onClick = { todos.clearDone() }, modifier = Modifier.padding(8.dp)) { Text("Tamamlananları temizle", color = UI.TextSoft) }
+                TextButton(onClick = { todos.clearDone() }, modifier = Modifier.padding(8.dp)) { Text(L.t("Tamamlananları temizle"), color = UI.TextSoft) }
             }
         }
     }
@@ -138,7 +140,7 @@ private fun TodoRow(todos: TodoList, t: Todo, link: TodoLink?, onOpen: (String, 
             Modifier.size(24.dp).clip(CircleShape).background(if (t.done) UI.Primary else Color.Transparent)
                 .border(2.dp, if (t.done) UI.Primary else if (t.color != 0) todoColors[t.color] else UI.TextFaint, CircleShape),
             contentAlignment = Alignment.Center,
-        ) { if (t.done) Icon(Icons.Rounded.Check, "Tamamlandı", tint = Color.White, modifier = Modifier.size(16.dp)) }
+        ) { if (t.done) Icon(Icons.Rounded.Check, L.t("Tamamlandı"), tint = Color.White, modifier = Modifier.size(16.dp)) }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(
@@ -154,7 +156,7 @@ private fun TodoRow(todos: TodoList, t: Todo, link: TodoLink?, onOpen: (String, 
         }
         if (t.color != 0) Box(Modifier.padding(horizontal = 4.dp).size(8.dp).clip(CircleShape).background(todoColors[t.color]))
         Box {
-            IconButton(onClick = { menu = true }) { Icon(Icons.Rounded.MoreVert, "Seçenekler", tint = UI.TextFaint) }
+            IconButton(onClick = { menu = true }) { Icon(Icons.Rounded.MoreVert, L.t("Seçenekler"), tint = UI.TextFaint) }
             DropdownMenu(menu, { menu = false }) {
                 Row(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     todoColors.forEachIndexed { i, c ->
@@ -165,14 +167,14 @@ private fun TodoRow(todos: TodoList, t: Todo, link: TodoLink?, onOpen: (String, 
                         )
                     }
                 }
-                DropdownMenuItem(text = { Text("Yukarı taşı") }, onClick = { todos.move(t, -1); menu = false })
-                DropdownMenuItem(text = { Text("Aşağı taşı") }, onClick = { todos.move(t, 1); menu = false })
+                DropdownMenuItem(text = { Text(L.t("Yukarı taşı")) }, onClick = { todos.move(t, -1); menu = false })
+                DropdownMenuItem(text = { Text(L.t("Aşağı taşı")) }, onClick = { todos.move(t, 1); menu = false })
                 if (link != null) DropdownMenuItem(
-                    text = { Text("Bu sayfaya bağla") },
+                    text = { Text(L.t("Bu sayfaya bağla")) },
                     onClick = { todos.update(t.copy(nbId = link.nbId, nbName = link.nbName, page = link.page)); menu = false },
                 )
-                if (t.nbId.isNotEmpty()) DropdownMenuItem(text = { Text("Bağlantıyı kaldır") }, onClick = { todos.update(t.copy(nbId = "", nbName = "", page = 0)); menu = false })
-                DropdownMenuItem(text = { Text("Sil", color = UI.Danger) }, onClick = { todos.delete(t); menu = false })
+                if (t.nbId.isNotEmpty()) DropdownMenuItem(text = { Text(L.t("Bağlantıyı kaldır")) }, onClick = { todos.update(t.copy(nbId = "", nbName = "", page = 0)); menu = false })
+                DropdownMenuItem(text = { Text(L.t("Sil"), color = UI.Danger) }, onClick = { todos.delete(t); menu = false })
             }
         }
     }

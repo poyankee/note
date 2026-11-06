@@ -1,5 +1,7 @@
 package com.poyankee.note.editor
 
+import com.poyankee.note.core.L
+
 import android.app.Activity
 import android.app.Presentation
 import android.content.ContentValues
@@ -184,7 +186,7 @@ class LessonRecorder(private val context: Context, private val ink: InkView) {
         file = null
         if (!ok) { f.delete(); return null }
         return try {
-            val name = "Ders_" + java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm", java.util.Locale.getDefault()).format(java.util.Date()) + ".mp4"
+            val name = L.t("Ders_") + java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm", java.util.Locale.getDefault()).format(java.util.Date()) + ".mp4"
             val values = ContentValues().apply {
                 put(MediaStore.Video.Media.DISPLAY_NAME, name)
                 put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")

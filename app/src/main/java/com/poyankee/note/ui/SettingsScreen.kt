@@ -1,5 +1,7 @@
 package com.poyankee.note.ui
 
+import com.poyankee.note.core.L
+
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -90,20 +92,29 @@ fun SettingsScreen(
 
     Column(Modifier.fillMaxSize().background(UI.Bg)) {
         Row(Modifier.fillMaxWidth().background(UI.Surface).padding(horizontal = 8.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, "Geri", tint = UI.Text) }
-            Text("Ayarlar", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = UI.Text)
+            IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, L.t("Geri"), tint = UI.Text) }
+            Text(L.t("Ayarlar"), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = UI.Text)
         }
         HorizontalDivider(color = UI.Border)
         Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), contentAlignment = Alignment.TopCenter) {
             Column(Modifier.widthIn(max = 720.dp).fillMaxWidth().padding(horizontal = 24.dp, vertical = 12.dp)) {
-                Group("Görünüm") {
+                Group(L.t("Görünüm")) {
                     Column(Modifier.padding(vertical = 10.dp)) {
-                        Text("Tema", fontSize = 16.sp, color = UI.Text)
+                        Text("Dil / Language", fontSize = 16.sp, color = UI.Text)
+                        Spacer(Modifier.height(8.dp))
+                        val act = ctx as? android.app.Activity
+                        PillRow {
+                            Pill("Türkçe", s.language.value == "tr") { if (s.language.value != "tr") { s.language.value = "tr"; act?.let { com.poyankee.note.MainActivity.restart(it) } } }
+                            Pill("English", s.language.value == "en") { if (s.language.value != "en") { s.language.value = "en"; act?.let { com.poyankee.note.MainActivity.restart(it) } } }
+                        }
+                    }
+                    Column(Modifier.padding(vertical = 10.dp)) {
+                        Text(L.t("Tema"), fontSize = 16.sp, color = UI.Text)
                         Spacer(Modifier.height(8.dp))
                         PillRow { ThemeMode.entries.forEach { m -> Pill(m.title, s.themeValue == m) { s.theme.value = m.name } } }
                     }
                     Column(Modifier.padding(vertical = 10.dp)) {
-                        Text("Renk teması", fontSize = 16.sp, color = UI.Text)
+                        Text(L.t("Renk teması"), fontSize = 16.sp, color = UI.Text)
                         Spacer(Modifier.height(8.dp))
                         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Palette.entries.forEach { pal ->
@@ -124,150 +135,150 @@ fun SettingsScreen(
                         }
                     }
                     Column(Modifier.padding(vertical = 10.dp)) {
-                        Text("Arayüz boyutu", fontSize = 16.sp, color = UI.Text)
+                        Text(L.t("Arayüz boyutu"), fontSize = 16.sp, color = UI.Text)
                         Text("Düğmeler, menüler ve yazılar. \"Çok büyük\" görme güçlüğü olanlar için (erişilebilirlik).", fontSize = 13.sp, color = UI.TextSoft)
                         Spacer(Modifier.height(8.dp))
-                        PillRow { listOf("Küçük", "Normal", "Büyük", "Çok büyük").forEachIndexed { i, t -> Pill(t, s.uiSize.value == i) { s.uiSize.value = i } } }
+                        PillRow { listOf(L.t("Küçük"), L.t("Normal"), L.t("Büyük"), L.t("Çok büyük")).forEachIndexed { i, t -> Pill(t, s.uiSize.value == i) { s.uiSize.value = i } } }
                     }
-                    Toggle("Göz dostu mod", "Koyu tema ve ekrana hafif sıcak renk filtresi; akşam çalışırken gözü yormaz", s.eyeComfort.value) { s.eyeComfort.value = it }
-                    Toggle("Solak kullanım", "Araç menüsü sağ tarafa geçer", s.leftHanded.value) { s.leftHanded.value = it }
+                    Toggle(L.t("Göz dostu mod"), L.t("Koyu tema ve ekrana hafif sıcak renk filtresi; akşam çalışırken gözü yormaz"), s.eyeComfort.value) { s.eyeComfort.value = it }
+                    Toggle(L.t("Solak kullanım"), L.t("Araç menüsü sağ tarafa geçer"), s.leftHanded.value) { s.leftHanded.value = it }
                     Column(Modifier.padding(vertical = 10.dp)) {
-                        Text("Panelleri varsayılan yerine al", fontSize = 16.sp, color = UI.Text)
-                        Text("Araç menüsü ve sayfa gezgini taşındıysa", fontSize = 13.sp, color = UI.TextSoft)
+                        Text(L.t("Panelleri varsayılan yerine al"), fontSize = 16.sp, color = UI.Text)
+                        Text(L.t("Araç menüsü ve sayfa gezgini taşındıysa"), fontSize = 13.sp, color = UI.TextSoft)
                         Spacer(Modifier.height(6.dp))
-                        Pill("Sıfırla", false) {
+                        Pill(L.t("Sıfırla"), false) {
                             s.dockX.value = 0f; s.dockY.value = 0f; s.navX.value = 0f; s.navY.value = 0f; s.presX.value = 0f; s.presY.value = 0f
                             s.dockCollapsed.value = false
                         }
                     }
                 }
-                Group("Kalem ve el") {
-                    Toggle("Sadece kalemle çiz", "El ve avuç dokunuşları asla çizim yapmaz", s.penOnly.value) { s.penOnly.value = it }
-                    Toggle("Parmakla kaydır / yakınlaştır", "Kapalıysa parmak dokunuşları tamamen yok sayılır", s.fingerGestures.value) { s.fingerGestures.value = it }
-                    Toggle("İki parmakla dokun = geri al", "Üç parmakla dokun = yinele", s.twoFingerUndo.value) { s.twoFingerUndo.value = it }
-                    SliderRow("Avuç algılama", when {
-                        s.palmSizeDp.value < 50 -> "çok hassas"; s.palmSizeDp.value < 80 -> "normal"; else -> "az hassas"
+                Group(L.t("Kalem ve el")) {
+                    Toggle(L.t("Sadece kalemle çiz"), L.t("El ve avuç dokunuşları asla çizim yapmaz"), s.penOnly.value) { s.penOnly.value = it }
+                    Toggle(L.t("Parmakla kaydır / yakınlaştır"), L.t("Kapalıysa parmak dokunuşları tamamen yok sayılır"), s.fingerGestures.value) { s.fingerGestures.value = it }
+                    Toggle(L.t("İki parmakla dokun = geri al"), L.t("Üç parmakla dokun = yinele"), s.twoFingerUndo.value) { s.twoFingerUndo.value = it }
+                    SliderRow(L.t("Avuç algılama"), when {
+                        s.palmSizeDp.value < 50 -> L.t("çok hassas"); s.palmSizeDp.value < 80 -> "normal"; else -> L.t("az hassas")
                     }, s.palmSizeDp.value.toFloat(), 30f..140f) { s.palmSizeDp.value = it.roundToInt() }
-                    Text("Elin yanlışlıkla kaydırıyorsa sola (daha hassas) çekin.", fontSize = 12.sp, color = UI.TextFaint)
-                    SliderRow("Kalem kalkınca parmakları yok say", "${s.palmHoldMs.value} ms", s.palmHoldMs.value.toFloat(), 0f..1200f) {
+                    Text(L.t("Elin yanlışlıkla kaydırıyorsa sola (daha hassas) çekin."), fontSize = 12.sp, color = UI.TextFaint)
+                    SliderRow(L.t("Kalem kalkınca parmakları yok say"), "${s.palmHoldMs.value} ms", s.palmHoldMs.value.toFloat(), 0f..1200f) {
                         s.palmHoldMs.value = (it / 50).roundToInt() * 50
                     }
                     Column(Modifier.padding(vertical = 10.dp)) {
-                        Text("Kalem yan tuşu (basılı tutarken)", fontSize = 16.sp, color = UI.Text)
+                        Text(L.t("Kalem yan tuşu (basılı tutarken)"), fontSize = 16.sp, color = UI.Text)
                         Spacer(Modifier.height(8.dp))
                         PillRow { ButtonAction.entries.forEach { a -> Pill(a.title, s.buttonActionValue == a) { s.buttonAction.value = a.name } } }
                     }
                     Column(Modifier.padding(vertical = 10.dp)) {
-                        Text("Kalemde çift dokunuş / tuşa basma", fontSize = 16.sp, color = UI.Text)
-                        Text("Kaleminiz çift dokunuşu bir tuş olarak gönderiyorsa burada ne yapacağını seçin.", fontSize = 13.sp, color = UI.TextSoft)
+                        Text(L.t("Kalemde çift dokunuş / tuşa basma"), fontSize = 16.sp, color = UI.Text)
+                        Text(L.t("Kaleminiz çift dokunuşu bir tuş olarak gönderiyorsa burada ne yapacağını seçin."), fontSize = 13.sp, color = UI.TextSoft)
                         Spacer(Modifier.height(8.dp))
                         PillRow { PenAction.entries.take(3).forEach { a -> Pill(a.title, s.penKeyActionValue == a) { s.penKeyAction.value = a.name } } }
                         Spacer(Modifier.height(6.dp))
                         PillRow { PenAction.entries.drop(3).forEach { a -> Pill(a.title, s.penKeyActionValue == a) { s.penKeyAction.value = a.name } } }
                         Spacer(Modifier.height(10.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Pill("Tuşu öğret", false) { learning = true }
+                            Pill(L.t("Tuşu öğret"), false) { learning = true }
                             Spacer(Modifier.width(10.dp))
                             val codes = s.penKeyCodeSet()
-                            Text(if (codes.isEmpty()) "Öğretilmiş tuş yok (standart kalem tuşları tanınır)" else "Öğretilen tuş kodları: ${codes.joinToString()}",
+                            Text(if (codes.isEmpty()) L.t("Öğretilmiş tuş yok (standart kalem tuşları tanınır)") else "Öğretilen tuş kodları: ${codes.joinToString()}",
                                 fontSize = 12.sp, color = UI.TextSoft)
                         }
-                        if (s.penKeyCodeSet().isNotEmpty()) TextButton(onClick = { s.penKeyCodes.value = "" }) { Text("Öğretilen tuşları temizle") }
+                        if (s.penKeyCodeSet().isNotEmpty()) TextButton(onClick = { s.penKeyCodes.value = "" }) { Text(L.t("Öğretilen tuşları temizle")) }
                         Spacer(Modifier.height(6.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Pill("Kalem testi", false) { penTest = true }
+                            Pill(L.t("Kalem testi"), false) { penTest = true }
                             Spacer(Modifier.width(10.dp))
-                            Text("Kalemin ve tuşlarının uygulamaya ne gönderdiğini gösterir", fontSize = 12.sp, color = UI.TextSoft)
+                            Text(L.t("Kalemin ve tuşlarının uygulamaya ne gönderdiğini gösterir"), fontSize = 12.sp, color = UI.TextSoft)
                         }
                     }
                 }
-                Group("Yazı") {
-                    Toggle("Basınç duyarlılığı", "Kalemi bastırdıkça çizgi kalınlaşır", s.pressure.value) { s.pressure.value = it }
-                    Toggle("Yazarken otomatik yeni sayfa", "Son sayfanın alt kısmına yazınca yeni düz sayfa eklenir", s.autoNewPage.value) { s.autoNewPage.value = it }
-                    Toggle("Yakınlaştırma kilidi", "İki parmak sayfayı yakınlaştırmaz, sadece kaydırır", s.zoomLock.value) { s.zoomLock.value = it }
-                    Toggle("Silgiden kaleme otomatik dön", "Silgiyle sildikten sonra önceki araca geri geçer", s.eraserReturn.value) { s.eraserReturn.value = it }
-                    SliderRow("Kalem basıncı eğrisi", listOf("Çok yumuşak", "Yumuşak", "Normal", "Sert", "Çok sert")[s.pressureCurve.value.coerceIn(0, 4)],
+                Group(L.t("Yazı")) {
+                    Toggle(L.t("Basınç duyarlılığı"), L.t("Kalemi bastırdıkça çizgi kalınlaşır"), s.pressure.value) { s.pressure.value = it }
+                    Toggle(L.t("Yazarken otomatik yeni sayfa"), L.t("Son sayfanın alt kısmına yazınca yeni düz sayfa eklenir"), s.autoNewPage.value) { s.autoNewPage.value = it }
+                    Toggle(L.t("Yakınlaştırma kilidi"), L.t("İki parmak sayfayı yakınlaştırmaz, sadece kaydırır"), s.zoomLock.value) { s.zoomLock.value = it }
+                    Toggle(L.t("Silgiden kaleme otomatik dön"), L.t("Silgiyle sildikten sonra önceki araca geri geçer"), s.eraserReturn.value) { s.eraserReturn.value = it }
+                    SliderRow(L.t("Kalem basıncı eğrisi"), listOf(L.t("Çok yumuşak"), L.t("Yumuşak"), L.t("Normal"), L.t("Sert"), L.t("Çok sert"))[s.pressureCurve.value.coerceIn(0, 4)],
                         s.pressureCurve.value.toFloat(), 0f..4f, 3) { s.pressureCurve.value = it.roundToInt() }
-                    Toggle("PDF'te metni vurgula", "Fosforlu kalem PDF yazısının üzerinde satırlara oturur", s.textHighlight.value) { s.textHighlight.value = it }
-                    Toggle("Gecikme azaltma (tahmin)", "Çizgi kalemin ucunu daha yakından takip eder", s.prediction.value) { s.prediction.value = it }
-                    SliderRow("Çizgi yumuşatma", listOf("Kapalı", "Az", "Orta", "Çok", "En çok")[s.smoothing.value.coerceIn(0, 4)],
+                    Toggle(L.t("PDF'te metni vurgula"), L.t("Fosforlu kalem PDF yazısının üzerinde satırlara oturur"), s.textHighlight.value) { s.textHighlight.value = it }
+                    Toggle(L.t("Gecikme azaltma (tahmin)"), L.t("Çizgi kalemin ucunu daha yakından takip eder"), s.prediction.value) { s.prediction.value = it }
+                    SliderRow(L.t("Çizgi yumuşatma"), listOf(L.t("Kapalı"), L.t("Az"), L.t("Orta"), L.t("Çok"), L.t("En çok"))[s.smoothing.value.coerceIn(0, 4)],
                         s.smoothing.value.toFloat(), 0f..4f, 3) { s.smoothing.value = it.roundToInt() }
                 }
-                Group("Sayfalar") {
+                Group(L.t("Sayfalar")) {
                     Column(Modifier.padding(vertical = 10.dp)) {
-                        Text("Yeni eklenen sayfa", fontSize = 16.sp, color = UI.Text)
+                        Text(L.t("Yeni eklenen sayfa"), fontSize = 16.sp, color = UI.Text)
                         Spacer(Modifier.height(8.dp))
                         PillRow {
-                            Pill("Düz beyaz", !s.newPageSame.value) { s.newPageSame.value = false }
-                            Pill("Önceki sayfa gibi", s.newPageSame.value) { s.newPageSame.value = true }
+                            Pill(L.t("Düz beyaz"), !s.newPageSame.value) { s.newPageSame.value = false }
+                            Pill(L.t("Önceki sayfa gibi"), s.newPageSame.value) { s.newPageSame.value = true }
                         }
                     }
                     Column(Modifier.padding(vertical = 10.dp)) {
-                        Text("Sayfa altında", fontSize = 16.sp, color = UI.Text)
-                        Text("Sağ alt köşeye sayfa numarası (ve sayfanın açıldığı tarih); dışa aktarılan PDF'te de görünür", fontSize = 13.sp, color = UI.TextSoft)
+                        Text(L.t("Sayfa altında"), fontSize = 16.sp, color = UI.Text)
+                        Text(L.t("Sağ alt köşeye sayfa numarası (ve sayfanın açıldığı tarih); dışa aktarılan PDF'te de görünür"), fontSize = 13.sp, color = UI.TextSoft)
                         Spacer(Modifier.height(8.dp))
-                        PillRow { listOf("Hiçbir şey", "Sayfa no", "Sayfa no + tarih").forEachIndexed { i, t -> Pill(t, s.pageFooter.value == i) { s.pageFooter.value = i } } }
+                        PillRow { listOf(L.t("Hiçbir şey"), L.t("Sayfa no"), L.t("Sayfa no + tarih")).forEachIndexed { i, t -> Pill(t, s.pageFooter.value == i) { s.pageFooter.value = i } } }
                     }
                     Column(Modifier.padding(vertical = 10.dp)) {
-                        Text("Çözüm katmanı", fontSize = 16.sp, color = UI.Text)
+                        Text(L.t("Çözüm katmanı"), fontSize = 16.sp, color = UI.Text)
                         Text("Bu renkle yazdıklarınız \"çözüm\" sayılır: defterde ⋮ › Çözümleri gizle ile saklanır, dışa aktarırken soru kağıdı olarak çıkarılabilir.", fontSize = 13.sp, color = UI.TextSoft)
                         Spacer(Modifier.height(8.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Pill("Kapalı", s.solutionColor.value == 0) { s.solutionColor.value = 0 }
+                            Pill(L.t("Kapalı"), s.solutionColor.value == 0) { s.solutionColor.value = 0 }
                             s.paletteColors().forEach { c -> ColorDot(c, (s.solutionColor.value or 0xFF000000.toInt()) == (c or 0xFF000000.toInt()) && s.solutionColor.value != 0, 30) { s.solutionColor.value = c } }
                         }
                     }
                 }
-                Group("Geometri") {
-                    Toggle("Çizip bekleyince şekle dönüştür", "Kalemi çizginin sonunda bir an bekletin", s.shapeHold.value) { s.shapeHold.value = it }
-                    SliderRow("Bekleme süresi", "${s.holdMs.value} ms", s.holdMs.value.toFloat(), 300f..1200f) { s.holdMs.value = (it / 50).roundToInt() * 50 }
-                    Toggle("Izgaraya ve köşelere yapıştır", "Şekil köşeleri desene ve diğer köşelere yapışır", s.gridSnap.value) { s.gridSnap.value = it }
-                    Toggle("Açı yapıştırma (15°)", "Çizgiler 0°, 15°, 30°, 45°... açılarına yapışır", s.angleSnap.value) { s.angleSnap.value = it }
-                    Toggle("Köşelere harf (A, B, C)", "Çokgen çizince köşelere otomatik harf", s.autoLetters.value) { s.autoLetters.value = it }
-                    Toggle("Ölçüleri yaz", "Doğru parçası uzunluğu ve açı dereceleri sayfada kalır", s.autoMeasures.value) { s.autoMeasures.value = it }
+                Group(L.t("Geometri")) {
+                    Toggle(L.t("Çizip bekleyince şekle dönüştür"), L.t("Kalemi çizginin sonunda bir an bekletin"), s.shapeHold.value) { s.shapeHold.value = it }
+                    SliderRow(L.t("Bekleme süresi"), "${s.holdMs.value} ms", s.holdMs.value.toFloat(), 300f..1200f) { s.holdMs.value = (it / 50).roundToInt() * 50 }
+                    Toggle(L.t("Izgaraya ve köşelere yapıştır"), L.t("Şekil köşeleri desene ve diğer köşelere yapışır"), s.gridSnap.value) { s.gridSnap.value = it }
+                    Toggle(L.t("Açı yapıştırma (15°)"), L.t("Çizgiler 0°, 15°, 30°, 45°... açılarına yapışır"), s.angleSnap.value) { s.angleSnap.value = it }
+                    Toggle(L.t("Köşelere harf (A, B, C)"), L.t("Çokgen çizince köşelere otomatik harf"), s.autoLetters.value) { s.autoLetters.value = it }
+                    Toggle(L.t("Ölçüleri yaz"), L.t("Doğru parçası uzunluğu ve açı dereceleri sayfada kalır"), s.autoMeasures.value) { s.autoMeasures.value = it }
                 }
-                Group("Ders anlatımı") {
-                    SliderRow("Lazer izinin kaybolma süresi", "${"%.1f".format(s.laserMs.value / 1000f)} sn", s.laserMs.value.toFloat(), 500f..5000f) {
+                Group(L.t("Ders anlatımı")) {
+                    SliderRow(L.t("Lazer izinin kaybolma süresi"), "${"%.1f".format(s.laserMs.value / 1000f)} sn", s.laserMs.value.toFloat(), 500f..5000f) {
                         s.laserMs.value = (it / 100).roundToInt() * 100
                     }
-                    SliderRow("Geçici kalemin kaybolma süresi", "${"%.1f".format(s.tempMs.value / 1000f)} sn", s.tempMs.value.toFloat(), 1000f..10000f) {
+                    SliderRow(L.t("Geçici kalemin kaybolma süresi"), "${"%.1f".format(s.tempMs.value / 1000f)} sn", s.tempMs.value.toFloat(), 1000f..10000f) {
                         s.tempMs.value = (it / 100).roundToInt() * 100
                     }
-                    SliderRow("Spot ışığı boyutu", "${s.spotRadiusDp.value}", s.spotRadiusDp.value.toFloat(), 60f..300f) { s.spotRadiusDp.value = it.roundToInt() }
-                    Toggle("İkinci ekran (projeksiyon / HDMI)", "Harici ekranda sadece temiz sayfa görünür, araçlar tablette kalır", s.secondScreen.value) { s.secondScreen.value = it }
-                    Toggle("Ders kaydında mikrofon", "Video kaydına sesinizi de ekler", s.recordAudio.value) { s.recordAudio.value = it }
+                    SliderRow(L.t("Spot ışığı boyutu"), "${s.spotRadiusDp.value}", s.spotRadiusDp.value.toFloat(), 60f..300f) { s.spotRadiusDp.value = it.roundToInt() }
+                    Toggle(L.t("İkinci ekran (projeksiyon / HDMI)"), L.t("Harici ekranda sadece temiz sayfa görünür, araçlar tablette kalır"), s.secondScreen.value) { s.secondScreen.value = it }
+                    Toggle(L.t("Ders kaydında mikrofon"), L.t("Video kaydına sesinizi de ekler"), s.recordAudio.value) { s.recordAudio.value = it }
                 }
-                Group("Yedekleme") {
+                Group(L.t("Yedekleme")) {
                     Column(Modifier.padding(vertical = 10.dp)) {
-                        Text("Tüm defterleriniz tek bir .zip dosyasına yedeklenir. Dosyayı Google Drive'a veya bilgisayara kaydedebilirsiniz.",
+                        Text(L.t("Tüm defterleriniz tek bir .zip dosyasına yedeklenir. Dosyayı Google Drive'a veya bilgisayara kaydedebilirsiniz."),
                             fontSize = 13.sp, color = UI.TextSoft)
                         Spacer(Modifier.height(10.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Pill("Şimdi yedekle", false) {
-                                val name = "Note-yedek-" + SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date()) + ".zip"
+                            Pill(L.t("Şimdi yedekle"), false) {
+                                val name = L.t("Note-yedek-") + SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date()) + ".zip"
                                 backupLauncher.launch(name)
                             }
-                            Pill("Yedekten geri yükle", false) { confirmRestore = true }
+                            Pill(L.t("Yedekten geri yükle"), false) { confirmRestore = true }
                         }
                     }
-                    Toggle("Otomatik yedek (günde bir)", "Uygulama açılınca, seçtiğiniz klasöre yedek alınır (son 5 yedek saklanır)", s.autoBackup.value) {
+                    Toggle(L.t("Otomatik yedek (günde bir)"), L.t("Uygulama açılınca, seçtiğiniz klasöre yedek alınır (son 5 yedek saklanır)"), s.autoBackup.value) {
                         s.autoBackup.value = it
                         if (it && s.backupTree.value.isEmpty()) folderLauncher.launch(null)
                     }
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 6.dp)) {
-                        Pill(if (s.backupTree.value.isEmpty()) "Yedek klasörü seç" else "Klasörü değiştir", false) { folderLauncher.launch(null) }
+                        Pill(if (s.backupTree.value.isEmpty()) L.t("Yedek klasörü seç") else L.t("Klasörü değiştir"), false) { folderLauncher.launch(null) }
                         Spacer(Modifier.width(10.dp))
                         Text(
-                            if (s.lastBackup.value == 0L) "Henüz otomatik yedek alınmadı"
-                            else "Son yedek: " + SimpleDateFormat("d MMM yyyy HH:mm", Locale.forLanguageTag("tr")).format(Date(s.lastBackup.value)),
+                            if (s.lastBackup.value == 0L) L.t("Henüz otomatik yedek alınmadı")
+                            else L.t("Son yedek: ") + SimpleDateFormat("d MMM yyyy HH:mm", Locale.forLanguageTag("tr")).format(Date(s.lastBackup.value)),
                             fontSize = 12.sp, color = UI.TextSoft,
                         )
                     }
                 }
-                Group("Depolama") {
+                Group(L.t("Depolama")) {
                     val u = usage
                     Column(Modifier.padding(vertical = 10.dp)) {
-                        if (u == null) Text("Hesaplanıyor…", fontSize = 13.sp, color = UI.TextSoft)
+                        if (u == null) Text(L.t("Hesaplanıyor…"), fontSize = 13.sp, color = UI.TextSoft)
                         else {
                             Text("Toplam: ${com.poyankee.note.data.StorageInfo.human(u.total)}", fontSize = 16.sp, color = UI.Text)
                             Text("Çöp kutusu: ${com.poyankee.note.data.StorageInfo.human(u.trash)}   ·   Geçici dosyalar: ${com.poyankee.note.data.StorageInfo.human(u.cache)}", fontSize = 13.sp, color = UI.TextSoft)
@@ -278,13 +289,13 @@ fun SettingsScreen(
                         }
                         Spacer(Modifier.height(10.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Pill("Geçici dosyaları sil", false) {
+                            Pill(L.t("Geçici dosyaları sil"), false) {
                                 scope.launch {
                                     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.poyankee.note.data.StorageInfo.clearCache(ctx) }
-                                    storageMsg = "Geçici dosyalar silindi"; usageTick++
+                                    storageMsg = L.t("Geçici dosyalar silindi"); usageTick++
                                 }
                             }
-                            if (!editorOpen) Pill("Kullanılmayan görselleri sil", false) {
+                            if (!editorOpen) Pill(L.t("Kullanılmayan görselleri sil"), false) {
                                 scope.launch {
                                     val freed = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.poyankee.note.data.StorageInfo.cleanUnusedImages(com.poyankee.note.data.Store(ctx)) }
                                     storageMsg = "${com.poyankee.note.data.StorageInfo.human(freed)} boşaltıldı"; usageTick++
@@ -295,48 +306,48 @@ fun SettingsScreen(
                         Text("Çöp kutusu ana sayfadaki \"Çöp kutusu\" bölümünden boşaltılır.", fontSize = 12.sp, color = UI.TextFaint, modifier = Modifier.padding(top = 6.dp))
                     }
                 }
-                Group("Hata kayıtları") {
+                Group(L.t("Hata kayıtları")) {
                     Column(Modifier.padding(vertical = 10.dp)) {
                         Text(
-                            if (crashCount == 0) "Kayıtlı hata yok." else "$crashCount hata kaydı var. Bir sorun yaşadıysanız bu kaydı paylaşarak bildirebilirsiniz; hiçbir şey kendiliğinden gönderilmez.",
+                            if (crashCount == 0) L.t("Kayıtlı hata yok.") else "$crashCount hata kaydı var. Bir sorun yaşadıysanız bu kaydı paylaşarak bildirebilirsiniz; hiçbir şey kendiliğinden gönderilmez.",
                             fontSize = 13.sp, color = UI.TextSoft,
                         )
                         if (crashCount > 0) Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
-                            Pill("Paylaş", false) {
+                            Pill(L.t("Paylaş"), false) {
                                 com.poyankee.note.data.CrashLog.bundle(ctx)?.let { f ->
                                     val uri = androidx.core.content.FileProvider.getUriForFile(ctx, ctx.packageName + ".files", f)
                                     val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain")
                                         .putExtra(android.content.Intent.EXTRA_STREAM, uri).addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                    ctx.startActivity(android.content.Intent.createChooser(send, "Hata kaydını paylaş"))
+                                    ctx.startActivity(android.content.Intent.createChooser(send, L.t("Hata kaydını paylaş")))
                                 }
                             }
-                            Pill("Sil", false) { com.poyankee.note.data.CrashLog.clear(ctx); crashCount = 0 }
+                            Pill(L.t("Sil"), false) { com.poyankee.note.data.CrashLog.clear(ctx); crashCount = 0 }
                         }
                     }
                 }
-                Group("Hakkında") {
+                Group(L.t("Hakkında")) {
                     Column(Modifier.padding(vertical = 10.dp)) {
                         val ver = try { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName } catch (_: Exception) { "" }
                         Text("Note $ver", fontSize = 16.sp, color = UI.Text)
-                        Text("Öğretmenler ve öğrenciler için ücretsiz, reklamsız, internete bağlanmayan not uygulaması.", fontSize = 13.sp, color = UI.TextSoft)
+                        Text(L.t("Öğretmenler ve öğrenciler için ücretsiz, reklamsız, internete bağlanmayan not uygulaması."), fontSize = 13.sp, color = UI.TextSoft)
                         Spacer(Modifier.height(10.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Pill("Gizlilik politikası", false) { info = "Gizlilik politikası" to PRIVACY_TEXT }
-                            Pill("Sorun bildir", false) {
+                            Pill(L.t("Gizlilik politikası"), false) { info = L.t("Gizlilik politikası") to PRIVACY_TEXT }
+                            Pill(L.t("Sorun bildir"), false) {
                                 try {
                                     ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://github.com/poyankee/note/issues")))
                                 } catch (_: Exception) {}
                             }
-                            Pill("Açık kaynak lisansları", false) { info = "Açık kaynak lisansları" to LICENSES_TEXT }
+                            Pill(L.t("Açık kaynak lisansları"), false) { info = L.t("Açık kaynak lisansları") to LICENSES_TEXT }
                         }
                         Spacer(Modifier.height(8.dp))
                         Row {
-                            Pill("Tanıtımı göster", false) { s.introShown.value = false; onBack() }
+                            Pill(L.t("Tanıtımı göster"), false) { s.introShown.value = false; onBack() }
                         }
                     }
                 }
                 Text(
-                    "Not: Kablosuz yansıtma tüm ekranı gösterir; temiz görüntü için odak modunu (menüler gizli) kullanın.",
+                    L.t("Not: Kablosuz yansıtma tüm ekranı gösterir; temiz görüntü için odak modunu (menüler gizli) kullanın."),
                     fontSize = 13.sp, color = UI.TextSoft, modifier = Modifier.padding(vertical = 16.dp),
                 )
             }
@@ -353,21 +364,21 @@ fun SettingsScreen(
         AlertDialog(
             onDismissRequest = { learning = false },
             containerColor = UI.Surface,
-            title = { Text("Kalem tuşunu öğret") },
+            title = { Text(L.t("Kalem tuşunu öğret")) },
             text = {
                 Column {
-                    Text("Şimdi kalemde çift dokunun ya da tuşa basın. Algılanırsa bu pencere kendiliğinden kapanır.\n\nHiçbir şey olmazsa kaleminiz bu hareketi uygulamalara iletmiyor demektir (bazı kalemlerde yalnızca sistem kullanabilir). Ne geldiğini görmek için Kalem testi'ni kullanın.", color = UI.TextSoft)
+                    Text(L.t("Şimdi kalemde çift dokunun ya da tuşa basın. Algılanırsa bu pencere kendiliğinden kapanır.\n\nHiçbir şey olmazsa kaleminiz bu hareketi uygulamalara iletmiyor demektir (bazı kalemlerde yalnızca sistem kullanabilir). Ne geldiğini görmek için Kalem testi'ni kullanın."), color = UI.TextSoft)
                     KeyCatcher()
                 }
             },
-            confirmButton = { TextButton(onClick = { learning = false }) { Text("Vazgeç") } },
+            confirmButton = { TextButton(onClick = { learning = false }) { Text(L.t("Vazgeç")) } },
         )
     }
     if (confirmRestore) {
         ConfirmDialog(
-            "Yedekten geri yükle",
-            "Yedekteki defterler eklenecek; aynı defterler varsa yedektekiyle değiştirilecek. Devam edilsin mi?",
-            "Dosya seç", { restoreLauncher.launch(arrayOf("application/zip", "application/octet-stream", "*/*")) }, { confirmRestore = false },
+            L.t("Yedekten geri yükle"),
+            L.t("Yedekteki defterler eklenecek; aynı defterler varsa yedektekiyle değiştirilecek. Devam edilsin mi?"),
+            L.t("Dosya seç"), { restoreLauncher.launch(arrayOf("application/zip", "application/octet-stream", "*/*")) }, { confirmRestore = false },
         )
     }
 }

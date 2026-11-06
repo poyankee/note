@@ -1,5 +1,7 @@
 package com.poyankee.note.ui
 
+import com.poyankee.note.core.L
+
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -40,12 +42,12 @@ Apache License 2.0 metni: https://www.apache.org/licenses/LICENSE-2.0"""
 fun InfoDialog(title: String, text: String, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss, containerColor = UI.Surface,
-        title = { Text(title, fontWeight = FontWeight.SemiBold) },
+        title = { Text(L.t(title), fontWeight = FontWeight.SemiBold) },
         text = {
             Column(Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState())) {
-                Text(text, fontSize = 14.sp, color = UI.Text, modifier = Modifier.padding(bottom = 4.dp))
+                Text(L.t(text), fontSize = 14.sp, color = UI.Text, modifier = Modifier.padding(bottom = 4.dp))
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Kapat") } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(L.t("Kapat")) } },
     )
 }

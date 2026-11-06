@@ -1,5 +1,7 @@
 package com.poyankee.note.ui
 
+import com.poyankee.note.core.L
+
 import android.content.Context
 import android.os.Bundle
 import android.os.CancellationSignal
@@ -69,18 +71,18 @@ fun SearchDialog(ctl: EditorController, onDismiss: () -> Unit) {
     }
     AlertDialog(
         onDismissRequest = onDismiss, containerColor = UI.Surface,
-        title = { Text("Defterde ara") },
+        title = { Text(L.t("Defterde ara")) },
         text = {
             Column {
-                OutlinedTextField(q, { q = it }, label = { Text("Aranacak kelime") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(q, { q = it }, label = { Text(L.t("Aranacak kelime")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 Spacer(Modifier.height(8.dp))
                 if (busy) Row(verticalAlignment = Alignment.CenterVertically) {
                     CircularProgressIndicator(Modifier.width(18.dp).height(18.dp), strokeWidth = 2.dp); Spacer(Modifier.width(8.dp))
-                    Text("Aranıyor…", color = UI.TextSoft, fontSize = 13.sp)
+                    Text(L.t("Aranıyor…"), color = UI.TextSoft, fontSize = 13.sp)
                 }
                 val r = results
                 if (r != null && !busy) {
-                    Text(if (r.isEmpty()) "Bulunamadı" else "${r.size} sonuç", color = UI.TextSoft, fontSize = 13.sp)
+                    Text(if (r.isEmpty()) L.t("Bulunamadı") else "${r.size} sonuç", color = UI.TextSoft, fontSize = 13.sp)
                     LazyColumn(Modifier.heightIn(max = 380.dp)) {
                         items(r) { (page, snip) ->
                             Column(
@@ -93,10 +95,10 @@ fun SearchDialog(ctl: EditorController, onDismiss: () -> Unit) {
                         }
                     }
                 }
-                Text("Metin kutularında, formüllerde ve PDF'in yazılarında arar. El yazısı aranamaz.", color = UI.TextFaint, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+                Text(L.t("Metin kutularında, formüllerde ve PDF'in yazılarında arar. El yazısı aranamaz."), color = UI.TextFaint, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Kapat") } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(L.t("Kapat")) } },
     )
 }
 
@@ -110,13 +112,13 @@ fun ValueTableDialog(ctl: EditorController, onDismiss: () -> Unit) {
     var fx by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss, containerColor = UI.Surface,
-        title = { Text("Değer tablosundan grafik") },
+        title = { Text(L.t("Değer tablosundan grafik")) },
         text = {
             Column {
-                Text("x ve y değerlerini yazın (ondalık için nokta). İsterseniz y'yi bir fonksiyondan doldurun.", fontSize = 13.sp, color = UI.TextSoft)
+                Text(L.t("x ve y değerlerini yazın (ondalık için nokta). İsterseniz y'yi bir fonksiyondan doldurun."), fontSize = 13.sp, color = UI.TextSoft)
                 Spacer(Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedTextField(fx, { fx = it }, label = { Text("y = (ör. 2x+1)") }, singleLine = true, modifier = Modifier.weight(1f))
+                    OutlinedTextField(fx, { fx = it }, label = { Text(L.t("y = (ör. 2x+1)")) }, singleLine = true, modifier = Modifier.weight(1f))
                     TextButton(onClick = {
                         error = try {
                             val f = com.poyankee.note.core.MathExpr.parse(fx)
@@ -126,8 +128,8 @@ fun ValueTableDialog(ctl: EditorController, onDismiss: () -> Unit) {
                                 ys[i] = if (y.isNaN() || y.isInfinite()) "" else (Math.round(y * 100) / 100.0).let { v -> if (v == Math.floor(v)) v.toLong().toString() else v.toString() }
                             }
                             null
-                        } catch (e: Exception) { e.message ?: "Fonksiyon anlaşılamadı" }
-                    }) { Text("Doldur") }
+                        } catch (e: Exception) { e.message ?: L.t("Fonksiyon anlaşılamadı") }
+                    }) { Text(L.t("Doldur")) }
                 }
                 Spacer(Modifier.height(8.dp))
                 for (row in 0..1) {
@@ -144,10 +146,10 @@ fun ValueTableDialog(ctl: EditorController, onDismiss: () -> Unit) {
                     }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    TextButton(onClick = { if (xs.size < 9) { xs += ""; ys += "" } }) { Text("+ Sütun") }
-                    TextButton(onClick = { if (xs.size > 2) { xs.removeAt(xs.lastIndex); ys.removeAt(ys.lastIndex) } }) { Text("− Sütun") }
+                    TextButton(onClick = { if (xs.size < 9) { xs += ""; ys += "" } }) { Text(L.t("+ Sütun")) }
+                    TextButton(onClick = { if (xs.size > 2) { xs.removeAt(xs.lastIndex); ys.removeAt(ys.lastIndex) } }) { Text(L.t("− Sütun")) }
                     Spacer(Modifier.weight(1f))
-                    Text("Noktaları birleştir", fontSize = 13.sp, color = UI.Text)
+                    Text(L.t("Noktaları birleştir"), fontSize = 13.sp, color = UI.Text)
                     Switch(connect, { connect = it })
                 }
                 error?.let { Text(it, color = UI.Danger, fontSize = 13.sp) }
@@ -161,9 +163,9 @@ fun ValueTableDialog(ctl: EditorController, onDismiss: () -> Unit) {
                 }
                 val err = ctl.plotPoints(pts.sortedBy { it.first }, connect, ctl.penColor or 0xFF000000.toInt())
                 if (err == null) onDismiss() else error = err
-            }, shape = RoundedCornerShape(10.dp)) { Text("Çiz") }
+            }, shape = RoundedCornerShape(10.dp)) { Text(L.t("Çiz")) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Vazgeç", color = UI.TextSoft) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(L.t("Vazgeç"), color = UI.TextSoft) } },
     )
 }
 
@@ -171,40 +173,40 @@ fun ValueTableDialog(ctl: EditorController, onDismiss: () -> Unit) {
 @Composable
 fun ExtractDialog(ctl: EditorController, initialRange: String? = null, onDismiss: () -> Unit, onDone: (List<Int>, String) -> Unit) {
     var range by remember { mutableStateOf(initialRange ?: "${ctl.currentPage + 1}") }
-    var name by remember { mutableStateOf(ctl.nb.name + " (bölüm)") }
+    var name by remember { mutableStateOf(ctl.nb.name + L.t(" (bölüm)")) }
     var error by remember { mutableStateOf<String?>(null) }
     AlertDialog(
         onDismissRequest = onDismiss, containerColor = UI.Surface,
-        title = { Text("Sayfaları ayrı deftere çıkar") },
+        title = { Text(L.t("Sayfaları ayrı deftere çıkar")) },
         text = {
             Column {
                 Text("Defterde ${ctl.pageCount} sayfa var. Aralığı yazın: ör. 3-7, 12", fontSize = 13.sp, color = UI.TextSoft)
                 Spacer(Modifier.height(8.dp))
-                OutlinedTextField(range, { range = it; error = null }, label = { Text("Sayfalar") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(range, { range = it; error = null }, label = { Text(L.t("Sayfalar")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 Spacer(Modifier.height(8.dp))
-                OutlinedTextField(name, { name = it }, label = { Text("Yeni defterin adı") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                Text("Yazılarınız da birlikte kopyalanır. PDF sayfaları yeni defterde ayrı bir PDF olur.", fontSize = 12.sp, color = UI.TextFaint, modifier = Modifier.padding(top = 8.dp))
+                OutlinedTextField(name, { name = it }, label = { Text(L.t("Yeni defterin adı")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                Text(L.t("Yazılarınız da birlikte kopyalanır. PDF sayfaları yeni defterde ayrı bir PDF olur."), fontSize = 12.sp, color = UI.TextFaint, modifier = Modifier.padding(top = 8.dp))
                 error?.let { Text(it, color = UI.Danger, fontSize = 13.sp) }
             }
         },
         confirmButton = {
             Button(onClick = {
                 val idx = PageRanges.parse(range, ctl.pageCount)
-                if (idx == null || idx.isEmpty()) error = "Aralık geçersiz (1-${ctl.pageCount})" else onDone(idx, name.ifBlank { "Yeni defter" })
-            }, shape = RoundedCornerShape(10.dp)) { Text("Çıkar") }
+                if (idx == null || idx.isEmpty()) error = "Aralık geçersiz (1-${ctl.pageCount})" else onDone(idx, name.ifBlank { L.t("Yeni defter") })
+            }, shape = RoundedCornerShape(10.dp)) { Text(L.t("Çıkar")) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Vazgeç", color = UI.TextSoft) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(L.t("Vazgeç"), color = UI.TextSoft) } },
     )
 }
 
 /** Defteri Android yazdırma ekranına gönderir (yazıcı, sayfa aralığı ve kopya sayısı orada seçilir). */
 fun printNotebook(context: Context, ctl: EditorController) {
-    val pm = context.getSystemService(Context.PRINT_SERVICE) as? PrintManager ?: run { ctl.message = "Yazdırma bu cihazda yok"; return }
+    val pm = context.getSystemService(Context.PRINT_SERVICE) as? PrintManager ?: run { ctl.message = L.t("Yazdırma bu cihazda yok"); return }
     val out = File(context.cacheDir, "yazdir.pdf")
     val pages = ctl.nb.pages.toList()
     val nb = ctl.nb
     val dir = ctl.store.dir(nb.id)
-    ctl.message = "Yazdırma için hazırlanıyor…"
+    ctl.message = L.t("Yazdırma için hazırlanıyor…")
     val adapter = object : PrintDocumentAdapter() {
         @Volatile private var ready = false
         override fun onLayout(old: PrintAttributes?, new: PrintAttributes?, cancel: CancellationSignal?, cb: LayoutResultCallback, extras: Bundle?) {
@@ -245,12 +247,12 @@ fun WrongFilterDialog(ctl: EditorController, onDismiss: () -> Unit) {
     var onlyOpen by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onDismiss, containerColor = UI.Surface,
-        title = { Text("Sorular") },
+        title = { Text(L.t("Sorular")) },
         text = {
             Column {
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(bottom = 6.dp)) {
-                    Pill("Hepsi", tag == null && !onlyOpen) { tag = null; onlyOpen = false }
-                    Pill("Çözülmeyenler", onlyOpen) { onlyOpen = !onlyOpen }
+                    Pill(L.t("Hepsi"), tag == null && !onlyOpen) { tag = null; onlyOpen = false }
+                    Pill(L.t("Çözülmeyenler"), onlyOpen) { onlyOpen = !onlyOpen }
                 }
                 if (tags.isNotEmpty()) Row(Modifier.padding(bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     tags.take(6).forEach { t -> Pill(t, tag == t) { tag = if (tag == t) null else t } }
@@ -269,12 +271,12 @@ fun WrongFilterDialog(ctl: EditorController, onDismiss: () -> Unit) {
                         ) {
                             Text("Soru ${i + 1}", fontWeight = FontWeight.SemiBold, color = UI.Primary, modifier = Modifier.width(80.dp))
                             Text(s.wrongTag(id).ifEmpty { "—" }, color = UI.Text, modifier = Modifier.weight(1f))
-                            Text(if (s.wrongDone(id)) "✓ çözüldü" else "tekrar", color = if (s.wrongDone(id)) androidx.compose.ui.graphics.Color(0xFF16A34A) else UI.TextSoft, fontSize = 13.sp)
+                            Text(if (s.wrongDone(id)) L.t("✓ çözüldü") else "tekrar", color = if (s.wrongDone(id)) androidx.compose.ui.graphics.Color(0xFF16A34A) else UI.TextSoft, fontSize = 13.sp)
                         }
                     }
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Kapat") } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(L.t("Kapat")) } },
     )
 }
