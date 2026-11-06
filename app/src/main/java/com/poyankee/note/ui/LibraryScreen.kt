@@ -8,6 +8,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -35,6 +36,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.FlashOn
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Star
@@ -126,7 +130,17 @@ fun LibraryScreen(
     var folderDelete by remember { mutableStateOf<String?>(null) }
     var lockTarget by remember { mutableStateOf<NotebookInfo?>(null) }
     var sortMenu by remember { mutableStateOf(false) }
+    var viewMenu by remember { mutableStateOf(false) }
+    var folderColorFor by remember { mutableStateOf<String?>(null) }
+    // toplu seçim: uzun basınca başlar
+    var selection by remember { mutableStateOf<Set<String>?>(null) }
+    var bulkDelete by remember { mutableStateOf(false) }
+    var bulkMove by remember { mutableStateOf(false) }
+    val settings = com.poyankee.note.data.Settings.get(androidx.compose.ui.platform.LocalContext.current)
+    val view = settings.libraryViewValue
     val isFav = folder == FAVORITES
+    LaunchedEffect(folder) { selection = null }
+    androidx.activity.compose.BackHandler(selection != null) { selection = null }
 
     BoxWithConstraints(Modifier.fillMaxSize().background(UI.Bg)) {
         val wide = maxWidth > 720.dp
@@ -173,9 +187,11 @@ fun LibraryScreen(
                     items(folders) { f ->
                         var menu by remember { mutableStateOf(false) }
                         Box {
-                            NavItem(Icons.Rounded.Folder, f, notebooks.count { it.folder == f }, folder == f, onLong = { menu = true }) { onSelectFolder(f) }
+                            NavItem(Icons.Rounded.Folder, f, notebooks.count { it.folder == f }, folder == f, onLong = { menu = true },
+                                iconTint = settings.folderColor(f)?.let { Color(it) }) { onSelectFolder(f) }
                             DropdownMenu(menu, { menu = false }) {
                                 DropdownMenuItem(text = { Text("Yeniden adlandır") }, onClick = { menu = false; folderRename = f })
+                                DropdownMenuItem(text = { Text("Renk") }, onClick = { menu = false; folderColorFor = f })
                                 DropdownMenuItem(text = { Text("Klasörü sil") }, onClick = { menu = false; folderDelete = f })
                             }
                         }
@@ -193,7 +209,32 @@ fun LibraryScreen(
 
             // ---------- defterler ----------
             Column(Modifier.weight(1f).fillMaxHeight()) {
-                Row(Modifier.fillMaxWidth().padding(start = 32.dp, end = 32.dp, top = 26.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                val sel = selection
+                if (sel != null) Row(
+                    Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = 22.dp, bottom = 6.dp).clip(RoundedCornerShape(16.dp))
+                        .background(UI.PrimarySoft).padding(horizontal = 8.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    IconButton(onClick = { selection = null }) { Icon(Icons.Rounded.Close, "Seçimi bitir", tint = UI.PrimaryText) }
+                    Text("${sel.size} defter seçili", color = UI.PrimaryText, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, modifier = Modifier.weight(1f))
+                    val visible = notebooks.filter { matches(it, folder) }.map { it.id }.toSet()
+                    TextButton(onClick = { selection = if (sel.containsAll(visible)) emptySet() else visible }) {
+                        Text(if (sel.containsAll(visible) && visible.isNotEmpty()) "Hiçbiri" else "Tümünü seç")
+                    }
+                    val enabled = sel.isNotEmpty()
+                    TextButton(enabled = enabled, onClick = {
+                        val chosen = notebooks.filter { it.id in sel }
+                        val fav = !chosen.all { it.favorite }
+                        chosen.forEach { if (it.favorite != fav) onFavorite(it.id, fav) }
+                    }) { Icon(Icons.Rounded.Star, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); Text("Favori") }
+                    TextButton(enabled = enabled, onClick = { bulkMove = true }) {
+                        Icon(Icons.Rounded.Folder, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); Text("Klasöre taşı")
+                    }
+                    TextButton(enabled = enabled, onClick = { bulkDelete = true }) {
+                        Icon(Icons.Rounded.Delete, null, tint = if (enabled) UI.Danger else UI.TextFaint, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(4.dp))
+                        Text("Sil", color = if (enabled) UI.Danger else UI.TextFaint)
+                    }
+                } else Row(Modifier.fillMaxWidth().padding(start = 32.dp, end = 32.dp, top = 26.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text(if (isFav) "Favoriler" else folder ?: "Tüm defterler", style = TextStyle(fontSize = 28.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.6).sp), color = UI.Text)
                         val count = notebooks.count { matches(it, folder) }
@@ -205,6 +246,17 @@ fun LibraryScreen(
                             SortMode.entries.forEach { m -> DropdownMenuItem(text = { Text((if (m == sort) "✓ " else "") + m.title) }, onClick = { sortMenu = false; onSort(m) }) }
                         }
                     }
+                    Spacer(Modifier.width(8.dp))
+                    Box {
+                        Pill("▦ " + view.title, false) { viewMenu = true }
+                        DropdownMenu(viewMenu, { viewMenu = false }) {
+                            com.poyankee.note.data.LibraryView.entries.forEach { v ->
+                                DropdownMenuItem(text = { Text((if (v == view) "✓ " else "") + v.title) }, onClick = { viewMenu = false; settings.libraryView.value = v.name })
+                            }
+                        }
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Pill("Seç", false) { selection = emptySet() }
                     Spacer(Modifier.width(10.dp))
                     SearchField(query) { query = it }
                 }
@@ -223,18 +275,35 @@ fun LibraryScreen(
                         else if (query.isNotBlank()) "Farklı bir ad deneyin." else "Bir defterin menüsünden \"Klasöre taşı\"yı seçin veya burada yeni defter oluşturun.",
                     )
                 } else {
-                    LazyVerticalGrid(
-                        columns = GridCells.Adaptive(if (wide) 128.dp else 112.dp),
+                    val actions: (NotebookInfo) -> CardActions = { nb ->
+                        CardActions(
+                            onOpen = { val s0 = selection; if (s0 != null) selection = if (nb.id in s0) s0 - nb.id else s0 + nb.id else onOpen(nb.id) },
+                            onLongPress = { val s0 = selection; selection = (s0 ?: emptySet()) + nb.id },
+                            onRename = { renameTarget = nb }, onMove = { moveTarget = nb }, onDelete = { deleteTarget = nb },
+                            onFavorite = { onFavorite(nb.id, !nb.favorite) }, onLock = { lockTarget = nb },
+                        )
+                    }
+                    if (view == com.poyankee.note.data.LibraryView.LIST) {
+                        LazyColumn(contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 32.dp), modifier = Modifier.fillMaxSize()) {
+                            items(list, key = { it.id }) { nb ->
+                                NotebookRow(nb, selection?.contains(nb.id), settings.folderColor(nb.folder)?.let { Color(it) }, actions(nb))
+                            }
+                        }
+                    } else LazyVerticalGrid(
+                        columns = GridCells.Adaptive(
+                            when (view) {
+                                com.poyankee.note.data.LibraryView.SMALL -> if (wide) 96.dp else 84.dp
+                                com.poyankee.note.data.LibraryView.LARGE -> if (wide) 180.dp else 150.dp
+                                else -> if (wide) 128.dp else 112.dp
+                            },
+                        ),
                         contentPadding = PaddingValues(start = 32.dp, end = 32.dp, top = 12.dp, bottom = 32.dp),
-                        horizontalArrangement = Arrangement.spacedBy(20.dp),
-                        verticalArrangement = Arrangement.spacedBy(20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(if (view == com.poyankee.note.data.LibraryView.SMALL) 14.dp else 20.dp),
+                        verticalArrangement = Arrangement.spacedBy(if (view == com.poyankee.note.data.LibraryView.SMALL) 14.dp else 20.dp),
                         modifier = Modifier.fillMaxSize(),
                     ) {
                         items(list, key = { it.id }) { nb ->
-                            NotebookCard(
-                                nb, onOpen = { onOpen(nb.id) }, onRename = { renameTarget = nb }, onMove = { moveTarget = nb }, onDelete = { deleteTarget = nb },
-                                onFavorite = { onFavorite(nb.id, !nb.favorite) }, onLock = { lockTarget = nb },
-                            )
+                            NotebookCard(nb, selection?.contains(nb.id), actions(nb))
                         }
                     }
                 }
@@ -265,8 +334,22 @@ fun LibraryScreen(
             }
         }
     }
+    if (bulkDelete) {
+        val ids = selection ?: emptySet()
+        ConfirmDialog("Defterleri sil", "${ids.size} defter ve içlerindeki tüm yazılar kalıcı olarak silinecek.", "Sil",
+            { ids.forEach(onDelete); selection = null }, { bulkDelete = false })
+    }
+    if (bulkMove) {
+        val ids = selection ?: emptySet()
+        MoveDialog("${ids.size} defter", null, folders, onDismiss = { bulkMove = false }, onCreateFolder = onCreateFolder) { f ->
+            bulkMove = false; ids.forEach { onMove(it, f) }; selection = null
+        }
+    }
+    folderColorFor?.let { f ->
+        FolderColorDialog(f, settings.folderColor(f), onDismiss = { folderColorFor = null }) { c -> settings.setFolderColor(f, c); folderColorFor = null }
+    }
     moveTarget?.let { nb ->
-        MoveDialog(nb, folders, onDismiss = { moveTarget = null }, onCreateFolder = onCreateFolder) { f -> moveTarget = null; onMove(nb.id, f) }
+        MoveDialog("\"${nb.name}\"", nb.folder, folders, onDismiss = { moveTarget = null }, onCreateFolder = onCreateFolder) { f -> moveTarget = null; onMove(nb.id, f) }
     }
     if (busy != null) {
         AlertDialog(
@@ -277,7 +360,7 @@ fun LibraryScreen(
 }
 
 @Composable
-private fun NavItem(icon: ImageVector, text: String, count: Int?, selected: Boolean, onLong: (() -> Unit)? = null, onClick: () -> Unit) {
+private fun NavItem(icon: ImageVector, text: String, count: Int?, selected: Boolean, onLong: (() -> Unit)? = null, iconTint: Color? = null, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().padding(vertical = 1.dp).clip(RoundedCornerShape(10.dp))
             .background(if (selected) UI.PrimarySoft else Color.Transparent)
@@ -285,7 +368,7 @@ private fun NavItem(icon: ImageVector, text: String, count: Int?, selected: Bool
             .padding(horizontal = 10.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(icon, null, tint = if (selected) UI.Primary else UI.TextSoft, modifier = Modifier.size(20.dp))
+        Icon(icon, null, tint = iconTint ?: if (selected) UI.Primary else UI.TextSoft, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(12.dp))
         Text(text, color = if (selected) UI.PrimaryText else UI.Text, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
             fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
@@ -327,22 +410,93 @@ private fun EmptyState(title: String, text: String) {
 private val dateFmt = SimpleDateFormat("d MMM yyyy", Locale.forLanguageTag("tr"))
 
 @Composable
-private fun NotebookCard(
-    nb: NotebookInfo, onOpen: () -> Unit, onRename: () -> Unit, onMove: () -> Unit, onDelete: () -> Unit,
-    onFavorite: () -> Unit, onLock: () -> Unit,
-) {
-    var menu by remember { mutableStateOf(false) }
+private class CardActions(
+    val onOpen: () -> Unit, val onLongPress: () -> Unit, val onRename: () -> Unit, val onMove: () -> Unit, val onDelete: () -> Unit,
+    val onFavorite: () -> Unit, val onLock: () -> Unit,
+)
+
+@Composable
+private fun rememberCover(nb: NotebookInfo): ImageBitmap? {
     val cover by produceState<ImageBitmap?>(null, nb.cover, nb.coverStamp) {
         value = nb.cover?.let { f -> withContext(Dispatchers.IO) { try { BitmapFactory.decodeFile(f.path)?.asImageBitmap() } catch (_: Throwable) { null } } }
     }
+    return if (nb.locked) null else cover
+}
+
+@Composable
+private fun NotebookMenu(nb: NotebookInfo, open: Boolean, onClose: () -> Unit, a: CardActions) {
+    DropdownMenu(open, onClose) {
+        DropdownMenuItem(text = { Text("Aç") }, onClick = { onClose(); a.onOpen() })
+        DropdownMenuItem(text = { Text("Seç") }, onClick = { onClose(); a.onLongPress() })
+        DropdownMenuItem(text = { Text("Yeniden adlandır") }, onClick = { onClose(); a.onRename() })
+        DropdownMenuItem(text = { Text("Klasöre taşı") }, onClick = { onClose(); a.onMove() })
+        DropdownMenuItem(text = { Text(if (nb.favorite) "Favorilerden çıkar" else "Favorilere ekle") }, onClick = { onClose(); a.onFavorite() })
+        DropdownMenuItem(text = { Text(if (nb.locked) "Kilidi kaldır" else "Kilitle") }, onClick = { onClose(); a.onLock() })
+        DropdownMenuItem(text = { Text("Sil", color = UI.Danger) }, onClick = { onClose(); a.onDelete() })
+    }
+}
+
+@Composable
+private fun SelectMark(selected: Boolean, modifier: Modifier) {
+    Box(
+        modifier.size(28.dp).clip(CircleShape).background(if (selected) UI.Primary else Color(0xCCFFFFFF)).border(2.dp, if (selected) UI.Primary else Color(0xFF98A2B3), CircleShape),
+        contentAlignment = Alignment.Center,
+    ) { if (selected) Icon(Icons.Rounded.Check, "Seçili", tint = Color.White, modifier = Modifier.size(18.dp)) }
+}
+
+/** Liste görünümünde bir satır. [selected] null = seçim modu kapalı. */
+@Composable
+private fun NotebookRow(nb: NotebookInfo, selected: Boolean?, folderColor: Color?, a: CardActions) {
+    var menu by remember { mutableStateOf(false) }
+    val img = rememberCover(nb)
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = 3.dp).clip(RoundedCornerShape(12.dp))
+            .background(if (selected == true) UI.PrimarySoft else Color.Transparent)
+            .combinedClickable(onClick = a.onOpen, onLongClick = a.onLongPress).padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (selected != null) { SelectMark(selected, Modifier); Spacer(Modifier.width(12.dp)) }
+        Box(Modifier.width(44.dp).height(60.dp).clip(RoundedCornerShape(6.dp)).background(UI.SurfaceAlt), contentAlignment = Alignment.Center) {
+            when {
+                nb.locked -> Icon(Icons.Rounded.Lock, null, tint = UI.TextSoft, modifier = Modifier.size(22.dp))
+                img != null -> Image(img, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                nb.isPdf -> Icon(Icons.Rounded.PictureAsPdf, null, tint = Color(0xFFD92D20), modifier = Modifier.size(22.dp))
+                else -> Text(nb.name.take(1).uppercase(), color = UI.TextSoft, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (nb.favorite) { Icon(Icons.Rounded.Star, "Favori", tint = Color(0xFFF59E0B), modifier = Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)) }
+                Text(nb.name, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = UI.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            Text("${nb.pageCount} sayfa · ${dateFmt.format(Date(nb.updated))}" + (if (nb.isPdf) " · PDF" else ""), fontSize = 13.sp, color = UI.TextSoft, maxLines = 1)
+        }
+        if (nb.folder.isNotEmpty()) {
+            Icon(Icons.Rounded.Folder, null, tint = folderColor ?: UI.TextFaint, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(4.dp))
+            Text(nb.folder, fontSize = 13.sp, color = UI.TextSoft, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 160.dp))
+            Spacer(Modifier.width(8.dp))
+        }
+        if (selected == null) Box {
+            IconButton(onClick = { menu = true }) { Icon(Icons.Rounded.MoreHoriz, "Menü", tint = UI.TextSoft) }
+            NotebookMenu(nb, menu, { menu = false }, a)
+        }
+    }
+}
+
+@Composable
+private fun NotebookCard(nb: NotebookInfo, selected: Boolean?, a: CardActions) {
+    var menu by remember { mutableStateOf(false) }
     Column {
         Box(
             Modifier.fillMaxWidth().aspectRatio(0.72f)
                 .shadow(6.dp, RoundedCornerShape(10.dp), ambientColor = UI.Shadow, spotColor = UI.Shadow)
                 .clip(RoundedCornerShape(10.dp)).background(UI.Surface)
-                .combinedClickable(onClick = onOpen, onLongClick = { menu = true }),
+                .then(if (selected == true) Modifier.border(3.dp, UI.Primary, RoundedCornerShape(10.dp)) else Modifier)
+                .combinedClickable(onClick = a.onOpen, onLongClick = a.onLongPress),
         ) {
-            val img = if (nb.locked) null else cover
+            val img = rememberCover(nb)
             if (nb.locked) {
                 Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF334155), Color(0xFF0F172A)))), contentAlignment = Alignment.Center) {
                     Icon(Icons.Rounded.Lock, null, tint = Color.White.copy(alpha = 0.9f), modifier = Modifier.size(44.dp))
@@ -373,19 +527,13 @@ private fun NotebookCard(
                     Text("PDF", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
                 }
             }
-            Box(Modifier.align(Alignment.TopEnd).padding(6.dp)) {
+            if (selected != null) SelectMark(selected, Modifier.align(Alignment.TopEnd).padding(8.dp))
+            else Box(Modifier.align(Alignment.TopEnd).padding(6.dp)) {
                 Box(
                     Modifier.size(30.dp).clip(CircleShape).background(Color(0xCCFFFFFF)).clickable { menu = true },
                     contentAlignment = Alignment.Center,
                 ) { Icon(Icons.Rounded.MoreHoriz, "Menü", tint = UI.Text, modifier = Modifier.size(20.dp)) }
-                DropdownMenu(menu, { menu = false }) {
-                    DropdownMenuItem(text = { Text("Aç") }, onClick = { menu = false; onOpen() })
-                    DropdownMenuItem(text = { Text("Yeniden adlandır") }, onClick = { menu = false; onRename() })
-                    DropdownMenuItem(text = { Text("Klasöre taşı") }, onClick = { menu = false; onMove() })
-                    DropdownMenuItem(text = { Text(if (nb.favorite) "Favorilerden çıkar" else "Favorilere ekle") }, onClick = { menu = false; onFavorite() })
-                    DropdownMenuItem(text = { Text(if (nb.locked) "Kilidi kaldır" else "Kilitle") }, onClick = { menu = false; onLock() })
-                    DropdownMenuItem(text = { Text("Sil", color = UI.Danger) }, onClick = { menu = false; onDelete() })
-                }
+                NotebookMenu(nb, menu, { menu = false }, a)
             }
         }
         Spacer(Modifier.height(10.dp))
@@ -423,7 +571,7 @@ fun NameDialog(
 }
 
 @Composable
-private fun MoveDialog(nb: NotebookInfo, folders: List<String>, onDismiss: () -> Unit, onCreateFolder: (String) -> Unit, onPick: (String) -> Unit) {
+private fun MoveDialog(what: String, current: String?, folders: List<String>, onDismiss: () -> Unit, onCreateFolder: (String) -> Unit, onPick: (String) -> Unit) {
     var creating by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -431,9 +579,9 @@ private fun MoveDialog(nb: NotebookInfo, folders: List<String>, onDismiss: () ->
         title = { Text("Klasöre taşı") },
         text = {
             Column {
-                Text("\"${nb.name}\"", color = UI.TextSoft, fontSize = 14.sp, modifier = Modifier.padding(bottom = 8.dp))
-                FolderRow("Klasörsüz", nb.folder.isEmpty()) { onPick("") }
-                folders.forEach { f -> FolderRow(f, nb.folder == f) { onPick(f) } }
+                Text(what, color = UI.TextSoft, fontSize = 14.sp, modifier = Modifier.padding(bottom = 8.dp))
+                FolderRow("Klasörsüz", current == "") { onPick("") }
+                folders.forEach { f -> FolderRow(f, current == f) { onPick(f) } }
                 TextButton(onClick = { creating = true }) { Icon(Icons.Rounded.CreateNewFolder, null); Spacer(Modifier.width(6.dp)); Text("Yeni klasör") }
             }
         },
@@ -456,6 +604,25 @@ private fun FolderRow(name: String, selected: Boolean, onClick: () -> Unit) {
         Spacer(Modifier.width(12.dp))
         Text(name, color = UI.Text, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal)
     }
+}
+
+/** Klasör rengi seçimi. */
+@Composable
+private fun FolderColorDialog(name: String, current: Int?, onDismiss: () -> Unit, onPick: (Int?) -> Unit) {
+    val colors = listOf(0xFF6366F1, 0xFF1565C0, 0xFF14B8A6, 0xFF2E7D32, 0xFFF59E0B, 0xFFEA580C, 0xFFD32F2F, 0xFFEC4899, 0xFF6A1B9A, 0xFF64748B).map { it.toInt() }
+    AlertDialog(
+        onDismissRequest = onDismiss, containerColor = UI.Surface,
+        title = { Text("\"$name\" rengi") },
+        text = {
+            Column {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { colors.take(5).forEach { c -> ColorDot(c, current == c, 40) { onPick(c) } } }
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { colors.drop(5).forEach { c -> ColorDot(c, current == c, 40) { onPick(c) } } }
+            }
+        },
+        confirmButton = { TextButton(onClick = { onPick(null) }) { Text("Renksiz") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Vazgeç", color = UI.TextSoft) } },
+    )
 }
 
 /** Kenar çubuğunda "Favoriler" seçimi için özel değer. */

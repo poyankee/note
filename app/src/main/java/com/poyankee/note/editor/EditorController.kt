@@ -51,6 +51,7 @@ import java.io.FileOutputStream
 import java.util.concurrent.Executors
 import kotlin.math.abs
 import kotlin.math.floor
+import kotlin.math.roundToInt
 
 enum class Tool(val title: String) {
     PEN("Kalem"), HIGHLIGHTER("Fosforlu kalem"), ERASER("Silgi"), LASSO("Kement seçim"),
@@ -459,6 +460,29 @@ class EditorController(
         nb.defaultPaper = style
         store.saveMeta(nb)
         pagesVersion++
+    }
+
+    /** Kağıt sayfalarının boyutunu değiştirir (yazılar yerinde kalır). Geri alınabilir. */
+    fun setPageSize(index: Int, w: Float, h: Float, all: Boolean) {
+        val targets = if (all) nb.pages.filter { it.background is Background.Paper }
+        else listOfNotNull(nb.pages.getOrNull(index)?.takeIf { it.background is Background.Paper })
+        var changed = false
+        for (p in targets) {
+            if (abs(p.width - w) < 0.5f && abs(p.height - h) < 0.5f) continue
+            val before = PageState.of(p)
+            p.width = w; p.height = h
+            undoStack.pageChanged(p, before)
+            store.savePage(nb.id, p)
+            changed = true
+        }
+        if (changed) pagesChanged()
+    }
+
+    /** Ekranın en-boy oranında sayfa boyutu ("Tam ekran"). */
+    fun fullScreenSize(): Pair<Float, Float> {
+        val v = view
+        val a = if (v != null && v.width > 0 && v.height > 0) v.width.toFloat() / v.height else 16f / 10f
+        return if (a >= 1f) 842f to (842f / a).roundToInt().toFloat() else (842f * a).roundToInt().toFloat() to 842f
     }
 
     /** Kendi deseniniz: resmi (veya PDF'in ilk sayfasını) sayfa zemini yapar. */

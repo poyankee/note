@@ -264,15 +264,13 @@ fun EditorScreen(
 
             if (!ctl.presentation) {
                 // yüzen araç menüsü (tutamaktan sürüklenip taşınabilir, daraltılabilir)
-                Draggable(s.dockX, s.dockY, areaW, areaH, Modifier.align(if (dockLeft) Alignment.CenterStart else Alignment.CenterEnd).padding(horizontal = 14.dp)) { handle ->
-                    ToolDock(ctl, handle, onTimer = { showTimer = true })
+                Draggable(s.dockX, s.dockY, areaW, areaH, Modifier.align(if (dockLeft) Alignment.CenterStart else Alignment.CenterEnd).padding(horizontal = 14.dp)) { handle, _ ->
+                    ToolDock(ctl, handle, onTimer = { showTimer = true }, onClear = { showClear = true }, onEditPalette = { paletteFor = it })
                 }
-                // seçili araca göre seçenekler
+                // geometri araçlarında kısa ipucu
                 Column(Modifier.align(Alignment.TopCenter).padding(top = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    ContextBar(ctl, onClear = { showClear = true }, onEditPalette = { paletteFor = it })
                     ctl.hint?.let { h ->
                         if (ctl.tool.isGeometry) {
-                            Spacer(Modifier.height(8.dp))
                             Surface(color = Color(0xE61D2330), shape = RoundedCornerShape(10.dp)) {
                                 Text(h, color = Color.White, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp))
                             }
@@ -280,12 +278,12 @@ fun EditorScreen(
                     }
                 }
                 // sayfa gezgini
-                Draggable(s.navX, s.navY, areaW, areaH, Modifier.align(if (dockLeft) Alignment.BottomEnd else Alignment.BottomStart).padding(16.dp)) { handle ->
+                Draggable(s.navX, s.navY, areaW, areaH, Modifier.align(if (dockLeft) Alignment.BottomEnd else Alignment.BottomStart).padding(16.dp)) { handle, _ ->
                     PageNavigator(ctl, handle, onGoto = { showGoto = true }, onPages = { panel = Panel.PAGES })
                 }
             } else {
-                Draggable(s.presX, s.presY, areaW, areaH, Modifier.align(if (dockLeft) Alignment.BottomStart else Alignment.BottomEnd).padding(14.dp)) { handle ->
-                    PresentationBar(ctl, handle, recState, recTime, onStopRecord = { stopRecording() })
+                Draggable(s.presX, s.presY, areaW, areaH, Modifier.align(if (dockLeft) Alignment.BottomStart else Alignment.BottomEnd).padding(14.dp)) { handle, vertical ->
+                    FocusBar(ctl, handle, vertical, recState, recTime, onStopRecord = { stopRecording() })
                 }
             }
 
@@ -329,7 +327,7 @@ fun EditorScreen(
 private fun Draggable(
     px: com.poyankee.note.data.Settings.Pref<Float>, py: com.poyankee.note.data.Settings.Pref<Float>,
     areaW: androidx.compose.ui.unit.Dp, areaH: androidx.compose.ui.unit.Dp,
-    modifier: Modifier, content: @Composable (Modifier) -> Unit,
+    modifier: Modifier, content: @Composable (handle: Modifier, nearSideEdge: Boolean) -> Unit,
 ) {
     var x by remember { mutableStateOf(px.value) }
     var y by remember { mutableStateOf(py.value) }
@@ -365,7 +363,9 @@ private fun Draggable(
             }
             .offset { androidx.compose.ui.unit.IntOffset((x * density).roundToInt(), (y * density).roundToInt()) },
     ) {
-        content(handle)
+        // panel ekranın sol ya da sağ kenarına yakınsa dikey düzen kullanılabilir
+        val cx = if (baseX.isNaN()) areaW.value / 2 else baseX + x + w / 2
+        content(handle, cx < areaW.value * 0.22f || cx > areaW.value * 0.78f)
     }
 }
 
@@ -466,7 +466,7 @@ private fun EditorTopBar(
                     }
                 }
                 if (recState == 0) BarIcon(Icons.Rounded.FiberManualRecord, "Ders kaydı", tint = UI.Danger, onClick = onRecord)
-                BarIcon(Icons.Rounded.Fullscreen, "Sunum modu") { ctl.view?.clearSelection(); ctl.presentation = true }
+                BarIcon(Icons.Rounded.Fullscreen, "Odak modu (menüleri gizle)") { ctl.view?.clearSelection(); ctl.presentation = true }
                 BarIcon(Icons.Rounded.Share, "Dışa aktar / paylaş", onClick = onExport)
                 Box {
                     BarIcon(Icons.Rounded.MoreVert, "Diğer") { more = true }
@@ -515,7 +515,18 @@ private fun LabeledBarButton(text: String, selected: Boolean, onClick: () -> Uni
 /* ======================= araç menüsü ======================= */
 
 @Composable
-private fun ToolDock(ctl: EditorController, handle: Modifier, onTimer: () -> Unit) {
+private fun ToolDock(ctl: EditorController, handle: Modifier, onTimer: () -> Unit, onClear: () -> Unit, onEditPalette: (Boolean) -> Unit) {
+    // seçili araca tekrar (çift) dokununca o aracın seçenekleri açılır
+    var optionsFor by remember { mutableStateOf<Tool?>(null) }
+    @Composable
+    fun Btn(t: Tool, selectedOverride: Boolean? = null, label: String = shortName(t)) {
+        Box(Modifier.testTag("tool-" + t.name)) {
+            DockButton(ctl, t, selectedOverride, label) { optionsFor = if (optionsFor == t) null else t }
+            DropdownMenu(optionsFor == t, { optionsFor = null }) {
+                ToolOptions(ctl, onClear = { optionsFor = null; onClear() }, onEditPalette = { optionsFor = null; onEditPalette(it) })
+            }
+        }
+    }
     var instMenu by remember { mutableStateOf(false) }
     var lessonMenu by remember { mutableStateOf(false) }
     val collapsed = ctl.settings.dockCollapsed.value
@@ -529,18 +540,18 @@ private fun ToolDock(ctl: EditorController, handle: Modifier, onTimer: () -> Uni
             Grip(handle)
             if (collapsed) {
                 // küçükken kalem ve silgi her zaman görünür; başka bir araç seçiliyse o da görünür
-                DockButton(ctl, Tool.PEN)
-                DockButton(ctl, Tool.ERASER)
-                if (ctl.tool != Tool.PEN && ctl.tool != Tool.ERASER) DockButton(ctl, ctl.tool, selectedOverride = true, label = shortName(ctl.tool))
+                Btn(Tool.PEN)
+                Btn(Tool.ERASER)
+                if (ctl.tool != Tool.PEN && ctl.tool != Tool.ERASER) Btn(ctl.tool, selectedOverride = true)
                 Box(Modifier.size(40.dp).clip(CircleShape).clickable { ctl.settings.dockCollapsed.value = false }, contentAlignment = Alignment.Center) {
                     Icon(Icons.Rounded.KeyboardArrowDown, "Menüyü aç", tint = UI.TextSoft)
                 }
                 return@Column
             }
-            for (t in listOf(Tool.PEN, Tool.HIGHLIGHTER, Tool.ERASER, Tool.LASSO)) DockButton(ctl, t)
+            for (t in listOf(Tool.PEN, Tool.HIGHLIGHTER, Tool.ERASER, Tool.LASSO)) Btn(t)
             val gt = if (ctl.tool.isGeometry) ctl.tool else ctl.lastGeometryTool
-            DockButton(ctl, gt, selectedOverride = ctl.tool.isGeometry, label = "Geometri")
-            for (t in listOf(Tool.TEXT, Tool.LASER, Tool.TEMP)) DockButton(ctl, t)
+            Btn(gt, selectedOverride = ctl.tool.isGeometry, label = "Geometri")
+            for (t in listOf(Tool.TEXT, Tool.LASER, Tool.TEMP)) Btn(t)
             Box(Modifier.padding(vertical = 4.dp).width(30.dp).height(1.dp).background(UI.Border))
             Box {
                 DockItem(selected = ctl.instruments.isNotEmpty(), label = "Cetvel", onClick = { instMenu = true }) {
@@ -588,9 +599,9 @@ private fun ToolDock(ctl: EditorController, handle: Modifier, onTimer: () -> Uni
 }
 
 @Composable
-private fun DockButton(ctl: EditorController, t: Tool, selectedOverride: Boolean? = null, label: String = shortName(t)) {
+private fun DockButton(ctl: EditorController, t: Tool, selectedOverride: Boolean? = null, label: String = shortName(t), onOptions: () -> Unit = {}) {
     val selected = selectedOverride ?: (ctl.tool == t)
-    DockItem(selected, label, onClick = { ctl.selectTool(t) }) {
+    DockItem(selected, label, onClick = { if (ctl.tool == t) onOptions() else ctl.selectTool(t) }) {
         val tint = if (selected) UI.Primary else UI.Text
         val accent = when (t) {
             Tool.PEN -> Color(ctl.penColor or 0xFF000000.toInt())
@@ -625,57 +636,57 @@ private fun shortName(t: Tool) = when (t) {
 /* ======================= bağlam çubuğu (renk, kalınlık, seçenekler) ======================= */
 
 @Composable
-private fun ContextBar(ctl: EditorController, onClear: () -> Unit, onEditPalette: (Boolean) -> Unit) {
+@OptIn(ExperimentalLayoutApi::class)
+private fun ToolOptions(ctl: EditorController, onClear: () -> Unit, onEditPalette: (Boolean) -> Unit) {
     val t = ctl.tool
-    FloatingCard(radius = 26) {
-        Row(Modifier.padding(horizontal = 12.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
-            when {
-                t == Tool.ERASER -> {
-                    PillRow {
-                        Pill("Bütün çizgi", !ctl.eraserPartial) { ctl.eraserPartial = false; ctl.settings.eraserPartial.value = false }
-                        Pill("Kısmi", ctl.eraserPartial) { ctl.eraserPartial = true; ctl.settings.eraserPartial.value = true }
-                    }
-                    BarDivider()
+    Column(Modifier.padding(horizontal = 14.dp, vertical = 6.dp).widthIn(min = 240.dp, max = 420.dp)) {
+        Text(t.title, fontWeight = FontWeight.SemiBold, color = UI.Text, modifier = Modifier.padding(bottom = 6.dp))
+        when {
+            t == Tool.ERASER -> {
+                PillRow {
+                    Pill("Bütün çizgi", !ctl.eraserPartial) { ctl.eraserPartial = false; ctl.settings.eraserPartial.value = false }
+                    Pill("Kısmi", ctl.eraserPartial) { ctl.eraserPartial = true; ctl.settings.eraserPartial.value = true }
+                }
+                SectionTitle("Boyut")
+                Row {
                     listOf(8, 14, 22).forEachIndexed { i, d ->
                         SizeDot(d, ctl.eraserSize == i, Color(0xFF98A2B3)) { ctl.eraserSize = i; ctl.settings.eraserSize.value = i }
                     }
-                    BarDivider()
-                    Pill("Sayfayı temizle", false, onClick = onClear)
                 }
-                t == Tool.LASSO -> {
-                    Hint("Seçmek istediğiniz yazının etrafını çizin")
-                    if (ctl.clipboardCount > 0) { BarDivider(); Pill("Yapıştır (${ctl.clipboardCount})", false) { ctl.paste() } }
+                LabeledRow("Sildikten sonra kaleme dön") { Switch(ctl.settings.eraserReturn.value, { ctl.settings.eraserReturn.value = it }) }
+                Pill("Sayfayı temizle", false, onClick = onClear)
+            }
+            t == Tool.LASSO -> {
+                Hint("Seçmek istediğiniz yazının etrafını çizin")
+                if (ctl.clipboardCount > 0) Pill("Yapıştır (${ctl.clipboardCount})", false) { ctl.paste() }
+            }
+            t == Tool.LASER -> Hint("Kalemle gösterin; iz birkaç saniyede kaybolur")
+            t == Tool.SPOT -> Hint("Kalemin gösterdiği yer aydınlanır")
+            else -> {
+                if (t.isGeometry) GeometryChooser(ctl)
+                val hl = t == Tool.HIGHLIGHTER
+                val colors = if (hl) ctl.settings.highlighterColors() else ctl.settings.paletteColors()
+                val active = ctl.activeColor or 0xFF000000.toInt()
+                SectionTitle("Renk")
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    colors.forEach { c -> ColorDot(c, (c or 0xFF000000.toInt()) == active, 34, onLongClick = { onEditPalette(hl) }) { ctl.setColor(c) } }
+                    Box(
+                        Modifier.size(34.dp).clip(CircleShape).background(UI.SurfaceAlt).clickable { onEditPalette(hl) },
+                        contentAlignment = Alignment.Center,
+                    ) { Icon(Icons.Rounded.Edit, "Renkleri düzenle", tint = UI.TextSoft, modifier = Modifier.size(16.dp)) }
                 }
-                t == Tool.LASER -> Hint("Kalemle gösterin; iz birkaç saniyede kaybolur")
-                t == Tool.SPOT -> Hint("Spot ışığı: kalemi gösterdiğiniz yer aydınlanır")
-                else -> {
-                    if (t.isGeometry) {
-                        GeometryChooser(ctl)
-                        BarDivider()
-                    }
-                    val hl = t == Tool.HIGHLIGHTER
-                    val colors = if (hl) ctl.settings.highlighterColors() else ctl.settings.paletteColors()
-                    val active = ctl.activeColor or 0xFF000000.toInt()
-                    Row(horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
-                        colors.forEach { c ->
-                            ColorDot(c, (c or 0xFF000000.toInt()) == active, 32, onLongClick = { onEditPalette(hl) }) { ctl.setColor(c) }
-                        }
-                        Box(
-                            Modifier.size(32.dp).clip(CircleShape).background(UI.SurfaceAlt).clickable { onEditPalette(hl) },
-                            contentAlignment = Alignment.Center,
-                        ) { Icon(Icons.Rounded.Edit, "Renkleri düzenle", tint = UI.TextSoft, modifier = Modifier.size(16.dp)) }
-                    }
-                    if (t != Tool.TEXT) {
-                        BarDivider()
+                if (t != Tool.TEXT) {
+                    SectionTitle("Kalınlık")
+                    Row {
                         val widths = if (hl) listOf(8f, 14f, 22f) else listOf(1.0f, 2.0f, 3.6f)
                         widths.forEachIndexed { i, w ->
                             SizeDot(6 + i * 5, abs(ctl.activeWidth - w) < 0.05f, Color(ctl.activeColor or 0xFF000000.toInt())) { ctl.setWidth(w) }
                         }
                     }
-                    if (t == Tool.PEN || t == Tool.HIGHLIGHTER) {
-                        BarDivider()
-                        PresetRow(ctl)
-                    }
+                }
+                if (t == Tool.PEN || t == Tool.HIGHLIGHTER) {
+                    SectionTitle("Kayıtlı kalemler")
+                    PresetRow(ctl)
                 }
             }
         }
@@ -867,33 +878,42 @@ private fun SelAction(icon: ImageVector, text: String, tint: Color, onClick: () 
     }
 }
 
+/**
+ * Odak modu paneli: menüler gizliyken sadece temel araçlar. Ekranın sağ/sol kenarına
+ * taşınınca dikey, diğer yerlerde yatay durur.
+ */
 @Suppress("DEPRECATION")
 @Composable
-private fun PresentationBar(ctl: EditorController, handle: Modifier, recState: Int, recTime: String, onStopRecord: () -> Unit) {
+private fun FocusBar(ctl: EditorController, handle: Modifier, vertical: Boolean, recState: Int, recTime: String, onStopRecord: () -> Unit) {
     var expanded by remember { mutableStateOf(true) }
-    FloatingCard(radius = 28) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)) {
-            Grip(handle, vertical = true)
-            if (expanded) {
-                for (t in listOf(Tool.PEN, Tool.HIGHLIGHTER, Tool.ERASER, Tool.LASER, Tool.TEMP, Tool.SPOT)) {
-                    Box(
-                        Modifier.size(44.dp).clip(CircleShape).background(if (ctl.tool == t) UI.PrimarySoft else Color.Transparent).clickable { ctl.selectTool(t) },
-                        contentAlignment = Alignment.Center,
-                    ) { ToolGlyph(t, if (ctl.tool == t) UI.Primary else UI.Text, size = 24.dp) }
-                }
-                ctl.settings.paletteColors().take(4).forEach { c ->
-                    Box(Modifier.padding(3.dp)) { ColorDot(c, (c or 0xFF000000.toInt()) == (ctl.activeColor or 0xFF000000.toInt()), 30) { ctl.setColor(c) } }
-                }
-                SmallRound(Icons.Rounded.Undo, "Geri al", true) { ctl.undo() }
-                SmallRound(Icons.Rounded.Add, "Yeni sayfa", true) { ctl.insertPageAfter(ctl.currentPage) }
-                if (recState != 0) {
-                    Text("● $recTime", color = UI.Danger, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 6.dp))
-                    SmallRound(Icons.Rounded.Stop, "Kaydı bitir", true, onStopRecord)
-                }
+    @Composable
+    fun Items() {
+        Grip(handle, vertical = !vertical)
+        if (expanded) {
+            for (t in listOf(Tool.PEN, Tool.HIGHLIGHTER, Tool.ERASER, Tool.LASER)) {
+                Box(
+                    Modifier.size(44.dp).clip(CircleShape).background(if (ctl.tool == t) UI.PrimarySoft else Color.Transparent).clickable { ctl.selectTool(t) },
+                    contentAlignment = Alignment.Center,
+                ) { ToolGlyph(t, if (ctl.tool == t) UI.Primary else UI.Text, size = 24.dp) }
             }
-            SmallRound(if (expanded) Icons.Rounded.ChevronLeft else Icons.Rounded.ChevronRight, "Daralt", true) { expanded = !expanded }
-            SmallRound(Icons.Rounded.FullscreenExit, "Sunumdan çık", true) { ctl.presentation = false }
+            ctl.settings.paletteColors().take(4).forEach { c ->
+                Box(Modifier.padding(3.dp)) { ColorDot(c, (c or 0xFF000000.toInt()) == (ctl.activeColor or 0xFF000000.toInt()), 30) { ctl.setColor(c) } }
+            }
+            SmallRound(Icons.Rounded.Undo, "Geri al", true) { ctl.undo() }
+            SmallRound(Icons.Rounded.Add, "Yeni sayfa", true) { ctl.insertPageAfter(ctl.currentPage) }
+            if (recState != 0) {
+                Text("● $recTime", color = UI.Danger, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, modifier = Modifier.padding(4.dp))
+                SmallRound(Icons.Rounded.Stop, "Kaydı bitir", true, onStopRecord)
+            }
         }
+        val collapseIcon = if (vertical) (if (expanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown)
+        else (if (expanded) Icons.Rounded.ChevronLeft else Icons.Rounded.ChevronRight)
+        SmallRound(collapseIcon, "Daralt", true) { expanded = !expanded }
+        SmallRound(Icons.Rounded.FullscreenExit, "Odak modundan çık", true) { ctl.presentation = false }
+    }
+    FloatingCard(radius = 28) {
+        if (vertical) Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 2.dp, vertical = 6.dp)) { Items() }
+        else Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)) { Items() }
     }
 }
 
@@ -922,6 +942,7 @@ private fun PanelHeader(title: String, onClose: () -> Unit) {
 
 /** Kağıt deseni, rengi, desen görünürlüğü ve aralığı. Değişiklikler anında sayfaya uygulanır. */
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 private fun PageStylePanel(ctl: EditorController, onClose: () -> Unit) {
     val pv = ctl.pagesVersion
     val page = ctl.nb.pages.getOrNull(ctl.currentPage)
@@ -929,6 +950,7 @@ private fun PageStylePanel(ctl: EditorController, onClose: () -> Unit) {
     val current = (page?.background as? Background.Paper) ?: ctl.nb.defaultPaper
     var style by remember(ctl.currentPage, isPdf, page?.background, pv) { mutableStateOf(current) }
     var all by remember { mutableStateOf(false) }
+    var customColor by remember { mutableStateOf(false) }
     val pickPaper = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) ctl.setPaperImage(uri, all) }
     fun apply(p: Background.Paper) {
         style = p
@@ -985,6 +1007,44 @@ private fun PageStylePanel(ctl: EditorController, onClose: () -> Unit) {
                         Text(name, fontSize = 10.sp, color = UI.TextSoft, modifier = Modifier.padding(top = 3.dp))
                     }
                 }
+                val custom = PaperColors.all.none { it.first == style.color }
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable { customColor = true }) {
+                    Box(
+                        Modifier.size(40.dp).clip(CircleShape)
+                            .border(if (custom) 3.dp else 1.dp, if (custom) UI.Primary else UI.Border, CircleShape)
+                            .padding(if (custom) 4.dp else 0.dp).clip(CircleShape)
+                            .background(if (custom) Color(style.color) else UI.SurfaceAlt),
+                        contentAlignment = Alignment.Center,
+                    ) { if (!custom) Icon(Icons.Rounded.Add, "Başka renk", tint = UI.TextSoft, modifier = Modifier.size(20.dp)) }
+                    Text("Diğer", fontSize = 10.sp, color = UI.TextSoft, modifier = Modifier.padding(top = 3.dp))
+                }
+            }
+            if (customColor) {
+                var picked by remember { mutableStateOf(style.color) }
+                val start = remember { style.color }
+                androidx.compose.material3.AlertDialog(
+                    onDismissRequest = { customColor = false }, containerColor = UI.Surface,
+                    title = { Text("Kağıt rengi") },
+                    text = { Column { HsvPicker(start) { picked = it or 0xFF000000.toInt() } } },
+                    confirmButton = { Button(onClick = { customColor = false; apply(style.copy(color = picked)) }, shape = RoundedCornerShape(10.dp)) { Text("Uygula") } },
+                    dismissButton = { androidx.compose.material3.TextButton(onClick = { customColor = false }) { Text("Vazgeç", color = UI.TextSoft) } },
+                )
+            }
+
+            if (!isPdf && page != null) {
+                SectionTitle("Sayfa boyutu")
+                val (fw, fh) = ctl.fullScreenSize()
+                val sizes = listOf(
+                    "A4 dikey" to (595f to 842f), "A4 yatay" to (842f to 595f),
+                    "16:9" to (960f to 540f), "Tam ekran" to (fw to fh),
+                )
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    sizes.forEach { (label, wh) ->
+                        val sel = abs(page.width - wh.first) < 1f && abs(page.height - wh.second) < 1f
+                        Pill(label, sel) { ctl.setPageSize(ctl.currentPage, wh.first, wh.second, all) }
+                    }
+                }
+                Text("\"Tam ekran\" sayfayı bu ekranın oranına getirir; kenar boşluğu kalmaz.", fontSize = 12.sp, color = UI.TextSoft, modifier = Modifier.padding(top = 4.dp))
             }
 
             if (style.template != Template.BLANK) {

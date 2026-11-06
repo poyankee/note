@@ -156,6 +156,10 @@ class MainActivity : ComponentActivity() {
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         val code = event.keyCode
+        PenKeys.monitor?.let { m ->
+            m(event)
+            if (code != KeyEvent.KEYCODE_BACK) return true
+        }
         val learner = PenKeys.learner
         if (learner != null && PenKeys.canLearn(code)) {
             if (event.action == KeyEvent.ACTION_UP) learner(code)
@@ -182,6 +186,7 @@ class MainActivity : ComponentActivity() {
         val n = new.trim()
         if (n.isEmpty() || n == old) return
         folders = folders.map { if (it == old) n else it }.distinct()
+        settings.folderColor(old)?.let { settings.setFolderColor(n, it); settings.setFolderColor(old, null) }
         store.saveFolders(folders)
         notebooks.filter { it.folder == old }.forEach { store.setFolder(it.id, n) }
         notebooks = notebooks.map { if (it.folder == old) it.copy(folder = n) else it }
@@ -190,6 +195,7 @@ class MainActivity : ComponentActivity() {
 
     private fun deleteFolder(name: String) {
         folders = folders - name
+        settings.setFolderColor(name, null)
         store.saveFolders(folders)
         notebooks.filter { it.folder == name }.forEach { store.setFolder(it.id, "") }
         notebooks = notebooks.map { if (it.folder == name) it.copy(folder = "") else it }

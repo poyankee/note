@@ -483,6 +483,44 @@ class SmokeTest {
         main { com.poyankee.note.data.Settings.get(rule.activity).dockCollapsed.value = true }
         shot("15-menu-daraltilmis")
         main { com.poyankee.note.data.Settings.get(rule.activity).dockCollapsed.value = false }
+
+        // sayfa boyutu: tam ekran oranı, geri alınabilir
+        val (fw, fh) = main { c.fullScreenSize() }
+        main { c.setPageSize(0, fw, fh, false) }
+        assertEquals(fh, main { c.nb.pages[0].height }, 0.5f)
+        main { c.undo() }
+        assertEquals(842f, main { c.nb.pages[0].height }, 0.5f)
+        main { c.setPageSize(0, fw, fh, false) }
+        main { c.setPageStyle(0, Background.Paper(Template.GRID, 0xFFE8F4FF.toInt())) }
+
+        // seçili araca tekrar dokununca seçenekler açılır
+        main { c.selectTool(Tool.PEN) }
+        rule.onNodeWithTag("tool-PEN").performClick()
+        shot("16-arac-secenekleri")
+        rule.onNodeWithTag("tool-PEN").performClick()
+        rule.waitForIdle()
+
+        // odak modu: sağ kenarda dikey
+        val st = com.poyankee.note.data.Settings.get(rule.activity)
+        main { st.presX.value = 5000f; st.presY.value = -200f; c.presentation = true }
+        shot("17-odak-dikey")
+        main { c.presentation = false; st.presX.value = 0f; st.presY.value = 0f }
+    }
+
+    @Test
+    fun libraryViews() {
+        val st = com.poyankee.note.data.Settings.get(rule.activity)
+        newNotebook()
+        main { rule.activity.onBackPressedDispatcher.onBackPressed() }
+        rule.waitUntil(5000) { rule.onAllNodesWithText("Yeni defter").fetchSemanticsNodes().isNotEmpty() }
+        main { st.libraryView.value = "LIST" }
+        shot("18-liste-gorunumu")
+        rule.onNodeWithText("Seç").performClick()
+        rule.onNodeWithText("Tümünü seç").performClick()
+        shot("19-toplu-secim")
+        main { st.libraryView.value = "SMALL" }
+        shot("20-kucuk-kapak")
+        main { st.libraryView.value = "MEDIUM" }
     }
 
     @Test

@@ -14,6 +14,8 @@ enum class PenAction(val title: String) {
 
 enum class ThemeMode(val title: String) { SYSTEM("Sistem"), LIGHT("Açık"), DARK("Koyu") }
 
+enum class LibraryView(val title: String) { SMALL("Küçük"), MEDIUM("Orta"), LARGE("Büyük"), LIST("Liste") }
+
 enum class SortMode(val title: String) { UPDATED("Son düzenlenen"), NAME("Ada göre"), CREATED("Oluşturma tarihi") }
 
 /** Kayıtlı kalem: tür (kalem / fosforlu), renk ve kalınlık. */
@@ -87,6 +89,9 @@ class Settings(context: Context) {
     /** Yeni sayfa: false = düz beyaz, true = önceki sayfa gibi. */
     val newPageSame = bool("newPageSame", false)
     val sortMode = str("sortMode", SortMode.UPDATED.name)
+    val libraryView = str("libraryView", LibraryView.MEDIUM.name)
+    /** Klasör renkleri: "ad=AARRGGBB" çiftleri, ayraç \u0001. */
+    val folderColors = str("folderColors", "")
 
     // Görünüm
     val theme = str("theme", ThemeMode.SYSTEM.name)
@@ -119,6 +124,16 @@ class Settings(context: Context) {
     val buttonActionValue get() = try { ButtonAction.valueOf(buttonAction.value) } catch (_: Exception) { ButtonAction.ERASER }
     val penKeyActionValue get() = try { PenAction.valueOf(penKeyAction.value) } catch (_: Exception) { PenAction.ERASER_TOGGLE }
     val themeValue get() = try { ThemeMode.valueOf(theme.value) } catch (_: Exception) { ThemeMode.SYSTEM }
+    val libraryViewValue get() = try { LibraryView.valueOf(libraryView.value) } catch (_: Exception) { LibraryView.MEDIUM }
+    private fun folderColorMap(): Map<String, Int> = folderColors.value.split('\u0001').mapNotNull {
+        val i = it.lastIndexOf('='); if (i <= 0) null else it.substring(i + 1).toLongOrNull(16)?.let { c -> it.substring(0, i) to c.toInt() }
+    }.toMap()
+    fun folderColor(name: String): Int? = folderColorMap()[name]
+    fun setFolderColor(name: String, color: Int?) {
+        val m = folderColorMap().toMutableMap()
+        if (color == null) m.remove(name) else m[name] = color
+        folderColors.value = m.entries.joinToString("\u0001") { "${it.key}=" + String.format("%08X", it.value) }
+    }
     val sortValue get() = try { SortMode.valueOf(sortMode.value) } catch (_: Exception) { SortMode.UPDATED }
     fun penKeyCodeSet(): Set<Int> = penKeyCodes.value.split(',').mapNotNull { it.trim().toIntOrNull() }.toSet()
     fun addPenKeyCode(code: Int) { penKeyCodes.value = (penKeyCodeSet() + code).joinToString(",") }

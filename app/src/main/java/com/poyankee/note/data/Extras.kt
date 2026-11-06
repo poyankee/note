@@ -10,6 +10,8 @@ import java.security.MessageDigest
 object PenKeys {
     /** "Tuşu öğret" açıkken bir sonraki tuş buraya iletilir. */
     @Volatile var learner: ((Int) -> Unit)? = null
+    /** Kalem testi ekranı açıkken bütün tuş olayları buraya da gönderilir. */
+    @Volatile var monitor: ((KeyEvent) -> Unit)? = null
 
     private val STANDARD = setOf(
         KeyEvent.KEYCODE_STYLUS_BUTTON_PRIMARY, KeyEvent.KEYCODE_STYLUS_BUTTON_SECONDARY,

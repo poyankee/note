@@ -66,6 +66,7 @@ fun SettingsScreen(
     val restoreLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) onRestore(uri) }
     val folderLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri -> if (uri != null) onBackupFolder(uri) }
     var learning by remember { mutableStateOf(false) }
+    var penTest by remember { mutableStateOf(false) }
     var confirmRestore by remember { mutableStateOf(false) }
 
     Column(Modifier.fillMaxSize().background(UI.Bg)) {
@@ -125,6 +126,12 @@ fun SettingsScreen(
                                 fontSize = 12.sp, color = UI.TextSoft)
                         }
                         if (s.penKeyCodeSet().isNotEmpty()) TextButton(onClick = { s.penKeyCodes.value = "" }) { Text("Öğretilen tuşları temizle") }
+                        Spacer(Modifier.height(6.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Pill("Kalem testi", false) { penTest = true }
+                            Spacer(Modifier.width(10.dp))
+                            Text("Kalemin ve tuşlarının uygulamaya ne gönderdiğini gösterir", fontSize = 12.sp, color = UI.TextSoft)
+                        }
                     }
                 }
                 Group("Yazı") {
@@ -191,13 +198,14 @@ fun SettingsScreen(
                     }
                 }
                 Text(
-                    "Not: Kablosuz yansıtma tüm ekranı gösterir; temiz görüntü için sunum modunu (tam ekran) kullanın.",
+                    "Not: Kablosuz yansıtma tüm ekranı gösterir; temiz görüntü için odak modunu (menüler gizli) kullanın.",
                     fontSize = 13.sp, color = UI.TextSoft, modifier = Modifier.padding(vertical = 16.dp),
                 )
             }
         }
     }
 
+    if (penTest) PenTestDialog(s) { penTest = false }
     if (learning) {
         DisposableEffect(Unit) {
             PenKeys.learner = { code -> s.addPenKeyCode(code); learning = false }
@@ -207,7 +215,12 @@ fun SettingsScreen(
             onDismissRequest = { learning = false },
             containerColor = UI.Surface,
             title = { Text("Kalem tuşunu öğret") },
-            text = { Text("Şimdi kalemde çift dokunun ya da tuşa basın. Algılanırsa bu pencere kendiliğinden kapanır.\n\nHiçbir şey olmazsa kaleminiz bu hareketi uygulamalara iletmiyor demektir (bazı kalemlerde yalnızca sistem kullanabilir).", color = UI.TextSoft) },
+            text = {
+                Column {
+                    Text("Şimdi kalemde çift dokunun ya da tuşa basın. Algılanırsa bu pencere kendiliğinden kapanır.\n\nHiçbir şey olmazsa kaleminiz bu hareketi uygulamalara iletmiyor demektir (bazı kalemlerde yalnızca sistem kullanabilir). Ne geldiğini görmek için Kalem testi'ni kullanın.", color = UI.TextSoft)
+                    KeyCatcher()
+                }
+            },
             confirmButton = { TextButton(onClick = { learning = false }) { Text("Vazgeç") } },
         )
     }
