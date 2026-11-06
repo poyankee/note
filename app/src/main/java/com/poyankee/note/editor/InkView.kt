@@ -250,7 +250,8 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
             }
             // içerik
             val selSkip = if (sel != null && sel!!.page == i) sel!!.ids else emptySet()
-            val skip = if (settings.hideSolutions.value && settings.solutionColor.value != 0) selSkip + solutionIds(page) else selSkip
+            var skip = if (settings.hideSolutions.value && settings.solutionColor.value != 0) selSkip + solutionIds(page) else selSkip
+            if (ctl.reviewMode) skip = skip + reviewHidden(page)
             if (useNodes) {
                 var node = nodes[page.id]
                 if (node == null || page.id in dirty || !node.hasDisplayList()) {
@@ -618,6 +619,19 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
     private var sel: Selection? = null
 
     private val footerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.RIGHT; textSize = 9f; color = 0xFF98A2B3.toInt() }
+
+    /** Tekrar modu: yanlış defteri kartında sorunun altına sonradan yazılanlar. */
+    private fun reviewHidden(page: com.poyankee.note.core.Page): Set<Long> {
+        val img = page.items.firstOrNull { it is com.poyankee.note.core.ImageItem && it.file.startsWith("wq_") } ?: return emptySet()
+        val limit = img.bounds().bottom + 30f
+        return page.items.filter { x ->
+            x.bounds().top > limit && when (x) {
+                is com.poyankee.note.core.TextItem -> !(x.text.startsWith("Çözüm:") || x.text.startsWith("☐"))
+                is com.poyankee.note.core.ImageItem -> true
+                else -> !(x is ShapeItem && (x.geom as? Geom.Polyline)?.let { g -> !g.closed && g.n == 2 && x.color == 0xFFD0D5DD.toInt() } == true)
+            }
+        }.map { it.id }.toHashSet()
+    }
 
     /** Çözüm katmanındaki öğeler (çözüm rengindekiler). */
     private fun solutionIds(page: com.poyankee.note.core.Page): Set<Long> {
@@ -1423,7 +1437,9 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
             s.live = Similarity()
             if (!tr.isIdentity) {
                 val moved = s.items.map { it.transformed(tr) }
-                ctl.commit(nb.pages[s.page], s.items, moved)
+                // kutuya bağlı oklar da gelsin (kavram haritası)
+                val conn = com.poyankee.note.core.Connectors.follow(nb.pages[s.page].items, s.ids, s.box(), tr)
+                ctl.commit(nb.pages[s.page], s.items + conn.map { it.first }, moved + conn.map { it.second })
                 sel = Selection(s.page, moved)
                 dirty += nb.pages[s.page].id
             }
@@ -1453,6 +1469,8 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
                 } else {
                     val extras = if (item is ShapeItem) ctl.shapeExtras(page, listOf(item.geom)) else emptyList()
                     ctl.commit(page, emptyList(), listOf(item) + extras)
+                    // PDF yazısının üzerine fosforlu: metin satırlarına oturt
+                    if (st.tool == Tool.HIGHLIGHTER && item is InkItem && page.background is Background.PdfPage && settings.textHighlight.value) ctl.snapHighlight(st.page, item)
                     // son sayfanın alt kısmına yazıldıysa yeni sayfa hazırla
                     if (settings.autoNewPage.value && st.page == nb.pages.lastIndex && page.background is Background.Paper &&
                         item.bounds().bottom > page.height * 0.85f) ctl.appendPageQuietly()

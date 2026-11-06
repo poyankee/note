@@ -169,8 +169,8 @@ fun ValueTableDialog(ctl: EditorController, onDismiss: () -> Unit) {
 
 /** Sayfaları ayrı deftere çıkarma: "3-7, 12" gibi aralık. Asıl defter değişmez. */
 @Composable
-fun ExtractDialog(ctl: EditorController, onDismiss: () -> Unit, onDone: (List<Int>, String) -> Unit) {
-    var range by remember { mutableStateOf("${ctl.currentPage + 1}") }
+fun ExtractDialog(ctl: EditorController, initialRange: String? = null, onDismiss: () -> Unit, onDone: (List<Int>, String) -> Unit) {
+    var range by remember { mutableStateOf(initialRange ?: "${ctl.currentPage + 1}") }
     var name by remember { mutableStateOf(ctl.nb.name + " (bölüm)") }
     var error by remember { mutableStateOf<String?>(null) }
     AlertDialog(
@@ -232,4 +232,49 @@ fun printNotebook(context: Context, ctl: EditorController) {
         }
     }
     pm.print(nb.name, adapter, PrintAttributes.Builder().setMediaSize(PrintAttributes.MediaSize.ISO_A4).build())
+}
+
+/** Yanlış defteri: soruları konuya ve çözülme durumuna göre süzüp ilgili sayfaya gitme. */
+@Composable
+fun WrongFilterDialog(ctl: EditorController, onDismiss: () -> Unit) {
+    val s = ctl.settings
+    @Suppress("UNUSED_VARIABLE") val wv = ctl.wrongVersion
+    val pages = ctl.nb.pages.toList()
+    val tags = pages.map { s.wrongTag(it.id) }.filter { it.isNotEmpty() }.distinct().sorted()
+    var tag by remember { mutableStateOf<String?>(null) }
+    var onlyOpen by remember { mutableStateOf(false) }
+    AlertDialog(
+        onDismissRequest = onDismiss, containerColor = UI.Surface,
+        title = { Text("Sorular") },
+        text = {
+            Column {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(bottom = 6.dp)) {
+                    Pill("Hepsi", tag == null && !onlyOpen) { tag = null; onlyOpen = false }
+                    Pill("Çözülmeyenler", onlyOpen) { onlyOpen = !onlyOpen }
+                }
+                if (tags.isNotEmpty()) Row(Modifier.padding(bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    tags.take(6).forEach { t -> Pill(t, tag == t) { tag = if (tag == t) null else t } }
+                }
+                val list = pages.indices.filter { i ->
+                    val id = pages[i].id
+                    (tag == null || s.wrongTag(id) == tag) && (!onlyOpen || !s.wrongDone(id))
+                }
+                Text("${list.size} soru", color = UI.TextSoft, fontSize = 13.sp)
+                LazyColumn(Modifier.heightIn(max = 360.dp)) {
+                    items(list) { i ->
+                        val id = pages[i].id
+                        Row(
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable { ctl.goToPage(i); onDismiss() }.padding(vertical = 8.dp, horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text("Soru ${i + 1}", fontWeight = FontWeight.SemiBold, color = UI.Primary, modifier = Modifier.width(80.dp))
+                            Text(s.wrongTag(id).ifEmpty { "—" }, color = UI.Text, modifier = Modifier.weight(1f))
+                            Text(if (s.wrongDone(id)) "✓ çözüldü" else "tekrar", color = if (s.wrongDone(id)) androidx.compose.ui.graphics.Color(0xFF16A34A) else UI.TextSoft, fontSize = 13.sp)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Kapat") } },
+    )
 }

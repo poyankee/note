@@ -188,6 +188,7 @@ fun SettingsScreen(
                     Toggle("Silgiden kaleme otomatik dön", "Silgiyle sildikten sonra önceki araca geri geçer", s.eraserReturn.value) { s.eraserReturn.value = it }
                     SliderRow("Kalem basıncı eğrisi", listOf("Çok yumuşak", "Yumuşak", "Normal", "Sert", "Çok sert")[s.pressureCurve.value.coerceIn(0, 4)],
                         s.pressureCurve.value.toFloat(), 0f..4f, 3) { s.pressureCurve.value = it.roundToInt() }
+                    Toggle("PDF'te metni vurgula", "Fosforlu kalem PDF yazısının üzerinde satırlara oturur", s.textHighlight.value) { s.textHighlight.value = it }
                     Toggle("Gecikme azaltma (tahmin)", "Çizgi kalemin ucunu daha yakından takip eder", s.prediction.value) { s.prediction.value = it }
                     SliderRow("Çizgi yumuşatma", listOf("Kapalı", "Az", "Orta", "Çok", "En çok")[s.smoothing.value.coerceIn(0, 4)],
                         s.smoothing.value.toFloat(), 0f..4f, 3) { s.smoothing.value = it.roundToInt() }
@@ -327,6 +328,10 @@ fun SettingsScreen(
                                 } catch (_: Exception) {}
                             }
                             Pill("Açık kaynak lisansları", false) { info = "Açık kaynak lisansları" to LICENSES_TEXT }
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        Row {
+                            Pill("Tanıtımı göster", false) { s.introShown.value = false; onBack() }
                         }
                     }
                 }

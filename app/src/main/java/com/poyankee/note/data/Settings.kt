@@ -64,6 +64,8 @@ class Settings(context: Context) {
     val pressure = bool("pressure", true)
     /** Basınç eğrisi: 0 çok yumuşak … 2 normal … 4 sert. */
     val pressureCurve = int("pressureCurve", 2)
+    /** PDF'te fosforlu kalem metin satırlarına otursun. */
+    val textHighlight = bool("textHighlight", true)
     /** Sayfa altına: 0 hiçbir şey, 1 sayfa no, 2 sayfa no + tarih (ekranda ve dışa aktarmada). */
     val pageFooter = int("pageFooter", 0)
     /** Çözüm katmanı: bu renkle yazılanlar "çözüm" sayılır (0 = kapalı). */
@@ -110,6 +112,8 @@ class Settings(context: Context) {
     // Görünüm
     val theme = str("theme", ThemeMode.SYSTEM.name)
     val colorTheme = str("colorTheme", "DEFAULT")
+    /** İlk açılış tanıtımı gösterildi mi. */
+    val introShown = bool("introShown", false)
     /** Arayüz boyutu: 0 küçük, 1 normal, 2 büyük, 3 çok büyük (erişilebilirlik). */
     val uiSize = int("uiSize", 1)
     /** Göz dostu mod: koyu tema + sıcak renk filtresi. */
@@ -186,6 +190,11 @@ class Settings(context: Context) {
         return v.substring(0, i) to (v.substring(i + 1).toIntOrNull() ?: 0)
     }
     fun setWrongSource(pageId: Long, nbId: String, page: Int) = sp.edit().putString("wrongSrc_$pageId", "$nbId|$page").apply()
+    /** Yanlış defteri sayfasının konu etiketi ve çözüldü işareti. */
+    fun wrongTag(pageId: Long): String = sp.getString("wrongTag_$pageId", "") ?: ""
+    fun setWrongTag(pageId: Long, tag: String) = sp.edit().putString("wrongTag_$pageId", tag.trim()).apply()
+    fun wrongDone(pageId: Long): Boolean = sp.getBoolean("wrongDone_$pageId", false)
+    fun setWrongDone(pageId: Long, done: Boolean) = sp.edit().putBoolean("wrongDone_$pageId", done).apply()
 
     /** Defterin en son bakılan sayfası (kaldığın yerden devam). */
     fun lastPage(id: String) = sp.getInt("lastPage_$id", 0)

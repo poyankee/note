@@ -693,6 +693,12 @@ class EditorController(
         v.select(pi, placed)
     }
 
+    /** Yanlış defteri tekrar modu: çözüm alanına yazılanlar gizlenir, soru yeniden çözülür. */
+    var reviewMode by mutableStateOf(false)
+    /** Yanlış defteri etiket/çözüldü değişince arayüzü yenilemek için. */
+    var wrongVersion by mutableIntStateOf(0)
+    val isWrongBook get() = nb.id == settings.wrongNotebook.value
+
     /** Hareketli geometri: seçili şeklin ölçüleri canlı gösterilsin mi. */
     var liveMeasure by mutableStateOf(true)
 
@@ -847,6 +853,70 @@ class EditorController(
         }
     } catch (_: Throwable) { emptyList() }
 
+    /* ---------- PDF metnini vurgulama ---------- */
+
+    /** PDF sayfasındaki karakter kutuları (görünen sayfa koordinatında): sol, üst, sağ, alt. */
+    private val glyphCache = HashMap<Int, List<FloatArray>>()
+
+    private fun glyphsOf(bg: Background.PdfPage, page: Page): List<FloatArray> {
+        glyphCache[bg.index]?.let { return transformGlyphs(it, bg, page) }
+        val list = ArrayList<FloatArray>()
+        try {
+            Exporter.init(context)
+            com.tom_roush.pdfbox.pdmodel.PDDocument.load(File(store.dir(nb.id), nb.pdfFile!!)).use { doc ->
+                val st = object : com.tom_roush.pdfbox.text.PDFTextStripper() {
+                    override fun writeString(text: String?, positions: MutableList<com.tom_roush.pdfbox.text.TextPosition>?) {
+                        positions?.forEach { tp ->
+                            if (tp.unicode.isNullOrBlank()) return@forEach
+                            val h = tp.heightDir.coerceAtLeast(tp.fontSizeInPt * 0.7f)
+                            list += floatArrayOf(tp.xDirAdj, tp.yDirAdj - h, tp.xDirAdj + tp.widthDirAdj, tp.yDirAdj + h * 0.25f)
+                        }
+                    }
+                }
+                st.startPage = bg.index + 1; st.endPage = bg.index + 1
+                st.getText(doc)
+            }
+        } catch (_: Throwable) {}
+        glyphCache[bg.index] = list
+        return transformGlyphs(list, bg, page)
+    }
+
+    private fun transformGlyphs(list: List<FloatArray>, bg: Background.PdfPage, page: Page): List<FloatArray> {
+        if (bg.rotation == 0 && bg.crop.isNone) return list
+        val fw = if (bg.fullW > 0f) bg.fullW else page.width
+        val fh = if (bg.fullH > 0f) bg.fullH else page.height
+        val t = PdfGeom.itemTransform(fw, fh, 0, Crop.NONE, bg.rotation, bg.crop)
+        return list.map { r ->
+            val xs = floatArrayOf(t.mapX(r[0], r[1]), t.mapX(r[2], r[3])); val ys = floatArrayOf(t.mapY(r[0], r[1]), t.mapY(r[2], r[3]))
+            floatArrayOf(minOf(xs[0], xs[1]), minOf(ys[0], ys[1]), maxOf(xs[0], xs[1]), maxOf(ys[0], ys[1]))
+        }
+    }
+
+    /** Fosforlu çizgiyi altındaki PDF metin satırlarına oturan dikdörtgenlere çevirir (metin yoksa dokunmaz). */
+    fun snapHighlight(pageIndex: Int, stroke: com.poyankee.note.core.InkItem) {
+        val page = nb.pages.getOrNull(pageIndex) ?: return
+        val bg = page.background as? Background.PdfPage ?: return
+        if (nb.pdfFile == null) return
+        val b = stroke.bounds()
+        if (b.height > 40f) return // eğik / büyük çizim: dokunma
+        imageExec.execute {
+            val glyphs = glyphsOf(bg, page)
+            val hit = glyphs.filter { g -> val cx = (g[0] + g[2]) / 2; val cy = (g[1] + g[3]) / 2; cx in b.left..b.right && cy in (b.top - 6f)..(b.bottom + 6f) }
+            if (hit.isEmpty()) return@execute
+            // satırlara grupla
+            val lines = hit.groupBy { (it[3] / 4f).roundToInt() }.values.map { l ->
+                floatArrayOf(l.minOf { it[0] }, l.minOf { it[1] }, l.maxOf { it[2] }, l.maxOf { it[3] })
+            }
+            val fill = (stroke.color and 0x00FFFFFF) or 0x55000000
+            val rects = lines.map { r ->
+                ShapeItem(Ids.next(), Geom.Polyline(floatArrayOf(r[0], r[1], r[2], r[1], r[2], r[3], r[0], r[3]), true), fill, 0.1f, false, fill)
+            }
+            main.post {
+                if (page.items.any { it.id == stroke.id }) commit(page, listOf(stroke), rects)
+            }
+        }
+    }
+
     /* ---------- değer tablosundan grafik ---------- */
 
     /** (x, y) noktalarını ekrandaki sayfanın koordinat düzlemine işler; istenirse birleştirir. */
@@ -970,6 +1040,21 @@ class EditorController(
         }
         if (pdf != null) pdf.runOnPdfThread(job) else thumbExec.execute { job() }
         return cached
+    }
+
+    /** Sayfanın resmini üretir (arka planda çağrılır; PDF zemini PDF iş parçacığında çizilir). */
+    fun renderPageBlocking(page: Page, scale: Float): Bitmap {
+        val snapshot = Page(page.id, page.background, page.width, page.height).also { it.items.addAll(page.items) }
+        val bgPdf = snapshot.background as? Background.PdfPage
+        var pdfBmp: Bitmap? = null
+        if (bgPdf != null && pdf != null) {
+            val latch = java.util.concurrent.CountDownLatch(1)
+            pdf.runOnPdfThread { try { pdfBmp = pdf.renderBlocking(bgPdf, scale) } finally { latch.countDown() } }
+            latch.await(30, java.util.concurrent.TimeUnit.SECONDS)
+        }
+        val out = thumbRenderer.renderPage(snapshot, scale, pdfBmp)
+        pdfBmp?.recycle()
+        return out
     }
 
     /** Silgiden önceki araca dön (silgi otomatik dönüşü). */

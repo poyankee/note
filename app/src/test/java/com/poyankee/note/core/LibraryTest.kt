@@ -72,3 +72,24 @@ class MeasureTest {
         assertEquals("2,5", Measure.fmt(2.46f)); assertEquals("3", Measure.fmt(3.01f))
     }
 }
+
+class ConnectorsTest {
+    @Test
+    fun arrowFollowsBox() {
+        val box = ShapeItem(1, Geom.Polyline(floatArrayOf(0f, 0f, 100f, 0f, 100f, 50f, 0f, 50f), true), 0, 1f)
+        val parts = Shapes.arrow(100f, 25f, 200f, 25f, 8f)
+        val shaft = ShapeItem(2, parts[0], 0, 1f)
+        val head = ShapeItem(3, parts[1], 0, 1f)
+        val far = ShapeItem(4, Geom.Polyline(floatArrayOf(300f, 300f, 400f, 300f), false), 0, 1f)
+        val items = listOf(box, shaft, head, far)
+        val t = Similarity.translate(0f, 100f)
+        val r = Connectors.follow(items, setOf(1L), box.bounds(), t)
+        assertEquals(2, r.size)
+        val ns = (r.first { it.first.id == 2L }.second as ShapeItem).geom as Geom.Polyline
+        assertEquals(125f, ns.pts[1], 0.01f)   // kutuya değen uç taşındı
+        assertEquals(25f, ns.pts[3], 0.01f)    // öbür uç yerinde
+        val nh = (r.first { it.first.id == 3L }.second as ShapeItem).geom as Geom.Polyline
+        assertEquals(200f, nh.pts[2], 0.01f); assertEquals(25f, nh.pts[3], 0.01f)
+        assertTrue(r.none { it.first.id == 4L })
+    }
+}

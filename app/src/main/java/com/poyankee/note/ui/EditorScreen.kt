@@ -164,6 +164,9 @@ fun EditorScreen(
     var showSearch by remember { mutableStateOf(false) }
     var showValueTable by remember { mutableStateOf(false) }
     var showExtract by remember { mutableStateOf(false) }
+    var extractRange by remember { mutableStateOf<String?>(null) }
+    var tagEdit by remember { mutableStateOf<String?>(null) }
+    var showWrongFilter by remember { mutableStateOf(false) }
     var saveToLib by remember { mutableStateOf(false) }
     val pickPdf = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) onInsertPdf(uri, ctl.currentPage) }
     ctl.openRequest?.let { req -> LaunchedEffect(req) { ctl.openRequest = null; onOpenTodo(req.first, req.second) } }
@@ -340,14 +343,34 @@ fun EditorScreen(
                     }
                 }
             }
-            val wrongSrc = remember(ctl.currentPage, ctl.pagesVersion) { ctl.nb.pages.getOrNull(ctl.currentPage)?.let { s.wrongSource(it.id) } }
-            if (wrongSrc != null && !ctl.presentation && !ctl.captureMode) {
+            val wrongPage = ctl.nb.pages.getOrNull(ctl.currentPage)
+            val wrongSrc = remember(ctl.currentPage, ctl.pagesVersion) { wrongPage?.let { s.wrongSource(it.id) } }
+            if (ctl.isWrongBook && wrongPage != null && !ctl.presentation && !ctl.captureMode) {
+                @Suppress("UNUSED_VARIABLE") val wv = ctl.wrongVersion
+                val tag = s.wrongTag(wrongPage.id); val done = s.wrongDone(wrongPage.id)
+                Surface(
+                    color = UI.Surface, shape = RoundedCornerShape(22.dp), shadowElevation = 6.dp,
+                    modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp),
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)) {
+                        if (wrongSrc != null) androidx.compose.material3.TextButton(onClick = { onOpenTodo(wrongSrc.first, wrongSrc.second) }) { Text("Kaynağa git ›", fontWeight = FontWeight.SemiBold) }
+                        androidx.compose.material3.TextButton(onClick = { tagEdit = tag }) { Text(if (tag.isEmpty()) "Konu ekle" else "Konu: $tag") }
+                        androidx.compose.material3.TextButton(onClick = { s.setWrongDone(wrongPage.id, !done); ctl.wrongVersion++ }) {
+                            Text(if (done) "✓ Çözüldü" else "☐ Çözüldü", color = if (done) Color(0xFF16A34A) else UI.Text)
+                        }
+                        androidx.compose.material3.TextButton(onClick = { ctl.reviewMode = !ctl.reviewMode; ctl.view?.refreshAll() }) {
+                            Text(if (ctl.reviewMode) "Tekrar modu: açık" else "Tekrar modu", color = if (ctl.reviewMode) UI.Primary else UI.Text)
+                        }
+                        androidx.compose.material3.TextButton(onClick = { showWrongFilter = true }) { Text("Sorular ▾") }
+                    }
+                }
+            } else if (wrongSrc != null && !ctl.presentation && !ctl.captureMode) {
                 Surface(
                     color = UI.Surface, shape = RoundedCornerShape(20.dp), shadowElevation = 6.dp,
                     modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp).clip(RoundedCornerShape(20.dp)).clickable { onOpenTodo(wrongSrc.first, wrongSrc.second) },
                 ) { Text("Kaynağa git ›", color = UI.Primary, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) }
             }
-            SidePanel(panel == Panel.PAGES) { PagesPanel(ctl, onCrop = { cropIndex = it }) { panel = Panel.NONE } }
+            SidePanel(panel == Panel.PAGES) { PagesPanel(ctl, onCrop = { cropIndex = it }, onExtract = { r -> extractRange = r; showExtract = true }) { panel = Panel.NONE } }
 
             ctl.message?.let { m ->
                 LaunchedEffect(m) { delay(3500); if (ctl.message == m) ctl.message = null }
@@ -362,8 +385,16 @@ fun EditorScreen(
     if (showGoto) GotoDialog(ctl) { showGoto = false }
     if (showBookmarks) BookmarksDialog(ctl) { showBookmarks = false }
     if (showSearch) SearchDialog(ctl) { showSearch = false }
+    tagEdit?.let { t ->
+        val page = ctl.nb.pages.getOrNull(ctl.currentPage)
+        NameDialog("Konu etiketi", "Konu (ör. Türev, Olasılık)", t, "Kaydet", onDismiss = { tagEdit = null }) { v ->
+            tagEdit = null
+            if (page != null) { s.setWrongTag(page.id, v); ctl.wrongVersion++ }
+        }
+    }
+    if (showWrongFilter) WrongFilterDialog(ctl) { showWrongFilter = false }
     if (showValueTable) ValueTableDialog(ctl) { showValueTable = false }
-    if (showExtract) ExtractDialog(ctl, onDismiss = { showExtract = false }) { idx, name -> showExtract = false; onExtract(idx, name) }
+    if (showExtract) ExtractDialog(ctl, extractRange, onDismiss = { showExtract = false; extractRange = null }) { idx, name -> showExtract = false; extractRange = null; onExtract(idx, name) }
     if (saveToLib) NameDialog("Kütüphaneye kaydet", "Çizimin adı", "", "Kaydet", onDismiss = { saveToLib = false }) { name ->
         saveToLib = false
         val n = com.poyankee.note.data.UserLibrary.get(context).save(name, ctl.view?.selectedItems() ?: emptyList())
@@ -1291,13 +1322,28 @@ private fun PageStylePanel(ctl: EditorController, onClose: () -> Unit) {
 
 /** Sayfa küçük resimleri: dokun = git, uzun bas = sayfa işlemleri. */
 @Composable
-private fun PagesPanel(ctl: EditorController, onCrop: (Int) -> Unit, onClose: () -> Unit) {
+private fun PagesPanel(ctl: EditorController, onCrop: (Int) -> Unit, onExtract: (String) -> Unit = {}, onClose: () -> Unit) {
     val pv = ctl.pagesVersion
     var tick by remember { mutableIntStateOf(0) }
     val state = rememberLazyGridState(initialFirstVisibleItemIndex = ctl.currentPage)
+    // çoklu seçim (sayfa kimlikleri) ve "taşı: yeni yerine dokun" modu
+    var picked by remember { mutableStateOf<Set<Long>?>(null) }
+    var moving by remember { mutableStateOf<Long?>(null) }
     Column(Modifier.fillMaxSize()) {
         PanelHeader("Sayfalar (${ctl.nb.pages.size})" + (if (pv < 0) "" else ""), onClose)
-        Text("Dokun: git · Uzun bas: ekle, çoğalt, taşı, sil", fontSize = 12.sp, color = UI.TextSoft, modifier = Modifier.padding(horizontal = 20.dp))
+        Row(Modifier.padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                when {
+                    moving != null -> "Sayfanın gideceği yere dokunun"
+                    picked != null -> "Sayfalara dokunarak seçin"
+                    else -> "Dokun: git · Uzun bas: ekle, çoğalt, taşı, sil"
+                },
+                fontSize = 12.sp, color = if (moving != null) UI.Primary else UI.TextSoft, modifier = Modifier.weight(1f),
+            )
+            Pill(if (picked != null || moving != null) "Bitti" else "Seç", picked != null) {
+                if (picked != null || moving != null) { picked = null; moving = null } else picked = emptySet()
+            }
+        }
         LazyVerticalGrid(
             columns = GridCells.Fixed(2), state = state,
             horizontalArrangement = Arrangement.spacedBy(14.dp), verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -1309,19 +1355,38 @@ private fun PagesPanel(ctl: EditorController, onCrop: (Int) -> Unit, onClose: ()
                 var menu by remember { mutableStateOf(false) }
                 val bmp = if (tick >= 0) ctl.thumbnail(i, 300) { tick++ } else null
                 val cur = i == ctl.currentPage
+                val isPicked = picked?.contains(page.id) == true
+                val isMoving = moving == page.id
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(
                         Modifier.fillMaxWidth().aspectRatio(page.width / page.height)
                             .shadow(if (cur) 0.dp else 3.dp, RoundedCornerShape(8.dp))
                             .clip(RoundedCornerShape(8.dp))
-                            .border(if (cur) 3.dp else 0.dp, if (cur) UI.Primary else Color.Transparent, RoundedCornerShape(8.dp))
+                            .border(
+                                if (cur || isPicked || isMoving) 3.dp else 0.dp,
+                                when { isMoving -> Color(0xFFF59E0B); isPicked -> UI.Primary; cur -> UI.Primary; else -> Color.Transparent }, RoundedCornerShape(8.dp),
+                            )
                             .background(Color.White)
-                            .combinedClickable(onClick = { ctl.goToPage(i) }, onLongClick = { menu = true }),
+                            .combinedClickable(
+                                onClick = {
+                                    val mv = moving; val pk = picked
+                                    when {
+                                        mv != null -> { val from = ctl.nb.indexOfPage(mv); if (from >= 0 && from != i) ctl.movePage(from, i - from); moving = null }
+                                        pk != null -> picked = if (page.id in pk) pk - page.id else pk + page.id
+                                        else -> ctl.goToPage(i)
+                                    }
+                                },
+                                onLongClick = { if (picked == null && moving == null) menu = true },
+                            ),
                     ) {
                         if (bmp != null) Image(bmp.asImageBitmap(), null, Modifier.fillMaxSize())
+                        if (isPicked) Box(Modifier.align(Alignment.TopEnd).padding(6.dp).size(24.dp).clip(CircleShape).background(UI.Primary), contentAlignment = Alignment.Center) {
+                            Text("✓", color = Color.White, fontSize = 14.sp)
+                        }
                         DropdownMenu(menu, { menu = false }) {
                             DropdownMenuItem(text = { Text("Sonrasına boş sayfa ekle") }, onClick = { menu = false; ctl.insertPageAfter(i) })
                             DropdownMenuItem(text = { Text("Çoğalt") }, onClick = { menu = false; ctl.duplicatePage(i) })
+                            DropdownMenuItem(text = { Text("Taşı (yeni yerine dokun)") }, onClick = { menu = false; moving = page.id })
                             DropdownMenuItem(text = { Text("Yukarı taşı") }, onClick = { menu = false; ctl.movePage(i, -1) })
                             DropdownMenuItem(text = { Text("Aşağı taşı") }, onClick = { menu = false; ctl.movePage(i, 1) })
                             DropdownMenuItem(text = { Text("90° döndür") }, onClick = { menu = false; ctl.rotatePage(i) })
@@ -1339,7 +1404,24 @@ private fun PagesPanel(ctl: EditorController, onCrop: (Int) -> Unit, onClose: ()
             }
         }
         HorizontalDivider(color = UI.Border)
-        OutlinedButton(
+        val pk = picked
+        if (pk != null) {
+            val idx = ctl.nb.pages.indices.filter { ctl.nb.pages[it].id in pk }
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
+                Text("${idx.size} sayfa seçili", fontWeight = FontWeight.SemiBold, color = UI.Text)
+                Spacer(Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Pill("Döndür", false) { idx.forEach { ctl.rotatePage(it) } }
+                    Pill("Çoğalt", false) { idx.sortedDescending().forEach { ctl.duplicatePage(it) }; picked = emptySet() }
+                    Pill("Sil", false) {
+                        if (idx.size >= ctl.nb.pages.size) ctl.message = "Bütün sayfalar silinemez"
+                        else { idx.sortedDescending().forEach { ctl.deletePage(it) }; picked = emptySet() }
+                    }
+                }
+                Spacer(Modifier.height(6.dp))
+                Pill("Ayrı deftere çıkar", false) { if (idx.isNotEmpty()) onExtract(idx.joinToString(", ") { "${it + 1}" }) }
+            }
+        } else OutlinedButton(
             onClick = { ctl.insertPageAfter(ctl.nb.pages.size - 1) }, shape = RoundedCornerShape(12.dp),
             modifier = Modifier.fillMaxWidth().padding(16.dp).height(46.dp),
         ) { Icon(Icons.Rounded.Add, null); Spacer(Modifier.width(6.dp)); Text("Sona sayfa ekle") }

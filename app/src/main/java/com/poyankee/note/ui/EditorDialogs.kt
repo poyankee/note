@@ -290,6 +290,7 @@ fun ExportDialog(ctl: EditorController, onDismiss: () -> Unit) {
     var pending by remember { mutableStateOf<File?>(null) }
     var noSolutions by remember { mutableStateOf(ctl.settings.hideSolutions.value) }
     var footer by remember { mutableIntStateOf(ctl.settings.pageFooter.value) }
+    var compress by remember { mutableStateOf(false) }
     val baseName = ctl.nb.name.replace(Regex("[\\\\/:*?\"<>|]"), "_").take(60).ifBlank { "Note" }
 
     suspend fun build(): File? = withContext(Dispatchers.IO) {
@@ -313,7 +314,13 @@ fun ExportDialog(ctl: EditorController, onDismiss: () -> Unit) {
                 val pages = if (what == 1) listOf(cur) else ctl.nb.pages.toList()
                 val snaps = pages.map { p -> Page(p.id, p.background, p.width, p.height).also { it.items.addAll(p.items) } }
                 val hide = if (noSolutions) ctl.settings.solutionColor.value else 0
-                Exporter.export(context, ctl.nb, ctl.store.dir(ctl.nb.id), snaps, f, { ctl.loadImageBlocking(it) }, footer, hide) { d, t ->
+                if (compress) {
+                    val hc = hide or 0xFF000000.toInt()
+                    Exporter.exportCompressed(context, snaps, f, { p ->
+                        if (hide != 0) p.items.removeAll { x -> Exporter.colorOf(x)?.let { (it or 0xFF000000.toInt()) == hc } == true }
+                        ctl.renderPageBlocking(p, 1.6f)
+                    }) { d, t -> progress = d.toFloat() / t }
+                } else Exporter.export(context, ctl.nb, ctl.store.dir(ctl.nb.id), snaps, f, { ctl.loadImageBlocking(it) }, footer, hide) { d, t ->
                     progress = d.toFloat() / t
                 }
                 f
@@ -374,6 +381,13 @@ fun ExportDialog(ctl: EditorController, onDismiss: () -> Unit) {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
                         Text("Çözümleri gizle (soru kağıdı)", modifier = Modifier.weight(1f))
                         androidx.compose.material3.Switch(noSolutions, { noSolutions = it }, enabled = ctl.settings.solutionColor.value != 0)
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Küçük dosya (sıkıştır)")
+                            Text("Sayfalar görüntüye çevrilir; büyük PDF'ler küçülür, metin seçilemez", fontSize = 11.sp, color = Color(0xFF607D8B))
+                        }
+                        androidx.compose.material3.Switch(compress, { compress = it })
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("Sayfa numarası", modifier = Modifier.weight(1f))

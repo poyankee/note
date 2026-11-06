@@ -85,6 +85,26 @@ object Exporter {
         progress: (Int, Int) -> Unit,
     ) = export(context, nb, dir, pages, dest, loadImage, 0, 0, progress)
 
+    /**
+     * Küçük dosya: her sayfa görüntüye çevrilip JPEG olarak yazılır (yazılar da görüntünün içinde).
+     * Büyük, taranmış PDF'lerin boyutunu çok düşürür; metin seçilemez hale gelir.
+     */
+    fun exportCompressed(context: Context, pages: List<Page>, dest: File, render: (Page) -> Bitmap, progress: (Int, Int) -> Unit) {
+        init(context)
+        PDDocument().use { out ->
+            pages.forEachIndexed { n, page ->
+                val bmp = render(page)
+                val pd = PDPage(PDRectangle(page.width, page.height))
+                out.addPage(pd)
+                val img = JPEGFactory.createFromImage(out, bmp, 0.7f)
+                PDPageContentStream(out, pd).use { cs -> cs.drawImage(img, 0f, 0f, page.width, page.height) }
+                bmp.recycle()
+                progress(n + 1, pages.size)
+            }
+            out.save(dest)
+        }
+    }
+
     /** Sayfa altı yazısı: sayfa no (ve sayfanın oluşturulduğu tarih). */
     fun footerText(mode: Int, index: Int, page: Page): String {
         if (mode < 2) return "${index + 1}"

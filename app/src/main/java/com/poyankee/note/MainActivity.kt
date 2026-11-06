@@ -63,6 +63,8 @@ class MainActivity : ComponentActivity() {
     private var tabs by mutableStateOf<List<Pair<String, String>>>(emptyList())
     /** Kilitli defter açılırken PIN sorulacak defter. */
     private var pinFor by mutableStateOf<NotebookInfo?>(null)
+    /** Testlerde tanıtım gösterilmez. */
+    private val introSuppressed by lazy { try { Class.forName("androidx.test.espresso.Espresso"); true } catch (_: Throwable) { false } }
 
     private val openPdf = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) importPdf(uri) }
 
@@ -170,6 +172,7 @@ class MainActivity : ComponentActivity() {
                             onQuickNote = { quickNote() },
                         )
                     }
+                    if (!settings.introShown.value && !introSuppressed) com.poyankee.note.ui.IntroDialog { settings.introShown.value = true }
                     pinFor?.let { nb ->
                         PinDialog("Kilitli defter", "\"${nb.name}\" defterini açmak için PIN girin", onForgot = { pinFor = null; forgotPin(nb) }, onDismiss = { pinFor = null }) { pin ->
                             if (Lock.check(nb.id, pin, nb.lockHash)) { pinFor = null; open(nb.id); true } else false
