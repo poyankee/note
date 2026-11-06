@@ -370,8 +370,14 @@ private fun Draggable(
             // ölçüm kaydırmadan sonra yapılır: konum kaydırmayı içerir, kaydırma çıkarılınca asıl yer bulunur
             .onGloballyPositioned { c ->
                 val pos = c.positionInParent()
-                baseX = pos.x / density - x; baseY = pos.y / density - y
-                w = c.size.width / density; h = c.size.height / density
+                // kaydırma piksele yuvarlanarak uygulanır; aynısı çıkarılmazsa küçük farklar döngü yaratır
+                val bx = ((pos.x - (x * density).roundToInt()) / density).roundToInt().toFloat()
+                val by = ((pos.y - (y * density).roundToInt()) / density).roundToInt().toFloat()
+                if (bx != baseX) baseX = bx
+                if (by != baseY) baseY = by
+                val nw = (c.size.width / density).roundToInt().toFloat(); val nh = (c.size.height / density).roundToInt().toFloat()
+                if (nw != w) w = nw
+                if (nh != h) h = nh
             },
     ) {
         content(handle, nearSide)
