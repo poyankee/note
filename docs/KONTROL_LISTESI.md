@@ -39,7 +39,10 @@ Kurulum: GitHub › Releases › en yeni **Note sürüm N** › `Note-N.apk` (es
 - [ ] İki parmakla yakınlaştırma / kaydırma
 - [ ] Ayarlar › Yazı: basınç, **basınç eğrisi**, yumuşatma, tahmin, silgiden otomatik dönüş, otomatik yeni sayfa, yakınlaştırma kilidi
 
-## 4. Araçlar (sol menü)
+## 4. Araçlar (üstteki şerit)
+- [ ] Araçlar üst çubuğun ortasında yatay şerit; seçili aracın renk / kalınlık / kayıtlı kalemleri hemen altında ince bir şeritte
+- [ ] Seçili araca tekrar dokununca alttaki seçenek şeridi gizleniyor / açılıyor
+- [ ] Ayarlar › Görünüm › **Araç çubuğu: Solda yüzen menü** seçilince eski sol menü geri geliyor
 - [ ] Kalem, fosforlu, silgi (bütün / kısmi), seçim, geometri, metin, lazer, geçici kalem
 - [ ] **Seçili araca tekrar dokununca** seçenek penceresi: renkler, kalınlık, kayıtlı kalemler, ✎ renkleri düzenle
 - [ ] Silgi seçenekleri: boyut, kısmi, "Sildikten sonra kaleme dön", Sayfayı temizle
@@ -112,6 +115,7 @@ Kurulum: GitHub › Releases › en yeni **Note sürüm N** › `Note-N.apk` (es
 - [ ] ⋮ › **Yazdır**
 
 ## 11. Ayarlar
+- [ ] **Arayüz stili**: Sade / Canlı / Koyu (önizlemeli); hem ana sayfa hem defter değişiyor
 - [ ] **Dil / Language**: English seçince uygulama yeniden açılıyor ve menüler İngilizce; Türkçe ile geri dönüyor
 - [ ] Tema: sistem / açık / koyu; **Renk teması** (Okyanus, Orman, Gün batımı, Kağıt, Gece, Yüksek kontrast)
 - [ ] **Arayüz boyutu** (Küçük … Çok büyük = erişilebilirlik)

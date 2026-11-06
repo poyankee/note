@@ -201,3 +201,4 @@ Kenarda açılır "Kütüphane" paneli, kategorilere ayrılmış, aranabilir; ek
 - Defter/PDF'te aşağı kaydırınca üst çubuk gizlenir, yukarı çekince gelir (Ayarlar'dan kapatılabilir)
 - Ana sayfa sadeleşti: solda dar şerit (tek + düğmesi ve 4 bölüm), klasörler defterlerin üstünde sekme; sol taraf kaydırılabilir
 - Ders programı kaldırıldı
+- Modern arayüz: üç stil (Sade, Canlı, Koyu) Ayarlar › Görünüm'den seçilir; araçlar üstte yatay şerit, seçenekleri altında ince şerit (eski sol menü isteğe bağlı)
