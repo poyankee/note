@@ -146,26 +146,31 @@ object Library {
     /* ---------------- trigonometri ---------------- */
 
     private fun unitCircle() = b {
-        val r = 120f
-        axes(-1.2f, 1.2f, -1.2f, 1.2f, r, numbers = false)
+        val r = 130f
+        axes(-1.25f, 1.25f, -1.25f, 1.25f, r, numbers = false)
         circle(0f, 0f, r, BLUE, 1.8f)
         val special = listOf(0, 30, 45, 60, 90, 120, 135, 150, 180, 210, 225, 240, 270, 300, 315, 330)
         for (d in special) {
             val a = -d * PI.toFloat() / 180f
             val x = r * cos(a); val y = r * sin(a)
             dot(x, y, BLUE)
-            if (d % 90 != 0) line(0f, 0f, x, y, GRAY, 0.8f, dashed = true)
-            textC((r + 18f) * cos(a), (r + 14f) * sin(a), "$d°", 9f, GRAY)
+            if (d % 90 != 0) line(x * 0.55f, y * 0.55f, x, y, GRAY, 0.8f, dashed = true)
+            // derece etiketi çemberin içinde
+            textC((r - 24f) * cos(a), (r - 20f) * sin(a), "$d°", 9f, GRAY)
         }
-        val s3 = "√3/2"; val s2 = "√2/2"
-        textC(r * cos(-PI.toFloat() / 6) + 40f, r * sin(-PI.toFloat() / 6) - 2f, "($s3, 1/2)", 9f, RED)
-        textC(r * cos(-PI.toFloat() / 4) + 38f, r * sin(-PI.toFloat() / 4) - 6f, "($s2, $s2)", 9f, RED)
-        textC(r * cos(-PI.toFloat() / 3) + 34f, r * sin(-PI.toFloat() / 3) - 10f, "(1/2, $s3)", 9f, RED)
-        textC(r + 26f, 12f, "(1, 0)", 9f, RED)
-        textC(26f, -r - 10f, "(0, 1)", 9f, RED)
-        textC(-r - 26f, 12f, "(-1, 0)", 9f, RED)
-        textC(26f, r + 12f, "(0, -1)", 9f, RED)
-        textC(0f, r + 40f, "Birim çember: x = cos α, y = sin α", 11f, INK)
+        // koordinatlar çemberin dışında (1. bölge ve eksenler)
+        fun out(deg: Int, s: String, dist: Float) {
+            val a = -deg * PI.toFloat() / 180f
+            textC((r + dist) * cos(a), (r + dist * 0.55f) * sin(a), s, 10f, RED)
+        }
+        out(30, "(√3/2, 1/2)", 44f)
+        out(45, "(√2/2, √2/2)", 44f)
+        out(60, "(1/2, √3/2)", 40f)
+        textC(r + 30f, 14f, "(1, 0)", 10f, RED)
+        textC(-34f, -r - 12f, "(0, 1)", 10f, RED)
+        textC(-r - 32f, 14f, "(−1, 0)", 10f, RED)
+        textC(-34f, r + 14f, "(0, −1)", 10f, RED)
+        textC(0f, r + 44f, "Birim çember: x = cos α, y = sin α", 11f, INK)
     }
 
     private fun tri306090() = b {
