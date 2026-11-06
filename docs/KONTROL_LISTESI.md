@@ -48,7 +48,7 @@ Kurulum: GitHub › Releases › en yeni **Note sürüm N** › `Note-N.apk` (es
 - [ ] Menüyü ⠿ tutamaktan taşıma; ekran dışına çıkmıyor
 - [ ] Geometri: şekil, doğru, ok, çokgen, pergel, işaret, 3B; seçenekler (kesikli, dolgu, harfler, ölçüler)
 - [ ] Çizip bekle → düzgün şekil
-- [ ] Cetvel ve iletki (Cetvel menüsü)
+- [ ] Cetvel, gönyeler (45° ve 30°-60°), iletki (Cetvel menüsü)
 - [ ] Ders menüsü: spot ışığı, perde, sayaç
 
 ## 5. Seçim
