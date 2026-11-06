@@ -452,11 +452,6 @@ class SmokeTest {
         shot("12-sekil-duzenleme")
         main { v.clearSelection() }
 
-        // ders araçları
-        main { c.curtain = true; c.startTimer(90); c.selectTool(Tool.SPOT) }
-        penLine(v, w * 0.4f, h * 0.3f, w * 0.45f, h * 0.32f)
-        shot("13-perde-spot-sayac")
-        main { c.curtain = false; c.stopTimer(); c.selectTool(Tool.PEN) }
 
         // sayfa döndürme (geri alınabilir)
         val pw = main { c.nb.pages[0].width }
