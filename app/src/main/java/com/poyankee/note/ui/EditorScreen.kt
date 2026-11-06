@@ -343,6 +343,8 @@ private fun Draggable(
     // değiştikçe karar da değişip sonsuz döngüye girebilir.
     var nearSide by remember { mutableStateOf(false) }
     var decided by remember { mutableStateOf(false) }
+    // dikey olunca hangi kenara yapışık kalacak (null = yapışma yok)
+    var anchorRight by remember { mutableStateOf<Boolean?>(null) }
     fun decide() {
         if (baseX.isNaN() || areaW.value <= 0f) return
         // sol/sağ kenara değiyorsa (köşelerde değil) dikey
@@ -351,6 +353,7 @@ private fun Draggable(
         val cy = top + h / 2
         val inCorner = cy < areaH.value * 0.12f || cy > areaH.value * 0.88f
         nearSide = touchesSide && !inCorner
+        anchorRight = if (nearSide) left + w / 2 > areaW.value / 2 else null
     }
     val handle = Modifier.pointerInput(Unit) {
         detectDragGestures(
@@ -367,6 +370,13 @@ private fun Draggable(
         val cx = clampX(x); val cy = clampY(y)
         if (cx != x || cy != y) { x = cx; y = cy; px.value = x; py.value = y }
         if (!baseX.isNaN() && !decided) { decided = true; decide() }
+        // boyut değişince (yatay → dikey) kenara yapışık kal
+        anchorRight?.let { right ->
+            if (!baseX.isNaN()) {
+                val ax = if (right) clampX(Float.MAX_VALUE / 4) else clampX(-Float.MAX_VALUE / 4)
+                if (ax != x) { x = ax; px.value = x }
+            }
+        }
     }
     Box(
         modifier
