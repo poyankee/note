@@ -356,12 +356,13 @@ private fun Draggable(
     }
     Box(
         modifier
+            .offset { androidx.compose.ui.unit.IntOffset((x * density).roundToInt(), (y * density).roundToInt()) }
+            // ölçüm kaydırmadan sonra yapılır: konum kaydırmayı içerir, kaydırma çıkarılınca asıl yer bulunur
             .onGloballyPositioned { c ->
                 val pos = c.positionInParent()
                 baseX = pos.x / density - x; baseY = pos.y / density - y
                 w = c.size.width / density; h = c.size.height / density
-            }
-            .offset { androidx.compose.ui.unit.IntOffset((x * density).roundToInt(), (y * density).roundToInt()) },
+            },
     ) {
         // panel ekranın sol ya da sağ kenarına yakınsa dikey düzen kullanılabilir
         val cx = if (baseX.isNaN()) areaW.value / 2 else baseX + x + w / 2

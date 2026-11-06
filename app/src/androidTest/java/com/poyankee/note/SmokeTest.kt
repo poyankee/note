@@ -503,6 +503,9 @@ class SmokeTest {
         // odak modu: sağ kenarda dikey
         val st = com.poyankee.note.data.Settings.get(rule.activity)
         main { st.presX.value = 5000f; st.presY.value = -200f; c.presentation = true }
+        rule.waitForIdle(); Thread.sleep(500)
+        // ekran dışına konmuş panel içeri çekilmiş olmalı
+        assertTrue("odak paneli ekrana çekilmedi", st.presX.value < 2000f)
         shot("17-odak-dikey")
         main { c.presentation = false; st.presX.value = 0f; st.presY.value = 0f }
     }
