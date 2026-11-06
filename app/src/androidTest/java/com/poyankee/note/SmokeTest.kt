@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.onNodeWithText
@@ -484,6 +485,19 @@ class SmokeTest {
         shot("15-menu-daraltilmis")
         main { com.poyankee.note.data.Settings.get(rule.activity).dockCollapsed.value = false }
 
+        // yazarken otomatik yeni sayfa (son sayfanın altına yazınca)
+        val pagesBefore = main { c.nb.pages.size }
+        main { c.selectTool(Tool.PEN); v.scrollToFraction(1f) }
+        Thread.sleep(300)
+        val lastTop = main { v.pageScreenRect(pagesBefore - 1) }
+        penLine(v, lastTop.left + 60f, lastTop.bottom - 20f, lastTop.left + 260f, lastTop.bottom - 25f)
+        assertEquals(pagesBefore + 1, main { c.nb.pages.size })
+        main { c.undo(); c.undo() }
+        assertEquals(pagesBefore, main { c.nb.pages.size })
+        // kaydırınca sağda sayfa çubuğu
+        main { c.scrollTick++ }
+        shot("16b-sayfa-cubugu")
+
         // sayfa boyutu: tam ekran oranı, geri alınabilir
         val (fw, fh) = main { c.fullScreenSize() }
         main { c.setPageSize(0, fw, fh, false) }
@@ -524,6 +538,35 @@ class SmokeTest {
         main { st.libraryView.value = "SMALL" }
         shot("20-kucuk-kapak")
         main { st.libraryView.value = "MEDIUM" }
+        rule.onNodeWithText("Hiçbiri").performClick()
+        rule.onNodeWithContentDescription("Seçimi bitir").performClick()
+
+        // yapılacaklar
+        val todos = com.poyankee.note.data.TodoList.get(rule.activity)
+        main { todos.add("Ödevleri kontrol et"); todos.add("9. sınıf: üçgenler sunumu") }
+        val t0 = main { todos.items.first { it.text == "Ödevleri kontrol et" } }
+        main { todos.toggle(t0) }
+        assertTrue(main { todos.items.first { it.id == t0.id }.done })
+        assertEquals(t0.copy(done = true), todos.decode(todos.encode(t0.copy(done = true))))
+        rule.onAllNodesWithText("Yapılacaklar")[0].performClick()
+        shot("21-yapilacaklar")
+        rule.onNodeWithContentDescription("Kapat").performClick()
+
+        // çöp kutusu: sil → çöpte görünür → geri getir
+        val store = com.poyankee.note.data.Store(rule.activity)
+        val nb = main { store.create("Silinecek", Background.Paper(Template.BLANK), com.poyankee.note.core.PageSize.A4_PORTRAIT, "") }
+        store.delete(nb.id); store.flush()
+        Thread.sleep(300)
+        assertTrue(store.listTrash().any { it.first.id == nb.id })
+        assertTrue(store.list().none { it.id == nb.id })
+        store.restoreFromTrash(nb.id)
+        assertTrue(store.list().any { it.id == nb.id })
+        store.delete(nb.id); store.flush(); Thread.sleep(300)
+
+        // renk teması
+        main { st.colorTheme.value = "OCEAN" }
+        shot("22-tema-okyanus")
+        main { st.colorTheme.value = "DEFAULT" }
     }
 
     @Test

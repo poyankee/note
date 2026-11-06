@@ -133,6 +133,19 @@ Ayarlar › Kalem ve el › "Tuşu öğret" → kalemde çift dokunun. Algılan�
 
 **Kalem testi** (Ayarlar › Kalem ve el › Kalem testi): soldaki alana yazın, kaleme çift dokunun, yan tuşa basın. Uygulamaya ulaşan her olay sağda listelenir. Çift dokununca hiçbir satır eklenmiyorsa bu hareketi sistem (HyperOS) kullanıyordur. Gelen satırların ekran görüntüsünü gönderirseniz çift dokunuşu ona göre bağlayabilirim.
 
+### Rahat çalışma
+- **Yazarken yeni sayfa:** son sayfanın alt kısmına yazınca altına yeni düz sayfa eklenir (Ayarlar › Yazı › kapatılabilir). Geri al ile geri alınır.
+- **Yakınlaştırma kilidi:** ⋮ menüsü › Yakınlaştırma kilidi. Açıkken iki parmak sayfayı yakınlaştırmaz, sadece kaydırır. **Sayfaya sığdır** sayfayı ekran genişliğine getirir.
+- **Sayfa çubuğu:** parmakla kaydırınca sağ kenarda belirir; tutup sürükleyerek hızlıca istediğiniz sayfaya gidin (sayfa numarası görünür). Birkaç saniyede kaybolur.
+- **Masa rengi:** Sayfa paneli › Masa rengi (sayfanın dışında kalan alan).
+- **Renk teması:** Ayarlar › Görünüm › Renk teması (Okyanus, Orman, Gün batımı, Kağıt, Gece, Yüksek kontrast). Açık/koyu tema ile birlikte çalışır.
+
+### Çöp kutusu
+Silinen defterler önce **Çöp kutusu**na gider (sol panel). 30 gün içinde **Geri getir** ile geri alınır; 30 günden sonra kendiliğinden silinir. "Kalıcı sil" ve "Çöp kutusunu boşalt" geri alınamaz.
+
+### Yapılacaklar
+Sol paneldeki **Yapılacaklar** (defterin içinde üst çubuktaki ✓ listesi simgesi). Görevi yazıp ekleyin; dokununca tamamlanır. ⋮ menüsünden renk, sıra, silme. Defterin içindeyken "Bu sayfaya bağla" ile görev o sayfaya bağlanır; görevin altındaki bağlantıya dokununca o defter o sayfada açılır. Liste yedeğe dahildir.
+
 ## Bilinen sınırlar (şimdilik)
 
 - Kalem tuşlarının Xiaomi kalemde nasıl bildirildiği cihazda denenmeli; çalışmazsa Ayarlar'dan değiştirilebilir veya bildirin.

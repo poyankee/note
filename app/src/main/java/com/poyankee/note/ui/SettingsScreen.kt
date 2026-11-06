@@ -5,6 +5,11 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -83,6 +88,27 @@ fun SettingsScreen(
                         Spacer(Modifier.height(8.dp))
                         PillRow { ThemeMode.entries.forEach { m -> Pill(m.title, s.themeValue == m) { s.theme.value = m.name } } }
                     }
+                    Column(Modifier.padding(vertical = 10.dp)) {
+                        Text("Renk teması", fontSize = 16.sp, color = UI.Text)
+                        Spacer(Modifier.height(8.dp))
+                        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Palette.entries.forEach { pal ->
+                                val sel = UI.palette == pal
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier.clip(RoundedCornerShape(10.dp)).clickable { s.colorTheme.value = pal.name }.padding(4.dp),
+                                ) {
+                                    Box(
+                                        Modifier.size(38.dp).clip(androidx.compose.foundation.shape.CircleShape)
+                                            .border(if (sel) 3.dp else 1.dp, if (sel) UI.Text else UI.Border, androidx.compose.foundation.shape.CircleShape)
+                                            .padding(if (sel) 5.dp else 0.dp).clip(androidx.compose.foundation.shape.CircleShape)
+                                            .background(androidx.compose.ui.graphics.Color(pal.c[if (UI.dark) 1 else 0])),
+                                    )
+                                    Text(pal.title, fontSize = 11.sp, color = if (sel) UI.Text else UI.TextSoft, modifier = Modifier.padding(top = 4.dp))
+                                }
+                            }
+                        }
+                    }
                     Toggle("Solak kullanım", "Araç menüsü sağ tarafa geçer", s.leftHanded.value) { s.leftHanded.value = it }
                     Column(Modifier.padding(vertical = 10.dp)) {
                         Text("Panelleri varsayılan yerine al", fontSize = 16.sp, color = UI.Text)
@@ -136,6 +162,8 @@ fun SettingsScreen(
                 }
                 Group("Yazı") {
                     Toggle("Basınç duyarlılığı", "Kalemi bastırdıkça çizgi kalınlaşır", s.pressure.value) { s.pressure.value = it }
+                    Toggle("Yazarken otomatik yeni sayfa", "Son sayfanın alt kısmına yazınca yeni düz sayfa eklenir", s.autoNewPage.value) { s.autoNewPage.value = it }
+                    Toggle("Yakınlaştırma kilidi", "İki parmak sayfayı yakınlaştırmaz, sadece kaydırır", s.zoomLock.value) { s.zoomLock.value = it }
                     Toggle("Silgiden kaleme otomatik dön", "Silgiyle sildikten sonra önceki araca geri geçer", s.eraserReturn.value) { s.eraserReturn.value = it }
                     Toggle("Gecikme azaltma (tahmin)", "Çizgi kalemin ucunu daha yakından takip eder", s.prediction.value) { s.prediction.value = it }
                     SliderRow("Çizgi yumuşatma", listOf("Kapalı", "Az", "Orta", "Çok", "En çok")[s.smoothing.value.coerceIn(0, 4)],

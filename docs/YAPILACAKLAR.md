@@ -163,6 +163,13 @@ Kenarda açılır "Kütüphane" paneli, kategorilere ayrılmış, aranabilir; ek
 - C11 + M7 odak modu (sunum modunun yerini aldı); panel sağ/sol kenarda dikey durur
 - C12 sayfa boyutu (A4 dikey/yatay, 16:9, tam ekran)
 - C13'ün bir kısmı: özel kağıt rengi (masa rengi hâlâ yapılacak)
+- M3 yazarken otomatik yeni sayfa (Ayarlar › Yazı'dan kapatılabilir; PDF sayfalarında çalışmaz)
+- M4 yakınlaştırma kilidi + "Sayfaya sığdır" (⋮ menüsü ve Ayarlar)
+- C13 masa rengi (Sayfa paneli)
+- M9 sağ kenarda otomatik gizlenen sayfa çubuğu
+- M2 çöp kutusu (defterler 30 gün; sayfa silme zaten Geri al ile geri alınıyor)
+- E renk temaları: Varsayılan, Okyanus, Orman, Gün batımı, Kağıt, Gece, Yüksek kontrast
+- D Yapılacaklar paneli (ana sayfa ve defter içi; renk, sıralama, deftere/sayfaya bağlama, yedeğe dahil). Tarih ve sürükleyerek sıralama sonra eklenebilir.
 - A2'nin ilk adımı: Ayarlar › Kalem ve el › "Kalem testi" ekranı. Kullanıcı Focus Pen Pro ile deneyip sonucu bildirecek; sonuca göre çift dokunuş bağlanacak.
 - C10 küçük menüde kalem + silgi
 - M1 kaldığın sayfadan açılma

@@ -50,25 +50,57 @@ data class NotebookInfo(
  */
 class Store(context: Context) {
     private val root = File(context.filesDir, "notebooks").apply { mkdirs() }
+    private val appContext = context.applicationContext
     private val io = Executors.newSingleThreadExecutor { r -> Thread(r, "note-io").apply { priority = Thread.NORM_PRIORITY - 1 } }
 
     fun dir(id: String) = File(root, id)
 
-    fun list(): List<NotebookInfo> {
-        val out = ArrayList<NotebookInfo>()
-        root.listFiles()?.forEach { d ->
-            val f = File(d, "notebook.bin")
-            if (!f.exists()) return@forEach
-            try {
-                DataInputStream(BufferedInputStream(FileInputStream(f))).use { inp ->
-                    val nb = Codec.readNotebook(inp)
-                    val cover = File(d, "cover.png").takeIf { it.exists() }
-                    out += NotebookInfo(nb.id, nb.name, nb.updated, nb.pages.size, nb.pdfFile != null, nb.folder, cover, cover?.lastModified() ?: 0L, nb.created, nb.favorite, nb.lockHash)
-                }
-            } catch (_: Exception) {
+    private fun readInfo(d: File): NotebookInfo? {
+        val f = File(d, "notebook.bin")
+        if (!f.exists()) return null
+        return try {
+            DataInputStream(BufferedInputStream(FileInputStream(f))).use { inp ->
+                val nb = Codec.readNotebook(inp)
+                val cover = File(d, "cover.png").takeIf { it.exists() }
+                NotebookInfo(nb.id, nb.name, nb.updated, nb.pages.size, nb.pdfFile != null, nb.folder, cover, cover?.lastModified() ?: 0L, nb.created, nb.favorite, nb.lockHash)
             }
+        } catch (_: Exception) { null }
+    }
+
+    fun list(): List<NotebookInfo> =
+        (root.listFiles()?.mapNotNull { if (it.isDirectory) readInfo(it) else null } ?: emptyList()).sortedByDescending { it.updated }
+
+    /* ---------- çöp kutusu: silinen defterler 30 gün saklanır ---------- */
+
+    private val trashRoot = File(context.filesDir, "trash").apply { mkdirs() }
+
+    /** Çöp kutusundaki defterler ve silinme zamanları (yeniden eskiye). */
+    fun listTrash(): List<Pair<NotebookInfo, Long>> = (trashRoot.listFiles() ?: emptyArray()).mapNotNull { d ->
+        val info = readInfo(d) ?: return@mapNotNull null
+        val t = try { File(d, "deleted.txt").readText().trim().toLong() } catch (_: Exception) { d.lastModified() }
+        info to t
+    }.sortedByDescending { it.second }
+
+    fun restoreFromTrash(id: String) {
+        io.execute {
+            val src = File(trashRoot, id)
+            if (!src.exists()) return@execute
+            File(src, "deleted.txt").delete()
+            val dst = dir(id)
+            if (dst.exists()) dst.deleteRecursively()
+            if (!src.renameTo(dst)) { src.copyRecursively(dst, true); src.deleteRecursively() }
         }
-        return out.sortedByDescending { it.updated }
+        io.submit {}.get()
+    }
+
+    fun purge(id: String) { io.execute { File(trashRoot, id).deleteRecursively() } }
+
+    fun emptyTrash() { io.execute { trashRoot.listFiles()?.forEach { it.deleteRecursively() } } }
+
+    /** 30 günden eski çöpleri siler. */
+    fun purgeOldTrash(days: Int = 30) {
+        val limit = System.currentTimeMillis() - days * 24L * 60 * 60 * 1000
+        io.execute { listTrash().filter { it.second < limit }.forEach { File(trashRoot, it.first.id).deleteRecursively() } }
     }
 
     fun create(name: String, paper: Background.Paper, size: PageSize, folder: String): Notebook {
@@ -253,6 +285,8 @@ class Store(context: Context) {
             val merged = (folders() + f.readLines().map { it.trim() }.filter { it.isNotEmpty() }).distinct()
             foldersFile.writeText(merged.joinToString("\n"))
         }
+        // yapılacaklar listesini birleştir
+        File(tmp, "todos.txt").takeIf { it.exists() }?.let { f -> try { TodoList.get(appContext).mergeFrom(f) } catch (_: Exception) {} }
         tmp.deleteRecursively()
         return count
     }
@@ -268,7 +302,17 @@ class Store(context: Context) {
         } catch (_: Exception) {}
     }
 
-    fun delete(id: String) { io.execute { dir(id).deleteRecursively() } }
+    /** Defteri çöp kutusuna taşır (30 gün içinde geri getirilebilir). */
+    fun delete(id: String) {
+        io.execute {
+            val src = dir(id)
+            if (!src.exists()) return@execute
+            val dst = File(trashRoot, id)
+            if (dst.exists()) dst.deleteRecursively()
+            if (!src.renameTo(dst)) { src.copyRecursively(dst, true); src.deleteRecursively() }
+            try { File(dst, "deleted.txt").writeText(System.currentTimeMillis().toString()) } catch (_: Exception) {}
+        }
+    }
 
     /** Bekleyen tüm kayıtların bitmesini bekler (uygulama arka plana geçerken). */
     fun flush() {

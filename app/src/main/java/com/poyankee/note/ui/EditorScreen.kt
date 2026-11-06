@@ -65,6 +65,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Bookmark
+import androidx.compose.material.icons.rounded.Checklist
 import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.Cast
 import androidx.compose.material.icons.rounded.ChevronLeft
@@ -151,13 +152,16 @@ fun EditorScreen(
     tabs: List<Pair<String, String>> = emptyList(),
     onTab: (String) -> Unit = {},
     onCloseTab: (String) -> Unit = {},
+    onOpenTodo: (String, Int) -> Unit = { _, _ -> },
 ) {
     val context = LocalContext.current
+    var showTodos by remember { mutableStateOf(false) }
     val activity = context as Activity
     val s = ctl.settings
     val ink = remember { InkView(context, ctl).also { ctl.view = it; it.keepScreenOn = true } }
     val dark = UI.dark
-    LaunchedEffect(dark) { ink.deskColor = UI.Desk.toArgb(); ink.invalidate() }
+    val desk = s.deskColor.value
+    LaunchedEffect(dark, desk) { ink.deskColor = if (desk != 0) desk else UI.Desk.toArgb(); ink.invalidate() }
 
     // ikinci ekran
     var secondActive by remember { mutableStateOf(false) }
@@ -256,6 +260,7 @@ fun EditorScreen(
                 onRecord = { toggleRecord() },
                 onPauseResume = { if (recState == 1) { recorder.pause(); recState = 2 } else if (recState == 2) { recorder.resume(); recState = 1 } },
                 onStopRecord = { stopRecording() },
+                onTodos = { showTodos = !showTodos },
             )
         }
         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth().clipToBounds()) {
@@ -287,9 +292,19 @@ fun EditorScreen(
                 }
             }
 
+            if (ctl.pageCount > 1) PageScrollbar(ctl, Modifier.align(Alignment.CenterEnd))
+
             if (ctl.hasSelection) SelectionBar(ctl, Modifier.align(Alignment.BottomCenter).padding(bottom = 22.dp))
 
             // sağdan açılan paneller
+            if (showTodos && !ctl.presentation) Box(Modifier.align(Alignment.CenterStart)) {
+                TodoPanel(
+                    com.poyankee.note.data.TodoList.get(context),
+                    TodoLink(ctl.nb.id, ctl.nb.name, ctl.currentPage),
+                    onOpen = { id, page -> if (id == ctl.nb.id) ctl.goToPage(page) else { showTodos = false; onOpenTodo(id, page) } },
+                    onClose = { showTodos = false },
+                )
+            }
             SidePanel(panel == Panel.PAGE) { PageStylePanel(ctl) { panel = Panel.NONE } }
             SidePanel(panel == Panel.PAGES) { PagesPanel(ctl, onCrop = { cropIndex = it }) { panel = Panel.NONE } }
 
@@ -315,6 +330,63 @@ fun EditorScreen(
     if (showTimer) TimerDialog(ctl) { showTimer = false }
     if (cropIndex >= 0) CropDialog(ctl, cropIndex) { cropIndex = -1 }
     paletteFor?.let { hl -> PaletteDialog(ctl, hl) { paletteFor = null } }
+}
+
+/* ======================= sağ kenar sayfa çubuğu ======================= */
+
+/**
+ * Normalde gizli; sayfa kaydırılınca sağ kenarda belirir. Tutamaktan sürüklenerek hızlı gezinilir,
+ * sürüklerken sayfa numarası gösterilir. Bırakınca birkaç saniyede kaybolur.
+ */
+@Composable
+private fun PageScrollbar(ctl: EditorController, modifier: Modifier) {
+    val tick = ctl.scrollTick
+    var dragging by remember { mutableStateOf(false) }
+    var visible by remember { mutableStateOf(false) }
+    LaunchedEffect(tick, dragging) {
+        if (tick == 0 && !dragging) return@LaunchedEffect
+        visible = true
+        if (!dragging) { delay(1800); visible = false }
+    }
+    val view = ctl.view ?: return
+    val density = androidx.compose.ui.platform.LocalDensity.current.density
+    val frac = view.scrollFraction() + 0f * tick
+    val visibleFrac = view.visibleFraction()
+    AnimatedVisibility(visible, modifier, enter = fadeIn(), exit = fadeOut()) {
+        BoxWithConstraints(Modifier.fillMaxHeight().width(170.dp).padding(vertical = 70.dp)) {
+            val trackH = maxHeight.value
+            val thumbH = (trackH * visibleFrac).coerceIn(44f, trackH)
+            val top = (trackH - thumbH) * frac
+            Box(Modifier.align(Alignment.TopEnd).padding(end = 4.dp).width(4.dp).fillMaxHeight().clip(RoundedCornerShape(2.dp)).background(Color(0x22000000)))
+            Box(
+                Modifier.align(Alignment.TopEnd).offset { androidx.compose.ui.unit.IntOffset(0, (top * density).roundToInt()) }
+                    .width(28.dp).height(thumbH.dp)
+                    .pointerInput(Unit) {
+                        detectDragGestures(
+                            onDragStart = { dragging = true },
+                            onDragEnd = { dragging = false },
+                            onDragCancel = { dragging = false },
+                        ) { change, drag ->
+                            change.consume()
+                            val range = (trackH - thumbH).coerceAtLeast(1f)
+                            view.scrollToFraction(view.scrollFraction() + drag.y / density / range)
+                            ctl.scrollTick++
+                        }
+                    },
+                contentAlignment = Alignment.CenterEnd,
+            ) {
+                Box(Modifier.width(10.dp).fillMaxHeight().clip(RoundedCornerShape(5.dp)).background(if (dragging) UI.Primary else Color(0x99475467)))
+            }
+            if (dragging) {
+                Surface(
+                    color = Color(0xE61D2330), shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.align(Alignment.TopEnd).offset { androidx.compose.ui.unit.IntOffset((-40 * density).roundToInt(), ((top + thumbH / 2 - 16) * density).roundToInt()) },
+                ) {
+                    Text("${ctl.currentPage + 1} / ${ctl.pageCount}", color = Color.White, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp))
+                }
+            }
+        }
+    }
 }
 
 /* ======================= sürüklenebilir panel ======================= */
@@ -449,6 +521,7 @@ private fun EditorTopBar(
     onExport: () -> Unit, onClear: () -> Unit, onImage: () -> Unit, onCamera: () -> Unit, onSettings: () -> Unit,
     onFormula: () -> Unit, onPlot: () -> Unit, onSticky: () -> Unit, onStamp: () -> Unit, onTimer: () -> Unit,
     onRecord: () -> Unit, onPauseResume: () -> Unit, onStopRecord: () -> Unit,
+    onTodos: () -> Unit = {},
 ) {
     var more by remember { mutableStateOf(false) }
     var insert by remember { mutableStateOf(false) }
@@ -482,6 +555,7 @@ private fun EditorTopBar(
                 }
                 LabeledBarButton("Sayfa", panel == Panel.PAGE, onPagePanel) { PaperGlyph(if (panel == Panel.PAGE) UI.Primary else UI.Text, 22.dp) }
                 BarIcon(Icons.Rounded.ViewModule, "Sayfalar", selected = panel == Panel.PAGES, onClick = onPages)
+                BarIcon(Icons.Rounded.Checklist, "Yapılacaklar", onClick = onTodos)
                 BarIcon(Icons.Rounded.Bookmark, "Yer imleri", onClick = onBookmarks)
                 Box {
                     BarIcon(Icons.Rounded.AddCircleOutline, "Ekle") { insert = true }
@@ -503,6 +577,11 @@ private fun EditorTopBar(
                         if (ctl.clipboardCount > 0) DropdownMenuItem(text = { Text("Yapıştır (${ctl.clipboardCount})") }, onClick = { more = false; ctl.paste() })
                         DropdownMenuItem(text = { Text(if (ctl.curtain) "Perdeyi kaldır" else "Perde") }, onClick = { more = false; ctl.curtain = !ctl.curtain; ctl.view?.invalidate() })
                         DropdownMenuItem(text = { Text("Sayaç") }, onClick = { more = false; onTimer() })
+                        DropdownMenuItem(text = { Text("Sayfaya sığdır") }, onClick = { more = false; ctl.view?.fitToWidth() })
+                        DropdownMenuItem(
+                            text = { Text((if (ctl.settings.zoomLock.value) "✓ " else "") + "Yakınlaştırma kilidi") },
+                            onClick = { more = false; ctl.settings.zoomLock.value = !ctl.settings.zoomLock.value },
+                        )
                         DropdownMenuItem(text = { Text("Sayfayı döndür") }, onClick = { more = false; ctl.rotatePage(ctl.currentPage) })
                         DropdownMenuItem(text = { Text("Sayfayı temizle") }, onClick = { more = false; onClear() })
                         DropdownMenuItem(text = { Text("Ayarlar") }, onClick = { more = false; onSettings() })
@@ -1058,6 +1137,23 @@ private fun PageStylePanel(ctl: EditorController, onClose: () -> Unit) {
                     confirmButton = { Button(onClick = { customColor = false; apply(style.copy(color = picked)) }, shape = RoundedCornerShape(10.dp)) { Text("Uygula") } },
                     dismissButton = { androidx.compose.material3.TextButton(onClick = { customColor = false }) { Text("Vazgeç", color = UI.TextSoft) } },
                 )
+            }
+
+            SectionTitle("Masa rengi (sayfanın dışı)")
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                val desks = listOf(0 to "Tema", 0xFFE9EBEF.toInt() to "Açık gri", 0xFFF3EBDD.toInt() to "Krem", 0xFF5B6472.toInt() to "Koyu gri", 0xFF111418.toInt() to "Siyah")
+                desks.forEach { (c, name) ->
+                    val sel = ctl.settings.deskColor.value == c
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable { ctl.settings.deskColor.value = c }) {
+                        Box(
+                            Modifier.size(34.dp).clip(RoundedCornerShape(8.dp))
+                                .border(if (sel) 3.dp else 1.dp, if (sel) UI.Primary else UI.Border, RoundedCornerShape(8.dp))
+                                .padding(if (sel) 4.dp else 0.dp).clip(RoundedCornerShape(5.dp))
+                                .background(if (c == 0) UI.Desk else Color(c)),
+                        )
+                        Text(name, fontSize = 10.sp, color = UI.TextSoft, modifier = Modifier.padding(top = 3.dp))
+                    }
+                }
             }
 
             if (!isPdf && page != null) {

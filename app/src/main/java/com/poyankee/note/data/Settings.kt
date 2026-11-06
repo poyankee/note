@@ -88,6 +88,12 @@ class Settings(context: Context) {
     val newDark = bool("newDark", false)
     /** Yeni sayfa: false = düz beyaz, true = önceki sayfa gibi. */
     val newPageSame = bool("newPageSame", false)
+    /** Son sayfanın altına yazınca kendiliğinden yeni sayfa ekle. */
+    val autoNewPage = bool("autoNewPage", true)
+    /** Parmakla yakınlaştırmayı kilitle (sadece kaydırma). */
+    val zoomLock = bool("zoomLock", false)
+    /** Sayfa dışındaki masa rengi (0 = temaya göre). */
+    val deskColor = int("deskColor", 0)
     val sortMode = str("sortMode", SortMode.UPDATED.name)
     val libraryView = str("libraryView", LibraryView.MEDIUM.name)
     /** Klasör renkleri: "ad=AARRGGBB" çiftleri, ayraç \u0001. */
@@ -95,6 +101,7 @@ class Settings(context: Context) {
 
     // Görünüm
     val theme = str("theme", ThemeMode.SYSTEM.name)
+    val colorTheme = str("colorTheme", "DEFAULT")
     val dockCollapsed = bool("dockCollapsed", false)
     val dockX = float("dockX", 0f)
     val dockY = float("dockY", 0f)

@@ -37,6 +37,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Checklist
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.FlashOn
@@ -119,7 +120,14 @@ fun LibraryScreen(
     onFavorite: (String, Boolean) -> Unit = { _, _ -> },
     onLock: (String, String) -> Unit = { _, _ -> },
     onQuickNote: () -> Unit = {},
+    trash: List<Pair<NotebookInfo, Long>> = emptyList(),
+    onRestoreTrash: (String) -> Unit = {},
+    onPurge: (String) -> Unit = {},
+    onEmptyTrash: () -> Unit = {},
+    onOpenTodo: (String, Int) -> Unit = { _, _ -> },
 ) {
+    var showTodos by remember { mutableStateOf(false) }
+    val todos = com.poyankee.note.data.TodoList.get(androidx.compose.ui.platform.LocalContext.current)
     var query by remember { mutableStateOf("") }
     var showNew by remember { mutableStateOf(false) }
     var newFolder by remember { mutableStateOf(false) }
@@ -139,6 +147,9 @@ fun LibraryScreen(
     val settings = com.poyankee.note.data.Settings.get(androidx.compose.ui.platform.LocalContext.current)
     val view = settings.libraryViewValue
     val isFav = folder == FAVORITES
+    val isTrash = folder == TRASH
+    var confirmEmpty by remember { mutableStateOf(false) }
+    var purgeTarget by remember { mutableStateOf<NotebookInfo?>(null) }
     LaunchedEffect(folder) { selection = null }
     androidx.activity.compose.BackHandler(selection != null) { selection = null }
 
@@ -177,6 +188,8 @@ fun LibraryScreen(
                 Spacer(Modifier.height(20.dp))
                 NavItem(Icons.Rounded.LibraryBooks, "Tüm defterler", notebooks.size, folder == null) { onSelectFolder(null) }
                 NavItem(Icons.Rounded.Star, "Favoriler", notebooks.count { it.favorite }, isFav) { onSelectFolder(FAVORITES) }
+                NavItem(Icons.Rounded.Checklist, "Yapılacaklar", todos.items.count { !it.done }, showTodos) { showTodos = !showTodos }
+                NavItem(Icons.Rounded.Delete, "Çöp kutusu", trash.size, isTrash) { onSelectFolder(TRASH) }
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 8.dp, top = 18.dp, bottom = 4.dp)) {
                     Text("KLASÖRLER", style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.8.sp), color = UI.TextFaint, modifier = Modifier.weight(1f))
                     IconButton(onClick = { newFolder = true }, modifier = Modifier.size(30.dp)) {
@@ -209,6 +222,9 @@ fun LibraryScreen(
 
             // ---------- defterler ----------
             Column(Modifier.weight(1f).fillMaxHeight()) {
+                if (isTrash) {
+                    TrashView(trash, onRestore = onRestoreTrash, onPurge = { purgeTarget = it }, onEmpty = { confirmEmpty = true })
+                } else {
                 val sel = selection
                 if (sel != null) Row(
                     Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = 22.dp, bottom = 6.dp).clip(RoundedCornerShape(16.dp))
@@ -307,7 +323,11 @@ fun LibraryScreen(
                         }
                     }
                 }
+                }
             }
+        }
+        if (showTodos) Box(Modifier.padding(start = if (wide) 264.dp else 210.dp)) {
+            TodoPanel(todos, null, onOpen = { id, page -> showTodos = false; onOpenTodo(id, page) }, onClose = { showTodos = false })
         }
     }
 
@@ -321,7 +341,7 @@ fun LibraryScreen(
     }
     renameTarget?.let { nb -> NameDialog("Yeniden adlandır", "Defter adı", nb.name, "Kaydet", onDismiss = { renameTarget = null }) { renameTarget = null; onRename(nb.id, it) } }
     deleteTarget?.let { nb ->
-        ConfirmDialog("Defteri sil", "\"${nb.name}\" ve içindeki tüm yazılar kalıcı olarak silinecek.", "Sil", { onDelete(nb.id) }, { deleteTarget = null })
+        ConfirmDialog("Defteri sil", "\"${nb.name}\" çöp kutusuna taşınacak. 30 gün içinde geri getirebilirsiniz.", "Sil", { onDelete(nb.id) }, { deleteTarget = null })
     }
     lockTarget?.let { nb ->
         if (nb.locked) {
@@ -336,7 +356,7 @@ fun LibraryScreen(
     }
     if (bulkDelete) {
         val ids = selection ?: emptySet()
-        ConfirmDialog("Defterleri sil", "${ids.size} defter ve içlerindeki tüm yazılar kalıcı olarak silinecek.", "Sil",
+        ConfirmDialog("Defterleri sil", "${ids.size} defter çöp kutusuna taşınacak. 30 gün içinde geri getirebilirsiniz.", "Sil",
             { ids.forEach(onDelete); selection = null }, { bulkDelete = false })
     }
     if (bulkMove) {
@@ -344,6 +364,10 @@ fun LibraryScreen(
         MoveDialog("${ids.size} defter", null, folders, onDismiss = { bulkMove = false }, onCreateFolder = onCreateFolder) { f ->
             bulkMove = false; ids.forEach { onMove(it, f) }; selection = null
         }
+    }
+    if (confirmEmpty) ConfirmDialog("Çöp kutusunu boşalt", "Çöp kutusundaki ${trash.size} defter kalıcı olarak silinecek. Bu geri alınamaz.", "Sil", onEmptyTrash) { confirmEmpty = false }
+    purgeTarget?.let { nb ->
+        ConfirmDialog("Kalıcı olarak sil", "\"${nb.name}\" kalıcı olarak silinecek. Bu geri alınamaz.", "Sil", { onPurge(nb.id) }) { purgeTarget = null }
     }
     folderColorFor?.let { f ->
         FolderColorDialog(f, settings.folderColor(f), onDismiss = { folderColorFor = null }) { c -> settings.setFolderColor(f, c); folderColorFor = null }
@@ -623,6 +647,45 @@ private fun FolderColorDialog(name: String, current: Int?, onDismiss: () -> Unit
         dismissButton = { TextButton(onClick = onDismiss) { Text("Vazgeç", color = UI.TextSoft) } },
     )
 }
+
+/** Çöp kutusu: silinen defterler 30 gün sonra kendiliğinden silinir. */
+@Composable
+private fun TrashView(items: List<Pair<NotebookInfo, Long>>, onRestore: (String) -> Unit, onPurge: (NotebookInfo) -> Unit, onEmpty: () -> Unit) {
+    Column(Modifier.fillMaxSize()) {
+        Row(Modifier.fillMaxWidth().padding(start = 32.dp, end = 32.dp, top = 26.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Çöp kutusu", style = TextStyle(fontSize = 28.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.6).sp), color = UI.Text)
+                Text("Silinen defterler 30 gün sonra kendiliğinden silinir", color = UI.TextSoft, fontSize = 14.sp)
+            }
+            if (items.isNotEmpty()) TextButton(onClick = onEmpty) { Text("Çöp kutusunu boşalt", color = UI.Danger) }
+        }
+        if (items.isEmpty()) {
+            EmptyState("Çöp kutusu boş", "Sildiğiniz defterler burada 30 gün bekler; bu sürede geri getirebilirsiniz.")
+            return
+        }
+        LazyColumn(contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 32.dp), modifier = Modifier.fillMaxSize()) {
+            items(items, key = { it.first.id }) { (nb, at) ->
+                val daysLeft = (30 - ((System.currentTimeMillis() - at) / (24L * 60 * 60 * 1000))).coerceAtLeast(0)
+                Row(
+                    Modifier.fillMaxWidth().padding(vertical = 3.dp).clip(RoundedCornerShape(12.dp)).background(UI.Surface).padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(if (nb.isPdf) Icons.Rounded.PictureAsPdf else Icons.Rounded.LibraryBooks, null, tint = UI.TextSoft, modifier = Modifier.size(22.dp))
+                    Spacer(Modifier.width(14.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(nb.name, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = UI.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text("${nb.pageCount} sayfa · silindi: ${dateFmt.format(Date(at))} · $daysLeft gün kaldı", fontSize = 13.sp, color = UI.TextSoft, maxLines = 1)
+                    }
+                    TextButton(onClick = { onRestore(nb.id) }) { Text("Geri getir") }
+                    TextButton(onClick = { onPurge(nb) }) { Text("Kalıcı sil", color = UI.Danger) }
+                }
+            }
+        }
+    }
+}
+
+/** Kenar çubuğunda "Çöp kutusu" seçimi için özel değer. */
+const val TRASH = "\u0000cop"
 
 /** Kenar çubuğunda "Favoriler" seçimi için özel değer. */
 const val FAVORITES = "\u0000favoriler"

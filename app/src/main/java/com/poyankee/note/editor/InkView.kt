@@ -141,6 +141,39 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
         if (ctl.currentPage != i) ctl.currentPage = i
     }
 
+    /** Kaydırma çubuğu için: belgenin neresindeyiz (0..1) ve ekranda görünen oran. */
+    fun scrollFraction(): Float {
+        if (height == 0) return 0f
+        val range = docH + 2 * margin - height / zoom
+        return if (range <= 0f) 0f else ((sy + margin) / range).coerceIn(0f, 1f)
+    }
+    fun visibleFraction(): Float = if (height == 0) 1f else ((height / zoom) / (docH + 2 * margin)).coerceIn(0.04f, 1f)
+    fun scrollToFraction(f: Float) {
+        if (height == 0) return
+        val range = docH + 2 * margin - height / zoom
+        if (range <= 0f) return
+        sy = -margin + f.coerceIn(0f, 1f) * range
+        scroller.forceFinished(true)
+        clampScroll(); invalidate(); updateCurrentPage(); scheduleSharp()
+    }
+
+    /** Sayfanın ekrandaki yeri (piksel). */
+    fun pageScreenRect(i: Int): RectF {
+        val p = nb.pages[i]
+        val l = (pageLeft(i) - sx) * zoom; val t = (tops[i] - sy) * zoom
+        return RectF(l, t, l + p.width * zoom, t + p.height * zoom)
+    }
+
+    /** Sayfa genişliğine sığdır (ekranın ortasındaki yer korunur). */
+    fun fitToWidth() {
+        if (width == 0) return
+        val cy = toDocY(height / 2f)
+        zoom = fitZoom()
+        sx = -margin
+        sy = cy - height / 2f / zoom
+        clampScroll(); invalidate(); scheduleSharp(); updateCurrentPage()
+    }
+
     /** Ekranın ortasındaki sayfa ve o sayfadaki nokta. */
     fun visibleCenter(): Triple<Int, Float, Float> {
         val dx = toDocX(width / 2f); val dy = toDocY(height / 2f)
@@ -789,7 +822,7 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
             } else if (lastSpan > 0f && span > 0f) {
                 // odak noktası etrafında yakınlaştır
                 val docFx = toDocX(lastCx); val docFy = toDocY(lastCy)
-                zoom *= span / lastSpan
+                if (!settings.zoomLock.value) zoom *= span / lastSpan
                 zoom = zoom.coerceIn(fitZoom() * 0.35f, fitZoom() * 12f)
                 sx = docFx - cx / zoom; sy = docFy - cy / zoom
             }
@@ -801,6 +834,7 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
             lastCx = f[0].x; lastCy = f[0].y
         }
         clampScroll(); invalidate(); updateCurrentPage(); scheduleSharp()
+        if (g == null) ctl.scrollTick++
     }
 
     private fun fingerUp(e: MotionEvent, idx: Int, canceled: Boolean) {
@@ -852,6 +886,7 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
             clampScroll()
             if (bsx != sx && bsy != sy) scroller.forceFinished(true)
             updateCurrentPage()
+            ctl.scrollTick++
             postInvalidateOnAnimation()
             if (scroller.isFinished) scheduleSharp()
         }
@@ -1300,6 +1335,9 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
                 } else {
                     val extras = if (item is ShapeItem) ctl.shapeExtras(page, listOf(item.geom)) else emptyList()
                     ctl.commit(page, emptyList(), listOf(item) + extras)
+                    // son sayfanın alt kısmına yazıldıysa yeni sayfa hazırla
+                    if (settings.autoNewPage.value && st.page == nb.pages.lastIndex && page.background is Background.Paper &&
+                        item.bounds().bottom > page.height * 0.85f) ctl.appendPageQuietly()
                 }
             }
             Tool.ERASER -> {

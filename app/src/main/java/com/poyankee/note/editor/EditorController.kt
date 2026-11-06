@@ -124,6 +124,8 @@ class EditorController(
     val instruments = mutableStateListOf<InstrumentKind>()
     var secondScreenActive by mutableStateOf(false)
     var pagesVersion by mutableIntStateOf(0)
+    /** Parmakla kaydırıldıkça artar (sağ kenardaki sayfa çubuğunu göstermek için). */
+    var scrollTick by mutableIntStateOf(0)
     var bookmarksVersion by mutableIntStateOf(0)
     var clipboardCount by mutableIntStateOf(Clipboard.items.size)
 
@@ -373,6 +375,17 @@ class EditorController(
         undoStack.pageAdded(p, at)
         pagesChanged()
         goToPage(at, remember = false)
+    }
+
+    /** Son sayfanın altına yazılınca: yeni düz sayfa ekler, görünümü kaydırmaz. Geri alınabilir. */
+    fun appendPageQuietly() {
+        val ref = nb.pages.lastOrNull()
+        val p = newPaperLike(ref, null)
+        nb.pages.add(p)
+        undoStack.pageAdded(p, nb.pages.size - 1)
+        store.savePage(nb.id, p)
+        pagesChanged()
+        message = "Yeni sayfa eklendi"
     }
 
     fun duplicatePage(index: Int) {

@@ -53,6 +53,7 @@ class MainActivity : ComponentActivity() {
 
     private var notebooks by mutableStateOf<List<NotebookInfo>>(emptyList())
     private var folders by mutableStateOf<List<String>>(emptyList())
+    private var trash by mutableStateOf<List<Pair<NotebookInfo, Long>>>(emptyList())
     private var folder by mutableStateOf<String?>(null)
     private var busy by mutableStateOf<String?>(null)
     private var editor by mutableStateOf<EditorController?>(null)
@@ -75,6 +76,7 @@ class MainActivity : ComponentActivity() {
         settings = Settings.get(this)
         bg.execute { Exporter.init(applicationContext) }
         folders = store.folders()
+        store.purgeOldTrash()
         refresh()
         handleIntent(intent)
         // ana ekranda uygulama simgesine uzun basınca "Hızlı not" kısayolu
@@ -93,6 +95,8 @@ class MainActivity : ComponentActivity() {
             val systemDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
             val wantDark = when (settings.themeValue) { ThemeMode.DARK -> true; ThemeMode.LIGHT -> false; ThemeMode.SYSTEM -> systemDark }
             if (UI.dark != wantDark) UI.dark = wantDark
+            val pal = try { com.poyankee.note.ui.Palette.valueOf(settings.colorTheme.value) } catch (_: Exception) { com.poyankee.note.ui.Palette.DEFAULT }
+            if (UI.palette != pal) UI.palette = pal
             LaunchedEffect(UI.dark) {
                 WindowCompat.getInsetsController(window, window.decorView).apply {
                     isAppearanceLightStatusBars = !UI.dark
@@ -117,6 +121,7 @@ class MainActivity : ComponentActivity() {
                             ed, onClose = { closeEditor() }, onSettings = { showSettings = true },
                             tabs = tabs, onTab = { id -> if (id != ed.nb.id) { closeEditor(keepTab = true); openById(id) } },
                             onCloseTab = { id -> closeTab(id) },
+                            onOpenTodo = { id, page -> settings.setLastPage(id, page); closeEditor(keepTab = true); openById(id) },
                         )
                         loading -> Box(Modifier.fillMaxSize().background(UI.Bg), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                         else -> LibraryScreen(
@@ -129,7 +134,12 @@ class MainActivity : ComponentActivity() {
                             onCreate = { create(it) },
                             onImportPdf = { openPdf.launch(arrayOf("application/pdf")) },
                             onRename = { id, name -> if (name.isNotBlank()) { store.rename(id, name); notebooks = notebooks.map { if (it.id == id) it.copy(name = name) else it } } },
-                            onDelete = { id -> store.delete(id); notebooks = notebooks.filter { it.id != id }; tabs = tabs.filter { it.first != id } },
+                            onDelete = { id -> store.delete(id); notebooks = notebooks.filter { it.id != id }; tabs = tabs.filter { it.first != id }; refresh() },
+                            trash = trash,
+                            onRestoreTrash = { id -> store.restoreFromTrash(id); refresh() },
+                            onPurge = { id -> store.purge(id); trash = trash.filter { it.first.id != id } },
+                            onEmptyTrash = { store.emptyTrash(); trash = emptyList() },
+                            onOpenTodo = { id, page -> settings.setLastPage(id, page); openById(id) },
                             onMove = { id, f -> store.setFolder(id, f); notebooks = notebooks.map { if (it.id == id) it.copy(folder = f) else it } },
                             onCreateFolder = { name -> addFolder(name) },
                             onRenameFolder = { old, new -> renameFolder(old, new) },
@@ -270,8 +280,10 @@ class MainActivity : ComponentActivity() {
         bg.execute {
             val l = store.list()
             val known = store.folders()
+            val t = store.listTrash()
             runOnUiThread {
                 notebooks = l
+                trash = t
                 val extra = l.map { it.folder }.filter { it.isNotEmpty() && it !in known }.distinct()
                 folders = known + extra
             }
@@ -281,7 +293,7 @@ class MainActivity : ComponentActivity() {
     private fun importPdf(uri: Uri) {
         closeEditor()
         busy = "PDF açılıyor..."
-        val f = folder?.takeIf { it != com.poyankee.note.ui.FAVORITES } ?: ""
+        val f = folder?.takeIf { it != com.poyankee.note.ui.FAVORITES && it != com.poyankee.note.ui.TRASH } ?: ""
         bg.execute {
             try {
                 val nb = store.importPdf(applicationContext, uri, f)
@@ -297,7 +309,7 @@ class MainActivity : ComponentActivity() {
         // yeni defter ve hızlı not her zaman düz beyaz açılır (desen defter içinden değiştirilir)
         val size = runCatching { PageSize.valueOf(settings.newSize.value) }.getOrDefault(PageSize.A4_PORTRAIT)
         val paper = Background.Paper(Template.BLANK, com.poyankee.note.core.PaperColors.WHITE)
-        val f = inFolder ?: folder?.takeIf { it != com.poyankee.note.ui.FAVORITES } ?: ""
+        val f = inFolder ?: folder?.takeIf { it != com.poyankee.note.ui.FAVORITES && it != com.poyankee.note.ui.TRASH } ?: ""
         bg.execute {
             val nb = store.create(title, paper, size, f)
             runOnUiThread { showEditor(EditorController(this, store, settings, nb)); refresh() }
