@@ -72,6 +72,7 @@ class MainActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.auto(android.graphics.Color.WHITE, android.graphics.Color.BLACK),
         )
         super.onCreate(savedInstanceState)
+        com.poyankee.note.data.CrashLog.install(applicationContext)
         store = Store(applicationContext)
         settings = Settings.get(this)
         bg.execute { Exporter.init(applicationContext) }
@@ -115,6 +116,7 @@ class MainActivity : ComponentActivity() {
                                 onBackupNow = { uri -> backupTo(uri) },
                                 onRestore = { uri -> restoreFrom(uri) },
                                 onBackupFolder = { uri -> setBackupFolder(uri) },
+                                editorOpen = ed != null,
                             )
                         }
                         ed != null -> EditorScreen(
@@ -122,6 +124,8 @@ class MainActivity : ComponentActivity() {
                             tabs = tabs, onTab = { id -> if (id != ed.nb.id) { closeEditor(keepTab = true); openById(id) } },
                             onCloseTab = { id -> closeTab(id) },
                             onOpenTodo = { id, page -> settings.setLastPage(id, page); closeEditor(keepTab = true); openById(id) },
+                            onInsertPdf = { uri, after -> insertPdfInto(ed.nb.id, uri, after) },
+                            onExtract = { idx, name -> extractPages(ed.nb.id, idx, name) },
                         )
                         loading -> Box(Modifier.fillMaxSize().background(UI.Bg), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                         else -> LibraryScreen(
@@ -140,6 +144,8 @@ class MainActivity : ComponentActivity() {
                             onPurge = { id -> store.purge(id); trash = trash.filter { it.first.id != id } },
                             onEmptyTrash = { store.emptyTrash(); trash = emptyList() },
                             onOpenTodo = { id, page -> settings.setLastPage(id, page); openById(id) },
+                            onMerge = { ids -> mergeNotebooks(ids) },
+                            onFromImages = { pickImages.launch("image/*") },
                             onMove = { id, f -> store.setFolder(id, f); notebooks = notebooks.map { if (it.id == id) it.copy(folder = f) else it } },
                             onCreateFolder = { name -> addFolder(name) },
                             onRenameFolder = { old, new -> renameFolder(old, new) },
@@ -288,6 +294,59 @@ class MainActivity : ComponentActivity() {
                 folders = known + extra
             }
         }
+    }
+
+    /** Arka planda uzun iş: ana sayfada "çalışıyor" penceresi, bitince mesaj ve liste yenileme. */
+    private fun runOp(label: String, op: () -> String?, after: (() -> Unit)? = null) {
+        busy = label
+        bg.execute {
+            val msg = try { op() } catch (e: Throwable) { "Olmadı: ${e.message}" }
+            runOnUiThread {
+                busy = null
+                refresh()
+                msg?.let { android.widget.Toast.makeText(this, it, android.widget.Toast.LENGTH_LONG).show() }
+                after?.invoke()
+            }
+        }
+    }
+
+    private fun insertPdfInto(id: String, uri: Uri, after: Int) {
+        closeEditor(keepTab = true)
+        var ok = false
+        runOp("PDF sayfaları ekleniyor...", {
+            store.flush()
+            val n = com.poyankee.note.data.PdfOps.insertPdf(applicationContext, store, id, uri, after)
+            settings.setLastPage(id, after + 1)
+            ok = true
+            "$n sayfa eklendi"
+        }) { if (ok) open(id) }
+    }
+
+    private fun extractPages(id: String, indices: List<Int>, name: String) {
+        runOp("Yeni defter hazırlanıyor...", {
+            store.flush()
+            val nb = com.poyankee.note.data.PdfOps.extract(applicationContext, store, id, indices, name)
+            "\"${nb.name}\" oluşturuldu (${nb.pages.size} sayfa)"
+        })
+    }
+
+    private fun mergeNotebooks(ids: List<String>) {
+        runOp("Defterler birleştiriliyor...", {
+            store.flush()
+            val nb = com.poyankee.note.data.PdfOps.merge(applicationContext, store, ids, "Birleştirilmiş defter")
+            "\"${nb.name}\" oluşturuldu (${nb.pages.size} sayfa)"
+        })
+    }
+
+    private val pickImages = registerForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
+        if (uris.isNullOrEmpty()) return@registerForActivityResult
+        val f = folder?.takeIf { it != com.poyankee.note.ui.FAVORITES && it != com.poyankee.note.ui.TRASH } ?: ""
+        var created: String? = null
+        runOp("Fotoğraflar defter yapılıyor...", {
+            val nb = com.poyankee.note.data.PdfOps.fromImages(applicationContext, store, uris, "Fotoğraflardan defter", f)
+            created = nb.id
+            null
+        }) { created?.let { open(it) } }
     }
 
     private fun importPdf(uri: Uri) {

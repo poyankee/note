@@ -110,6 +110,9 @@ class Settings(context: Context) {
     val presX = float("presX", 0f)
     val presY = float("presY", 0f)
 
+    /** Yanlış defterinin kimliği (boş = henüz yok). */
+    val wrongNotebook = str("wrongNotebook", "")
+
     // Yedekleme
     val backupTree = str("backupTree", "")
     val autoBackup = bool("autoBackup", false)
@@ -160,6 +163,14 @@ class Settings(context: Context) {
         palette.value = "FF1A1A1A,FF1565C0,FFD32F2F,FF2E7D32,FFF57C00,FF6A1B9A"
         hlPalette.value = "FFFFEB3B,FF7CF29A,FFFF9EC7,FF8EC5FF,FFFFB74D"
     }
+
+    /** Yanlış defteri sayfasının kaynağı (defter kimliği, sayfa sırası). */
+    fun wrongSource(pageId: Long): Pair<String, Int>? {
+        val v = sp.getString("wrongSrc_$pageId", null) ?: return null
+        val i = v.lastIndexOf('|'); if (i <= 0) return null
+        return v.substring(0, i) to (v.substring(i + 1).toIntOrNull() ?: 0)
+    }
+    fun setWrongSource(pageId: Long, nbId: String, page: Int) = sp.edit().putString("wrongSrc_$pageId", "$nbId|$page").apply()
 
     /** Defterin en son bakılan sayfası (kaldığın yerden devam). */
     fun lastPage(id: String) = sp.getInt("lastPage_$id", 0)

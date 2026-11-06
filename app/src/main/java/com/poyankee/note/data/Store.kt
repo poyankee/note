@@ -184,6 +184,16 @@ class Store(context: Context) {
         atomicWrite(File(d, "notebook.bin")) { Codec.writeNotebook(nb, it) }
     }
 
+    /** Defterin tamamını (bilgi + bütün sayfalar) hemen yazar. Arka planda çağrılmalı. */
+    fun saveAllNow(nb: Notebook) {
+        for (p in nb.pages) savePage(nb.id, p)
+        flush()
+        writeMetaNow(nb)
+    }
+
+    /** Yeni boş defter kimliği ve klasörü. */
+    fun newId(): String = UUID.randomUUID().toString().also { dir(it).mkdirs() }
+
     /** Defter bilgisini (sayfa listesi dahil) kaydeder. Ana iş parçacığından çağrılır; anlık görüntü alınır. */
     fun saveMeta(nb: Notebook) {
         nb.updated = System.currentTimeMillis()
@@ -285,6 +295,8 @@ class Store(context: Context) {
             val merged = (folders() + f.readLines().map { it.trim() }.filter { it.isNotEmpty() }).distinct()
             foldersFile.writeText(merged.joinToString("\n"))
         }
+        // kullanıcı kütüphanesini ekle
+        File(tmp, "library").listFiles()?.forEach { f -> try { f.copyTo(File(root, "library/${f.name}"), overwrite = true) } catch (_: Exception) {} }
         // yapılacaklar listesini birleştir
         File(tmp, "todos.txt").takeIf { it.exists() }?.let { f -> try { TodoList.get(appContext).mergeFrom(f) } catch (_: Exception) {} }
         tmp.deleteRecursively()

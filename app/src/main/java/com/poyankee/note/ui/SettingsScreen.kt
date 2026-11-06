@@ -57,6 +57,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 
 @Suppress("DEPRECATION")
 @Composable
@@ -66,7 +67,19 @@ fun SettingsScreen(
     onBackupNow: (Uri) -> Unit = {},
     onRestore: (Uri) -> Unit = {},
     onBackupFolder: (Uri) -> Unit = {},
+    editorOpen: Boolean = false,
 ) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    var usage by remember { mutableStateOf<com.poyankee.note.data.StorageInfo.Usage?>(null) }
+    var usageTick by remember { mutableStateOf(0) }
+    var crashCount by remember { mutableStateOf(com.poyankee.note.data.CrashLog.list(ctx).size) }
+    var storageMsg by remember { mutableStateOf<String?>(null) }
+    androidx.compose.runtime.LaunchedEffect(usageTick) {
+        usage = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            try { com.poyankee.note.data.StorageInfo.usage(ctx, com.poyankee.note.data.Store(ctx)) } catch (_: Throwable) { null }
+        }
+    }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     val backupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri -> if (uri != null) onBackupNow(uri) }
     val restoreLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) onRestore(uri) }
     val folderLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri -> if (uri != null) onBackupFolder(uri) }
@@ -223,6 +236,56 @@ fun SettingsScreen(
                             else "Son yedek: " + SimpleDateFormat("d MMM yyyy HH:mm", Locale.forLanguageTag("tr")).format(Date(s.lastBackup.value)),
                             fontSize = 12.sp, color = UI.TextSoft,
                         )
+                    }
+                }
+                Group("Depolama") {
+                    val u = usage
+                    Column(Modifier.padding(vertical = 10.dp)) {
+                        if (u == null) Text("Hesaplanıyor…", fontSize = 13.sp, color = UI.TextSoft)
+                        else {
+                            Text("Toplam: ${com.poyankee.note.data.StorageInfo.human(u.total)}", fontSize = 16.sp, color = UI.Text)
+                            Text("Çöp kutusu: ${com.poyankee.note.data.StorageInfo.human(u.trash)}   ·   Geçici dosyalar: ${com.poyankee.note.data.StorageInfo.human(u.cache)}", fontSize = 13.sp, color = UI.TextSoft)
+                            Spacer(Modifier.height(6.dp))
+                            u.notebooks.take(5).forEach { (n, b) ->
+                                Row { Text(n, fontSize = 13.sp, color = UI.Text, modifier = Modifier.weight(1f), maxLines = 1); Text(com.poyankee.note.data.StorageInfo.human(b), fontSize = 13.sp, color = UI.TextSoft) }
+                            }
+                        }
+                        Spacer(Modifier.height(10.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Pill("Geçici dosyaları sil", false) {
+                                scope.launch {
+                                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.poyankee.note.data.StorageInfo.clearCache(ctx) }
+                                    storageMsg = "Geçici dosyalar silindi"; usageTick++
+                                }
+                            }
+                            if (!editorOpen) Pill("Kullanılmayan görselleri sil", false) {
+                                scope.launch {
+                                    val freed = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.poyankee.note.data.StorageInfo.cleanUnusedImages(com.poyankee.note.data.Store(ctx)) }
+                                    storageMsg = "${com.poyankee.note.data.StorageInfo.human(freed)} boşaltıldı"; usageTick++
+                                }
+                            }
+                        }
+                        storageMsg?.let { Text(it, fontSize = 13.sp, color = UI.Primary, modifier = Modifier.padding(top = 6.dp)) }
+                        Text("Çöp kutusu ana sayfadaki \"Çöp kutusu\" bölümünden boşaltılır.", fontSize = 12.sp, color = UI.TextFaint, modifier = Modifier.padding(top = 6.dp))
+                    }
+                }
+                Group("Hata kayıtları") {
+                    Column(Modifier.padding(vertical = 10.dp)) {
+                        Text(
+                            if (crashCount == 0) "Kayıtlı hata yok." else "$crashCount hata kaydı var. Bir sorun yaşadıysanız bu kaydı paylaşarak bildirebilirsiniz; hiçbir şey kendiliğinden gönderilmez.",
+                            fontSize = 13.sp, color = UI.TextSoft,
+                        )
+                        if (crashCount > 0) Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+                            Pill("Paylaş", false) {
+                                com.poyankee.note.data.CrashLog.bundle(ctx)?.let { f ->
+                                    val uri = androidx.core.content.FileProvider.getUriForFile(ctx, ctx.packageName + ".files", f)
+                                    val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain")
+                                        .putExtra(android.content.Intent.EXTRA_STREAM, uri).addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    ctx.startActivity(android.content.Intent.createChooser(send, "Hata kaydını paylaş"))
+                                }
+                            }
+                            Pill("Sil", false) { com.poyankee.note.data.CrashLog.clear(ctx); crashCount = 0 }
+                        }
                     }
                 }
                 Text(

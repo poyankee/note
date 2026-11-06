@@ -280,7 +280,7 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
         c.translate(-ox, -oy)
         for (ins in instruments) ins.draw(c)
         drawLaser(c, z, now)
-        if (!forOutput) drawCursor(c, z)
+        if (!forOutput) { drawCursor(c, z); drawCapture(c, z) }
         drawProtractorReading(c, z)
         c.restore()
         drawLessonOverlays(c, z, ox, oy, vw, vh)
@@ -556,6 +556,9 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
     }
 
     private var sel: Selection? = null
+
+    /** Seçili öğeler (kütüphaneye kaydetmek için). */
+    fun selectedItems(): List<Item> = sel?.items ?: emptyList()
 
     fun select(pageIndex: Int, items: List<Item>) {
         if (items.isEmpty()) { clearSelection(); return }
@@ -1006,10 +1009,42 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
         return Snapper(lattice, Snapper.anchorsOf(if (exclude == -1L) page.items else page.items.filter { it.id != exclude }), max(3f, 13f * density / zoom), settings.angleSnap.value)
     }
 
+    /* ---------- yanlış defteri: dikdörtgen seçimi (belge koordinatı) ---------- */
+    private var capA: android.graphics.PointF? = null
+    private var capB: android.graphics.PointF? = null
+
+    private fun finishCapture() {
+        val a = capA; val b = capB
+        capA = null; capB = null
+        invalidate()
+        if (a == null || b == null) return
+        val i = pageIndexAt((a.y + b.y) / 2f)
+        val p = nb.pages[i]
+        val l = (minOf(a.x, b.x) - pageLeft(i)).coerceIn(0f, p.width); val r = (maxOf(a.x, b.x) - pageLeft(i)).coerceIn(0f, p.width)
+        val t = (minOf(a.y, b.y) - tops[i]).coerceIn(0f, p.height); val bt = (maxOf(a.y, b.y) - tops[i]).coerceIn(0f, p.height)
+        ctl.captureToWrongNotebook(i, l, t, r, bt)
+    }
+
+    private fun drawCapture(c: Canvas, z: Float) {
+        val a = capA ?: return; val b = capB ?: return
+        val l = minOf(a.x, b.x); val t = minOf(a.y, b.y); val r = maxOf(a.x, b.x); val bt = maxOf(a.y, b.y)
+        overlayFill.color = 0x221565C0
+        c.drawRect(l, t, r, bt, overlayFill)
+        overlayStroke.color = 0xFF1565C0.toInt(); overlayStroke.strokeWidth = 2f / z
+        overlayStroke.pathEffect = android.graphics.DashPathEffect(floatArrayOf(10f / z, 6f / z), 0f)
+        c.drawRect(l, t, r, bt, overlayStroke)
+        overlayStroke.pathEffect = null
+    }
+
     private fun penDown(e: MotionEvent, idx: Int) {
         scroller.forceFinished(true)
         laserDot = null; cursor = null
         val dx = toDocX(e.getX(idx)); val dy = toDocY(e.getY(idx))
+        if (ctl.captureMode) {
+            clearSelection()
+            capA = android.graphics.PointF(dx, dy); capB = android.graphics.PointF(dx, dy)
+            invalidate(); return
+        }
         val tool = effectiveTool(e, idx)
         penTool = tool
 
@@ -1108,6 +1143,7 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
     }
 
     private fun penMove(e: MotionEvent, idx: Int) {
+        if (capA != null) { capB = android.graphics.PointF(toDocX(e.getX(idx)), toDocY(e.getY(idx))); invalidate(); return }
         val st = stroke ?: return
         val hs = e.historySize
         for (h in 0..hs) {
@@ -1282,6 +1318,7 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
     }
 
     private fun penUp(e: MotionEvent, idx: Int) {
+        if (capA != null) { finishCapture(); return }
         removeCallbacks(holdRunnable)
         val st = stroke ?: return
         stroke = null
@@ -1413,6 +1450,7 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
     }
 
     private fun penCancel() {
+        if (capA != null) { capA = null; capB = null; invalidate(); return }
         removeCallbacks(holdRunnable)
         val st = stroke ?: return
         stroke = null

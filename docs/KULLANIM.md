@@ -146,6 +146,26 @@ Silinen defterler önce **Çöp kutusu**na gider (sol panel). 30 gün içinde **
 ### Yapılacaklar
 Sol paneldeki **Yapılacaklar** (defterin içinde üst çubuktaki ✓ listesi simgesi). Görevi yazıp ekleyin; dokununca tamamlanır. ⋮ menüsünden renk, sıra, silme. Defterin içindeyken "Bu sayfaya bağla" ile görev o sayfaya bağlanır; görevin altındaki bağlantıya dokununca o defter o sayfada açılır. Liste yedeğe dahildir.
 
+### Hazır kütüphane
+Üst çubuktaki **Kütüphane** simgesi (veya ⊕ › Hazır kütüphane). Kategoriler: Trigonometri (birim çember, 30-60-90, 45-45-90, özel açılar tablosu…), Geometri, Analitik, Katı cisimler (açınımlarıyla), Olasılık ve istatistik, Kesir modelleri (pay/payda seçilir), Cebir karoları, Formül kartları, Genel (tablo, soru alanları, kavram haritası…). Dokununca sayfanın ortasına eklenir ve seçili gelir: taşıyın, köşeden büyütün, renge dokunarak rengini değiştirin.
+- **Kendi çizimleriniz:** bir çizimi seçim aracıyla seçin, alttaki çubuktan **Kütüphaneye** → ad verin. "Benim çizimlerim"de durur (uzun basınca silinir).
+- **Kişisel formül kağıdı:** boş bir sayfaya formül kartlarını ekleyip dizin, PDF olarak paylaşın.
+
+### Yanlış defteri
+⊕ › **Soruyu yanlış defterine ekle** → soruyu kalemle dikdörtgen içine alın. Soru (üzerindeki yazılarınızla birlikte) "Yanlış defteri" adlı deftere yeni bir sayfa olarak eklenir: kaynak ve tarih, sorunun görüntüsü, çözüm alanı, "Çözüldü / Tekrar et" kutuları. O sayfadayken üstteki **Kaynağa git** sorunun geldiği sayfayı açar. Tekrar ederken çözümü **Perde** ile kapatabilirsiniz.
+
+### PDF ve defter işlemleri
+- **Başka PDF'ten sayfa ekle:** ⊕ menüsü; seçilen PDF'in sayfaları bulunduğunuz sayfadan sonra eklenir.
+- **Sayfaları ayrı deftere çıkar:** ⋮ menüsü; "3-7, 12" gibi yazın. Asıl defter değişmez.
+- **Birleştir:** ana sayfada defterleri seçin (Seç) → **Birleştir**. Asıllar değişmez, yeni bir defter oluşur.
+- **Fotoğraflardan defter:** sol paneldeki bağlantı; her fotoğraf bir sayfa olur, üzerine yazabilirsiniz.
+- **Yazdır:** ⋮ › Yazdır (yazıcı, sayfa aralığı ve kopya sayısı Android'in yazdırma ekranında seçilir).
+- **Defterde ara:** ⋮ › Defterde ara. Metin kutularında, formüllerde ve PDF'in yazısında arar (el yazısında arama yok).
+- **Değer tablosundan grafik:** ⊕ menüsü; x ve y değerlerini yazın (veya bir fonksiyondan doldurun), noktalar koordinat düzlemine işlenir.
+
+### Depolama ve hata kaydı
+Ayarlar › **Depolama**: defterlerin kapladığı alan, geçici dosyaları ve kullanılmayan görselleri silme. Ayarlar › **Hata kayıtları**: uygulama beklenmedik şekilde kapanırsa nedeni cihazda kaydedilir; isterseniz paylaşırsınız, hiçbir şey kendiliğinden gönderilmez.
+
 ## Bilinen sınırlar (şimdilik)
 
 - Kalem tuşlarının Xiaomi kalemde nasıl bildirildiği cihazda denenmeli; çalışmazsa Ayarlar'dan değiştirilebilir veya bildirin.

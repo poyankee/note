@@ -68,6 +68,7 @@ import androidx.compose.material.icons.rounded.Bookmark
 import androidx.compose.material.icons.rounded.Checklist
 import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.Cast
+import androidx.compose.material.icons.rounded.Category
 import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Close
@@ -142,7 +143,7 @@ import java.io.File
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
-private enum class Panel { NONE, PAGE, PAGES }
+private enum class Panel { NONE, PAGE, PAGES, LIBRARY }
 
 @Composable
 fun EditorScreen(
@@ -153,9 +154,17 @@ fun EditorScreen(
     onTab: (String) -> Unit = {},
     onCloseTab: (String) -> Unit = {},
     onOpenTodo: (String, Int) -> Unit = { _, _ -> },
+    onInsertPdf: (Uri, Int) -> Unit = { _, _ -> },
+    onExtract: (List<Int>, String) -> Unit = { _, _ -> },
 ) {
     val context = LocalContext.current
     var showTodos by remember { mutableStateOf(false) }
+    var showSearch by remember { mutableStateOf(false) }
+    var showValueTable by remember { mutableStateOf(false) }
+    var showExtract by remember { mutableStateOf(false) }
+    var saveToLib by remember { mutableStateOf(false) }
+    val pickPdf = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) onInsertPdf(uri, ctl.currentPage) }
+    ctl.openRequest?.let { req -> LaunchedEffect(req) { ctl.openRequest = null; onOpenTodo(req.first, req.second) } }
     val activity = context as Activity
     val s = ctl.settings
     val ink = remember { InkView(context, ctl).also { ctl.view = it; it.keepScreenOn = true } }
@@ -261,6 +270,17 @@ fun EditorScreen(
                 onPauseResume = { if (recState == 1) { recorder.pause(); recState = 2 } else if (recState == 2) { recorder.resume(); recState = 1 } },
                 onStopRecord = { stopRecording() },
                 onTodos = { showTodos = !showTodos },
+                onExtra = { key ->
+                    when (key) {
+                        "library" -> panel = if (panel == Panel.LIBRARY) Panel.NONE else Panel.LIBRARY
+                        "wrong" -> { ctl.view?.clearSelection(); ctl.captureMode = true }
+                        "valuetable" -> showValueTable = true
+                        "search" -> showSearch = true
+                        "print" -> printNotebook(context, ctl)
+                        "extract" -> showExtract = true
+                        "insertpdf" -> pickPdf.launch(arrayOf("application/pdf"))
+                    }
+                },
             )
         }
         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth().clipToBounds()) {
@@ -294,7 +314,7 @@ fun EditorScreen(
 
             if (ctl.pageCount > 1) PageScrollbar(ctl, Modifier.align(Alignment.CenterEnd))
 
-            if (ctl.hasSelection) SelectionBar(ctl, Modifier.align(Alignment.BottomCenter).padding(bottom = 22.dp))
+            if (ctl.hasSelection) SelectionBar(ctl, onSaveToLib = { saveToLib = true }, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 22.dp))
 
             // sağdan açılan paneller
             if (showTodos && !ctl.presentation) Box(Modifier.align(Alignment.CenterStart)) {
@@ -306,6 +326,25 @@ fun EditorScreen(
                 )
             }
             SidePanel(panel == Panel.PAGE) { PageStylePanel(ctl) { panel = Panel.NONE } }
+            SidePanel(panel == Panel.LIBRARY) { LibraryPanel(onInsert = { ctl.insertLibrary(it) }) { panel = Panel.NONE } }
+            if (ctl.captureMode) {
+                Surface(
+                    color = Color(0xF01565C0), shape = RoundedCornerShape(14.dp), shadowElevation = 6.dp,
+                    modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp),
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 16.dp, end = 4.dp)) {
+                        Text("Soruyu kalemle dikdörtgen içine alın", color = Color.White, fontSize = 14.sp)
+                        androidx.compose.material3.TextButton(onClick = { ctl.captureMode = false }) { Text("Vazgeç", color = Color.White, fontWeight = FontWeight.SemiBold) }
+                    }
+                }
+            }
+            val wrongSrc = remember(ctl.currentPage, ctl.pagesVersion) { ctl.nb.pages.getOrNull(ctl.currentPage)?.let { s.wrongSource(it.id) } }
+            if (wrongSrc != null && !ctl.presentation && !ctl.captureMode) {
+                Surface(
+                    color = UI.Surface, shape = RoundedCornerShape(20.dp), shadowElevation = 6.dp,
+                    modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp).clip(RoundedCornerShape(20.dp)).clickable { onOpenTodo(wrongSrc.first, wrongSrc.second) },
+                ) { Text("Kaynağa git ›", color = UI.Primary, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) }
+            }
             SidePanel(panel == Panel.PAGES) { PagesPanel(ctl, onCrop = { cropIndex = it }) { panel = Panel.NONE } }
 
             ctl.message?.let { m ->
@@ -320,6 +359,14 @@ fun EditorScreen(
 
     if (showGoto) GotoDialog(ctl) { showGoto = false }
     if (showBookmarks) BookmarksDialog(ctl) { showBookmarks = false }
+    if (showSearch) SearchDialog(ctl) { showSearch = false }
+    if (showValueTable) ValueTableDialog(ctl) { showValueTable = false }
+    if (showExtract) ExtractDialog(ctl, onDismiss = { showExtract = false }) { idx, name -> showExtract = false; onExtract(idx, name) }
+    if (saveToLib) NameDialog("Kütüphaneye kaydet", "Çizimin adı", "", "Kaydet", onDismiss = { saveToLib = false }) { name ->
+        saveToLib = false
+        val n = com.poyankee.note.data.UserLibrary.get(context).save(name, ctl.view?.selectedItems() ?: emptyList())
+        ctl.message = if (n > 0) "Kütüphaneye kaydedildi (Kütüphane › Benim çizimlerim)" else "Görseller kütüphaneye kaydedilemez"
+    }
     if (showExport) ExportDialog(ctl) { showExport = false }
     if (showRename) NameDialog("Defteri yeniden adlandır", "Defter adı", ctl.nb.name, "Kaydet", onDismiss = { showRename = false }) { showRename = false; ctl.rename(it) }
     if (showClear) ConfirmDialog("Sayfayı temizle", "Bu sayfadaki tüm yazılar silinecek. (Geri al ile geri getirebilirsiniz.)", "Temizle", { ctl.clearPage() }, { showClear = false })
@@ -522,6 +569,7 @@ private fun EditorTopBar(
     onFormula: () -> Unit, onPlot: () -> Unit, onSticky: () -> Unit, onStamp: () -> Unit, onTimer: () -> Unit,
     onRecord: () -> Unit, onPauseResume: () -> Unit, onStopRecord: () -> Unit,
     onTodos: () -> Unit = {},
+    onExtra: (String) -> Unit = {},
 ) {
     var more by remember { mutableStateOf(false) }
     var insert by remember { mutableStateOf(false) }
@@ -555,6 +603,7 @@ private fun EditorTopBar(
                 }
                 LabeledBarButton("Sayfa", panel == Panel.PAGE, onPagePanel) { PaperGlyph(if (panel == Panel.PAGE) UI.Primary else UI.Text, 22.dp) }
                 BarIcon(Icons.Rounded.ViewModule, "Sayfalar", selected = panel == Panel.PAGES, onClick = onPages)
+                BarIcon(Icons.Rounded.Category, "Kütüphane", selected = panel == Panel.LIBRARY) { onExtra("library") }
                 BarIcon(Icons.Rounded.Checklist, "Yapılacaklar", onClick = onTodos)
                 BarIcon(Icons.Rounded.Bookmark, "Yer imleri", onClick = onBookmarks)
                 Box {
@@ -566,6 +615,11 @@ private fun EditorTopBar(
                         DropdownMenuItem(text = { Text("Fonksiyon grafiği") }, leadingIcon = { Text("ƒ", fontSize = 20.sp, color = UI.Text) }, onClick = { insert = false; onPlot() })
                         DropdownMenuItem(text = { Text("Yapışkan not") }, leadingIcon = { Icon(Icons.Rounded.Description, null) }, onClick = { insert = false; onSticky() })
                         DropdownMenuItem(text = { Text("Damga (✓ ✗ ★ Dikkat!)") }, leadingIcon = { Text("✓", fontSize = 20.sp, color = Color(0xFF16A34A)) }, onClick = { insert = false; onStamp() })
+                        DropdownMenuItem(text = { Text("Değer tablosundan grafik") }, leadingIcon = { Text("⋰", fontSize = 20.sp, color = UI.Text) }, onClick = { insert = false; onExtra("valuetable") })
+                        DropdownMenuItem(text = { Text("Hazır kütüphane") }, leadingIcon = { Icon(Icons.Rounded.Category, null) }, onClick = { insert = false; onExtra("library") })
+                        HorizontalDivider(color = UI.Border)
+                        DropdownMenuItem(text = { Text("Soruyu yanlış defterine ekle") }, leadingIcon = { Text("✗", fontSize = 20.sp, color = UI.Danger) }, onClick = { insert = false; onExtra("wrong") })
+                        DropdownMenuItem(text = { Text("Başka PDF'ten sayfa ekle") }, leadingIcon = { Icon(Icons.Rounded.Description, null) }, onClick = { insert = false; onExtra("insertpdf") })
                     }
                 }
                 if (recState == 0) BarIcon(Icons.Rounded.FiberManualRecord, "Ders kaydı", tint = UI.Danger, onClick = onRecord)
@@ -575,6 +629,9 @@ private fun EditorTopBar(
                     BarIcon(Icons.Rounded.MoreVert, "Diğer") { more = true }
                     DropdownMenu(more, { more = false }) {
                         if (ctl.clipboardCount > 0) DropdownMenuItem(text = { Text("Yapıştır (${ctl.clipboardCount})") }, onClick = { more = false; ctl.paste() })
+                        DropdownMenuItem(text = { Text("Defterde ara") }, onClick = { more = false; onExtra("search") })
+                        DropdownMenuItem(text = { Text("Yazdır") }, onClick = { more = false; onExtra("print") })
+                        DropdownMenuItem(text = { Text("Sayfaları ayrı deftere çıkar") }, onClick = { more = false; onExtra("extract") })
                         DropdownMenuItem(text = { Text(if (ctl.curtain) "Perdeyi kaldır" else "Perde") }, onClick = { more = false; ctl.curtain = !ctl.curtain; ctl.view?.invalidate() })
                         DropdownMenuItem(text = { Text("Sayaç") }, onClick = { more = false; onTimer() })
                         DropdownMenuItem(text = { Text("Sayfaya sığdır") }, onClick = { more = false; ctl.view?.fitToWidth() })
@@ -962,15 +1019,19 @@ private fun SmallRound(icon: ImageVector, desc: String, enabled: Boolean, onClic
 /* ======================= seçim / sunum çubukları ======================= */
 
 @Composable
-private fun SelectionBar(ctl: EditorController, modifier: Modifier) {
+private fun SelectionBar(ctl: EditorController, onSaveToLib: () -> Unit, modifier: Modifier) {
     FloatingCard(modifier, radius = 26) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
             SelAction(Icons.Rounded.ContentCopy, "Kopyala", UI.Text) { ctl.view?.selectionCopy() }
             SelAction(Icons.Rounded.ContentCut, "Kes", UI.Text) { ctl.view?.selectionCut() }
             SelAction(Icons.Rounded.AddCircleOutline, "Çoğalt", UI.Text) { ctl.view?.selectionDuplicate() }
             if (ctl.selectionHasShapes) SelAction(Icons.Rounded.FormatColorFill, "Doldur", UI.Text) { ctl.view?.selectionFill() }
+            SelAction(Icons.Rounded.Category, "Kütüphaneye", UI.Text, onSaveToLib)
             SelAction(Icons.Rounded.Delete, "Sil", UI.Danger) { ctl.view?.selectionDelete() }
-            Text("Renk: üstten seçin", fontSize = 12.sp, color = UI.TextSoft, modifier = Modifier.padding(horizontal = 8.dp))
+            BarDivider()
+            ctl.settings.paletteColors().take(6).forEach { c ->
+                Box(Modifier.padding(2.dp)) { ColorDot(c, false, 26) { ctl.view?.selectionRecolor(c) } }
+            }
             SmallRound(Icons.Rounded.Close, "Seçimi kaldır", true) { ctl.view?.clearSelection() }
         }
     }

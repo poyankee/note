@@ -424,3 +424,21 @@ object PageNumbers {
         return bg.index + 1 - nb.pageOffset
     }
 }
+
+/** "3-7, 12" gibi sayfa aralıkları (1'den başlar) → 0'dan başlayan sıralar. Geçersiz yazımda null. */
+object PageRanges {
+    fun parse(text: String, count: Int): List<Int>? {
+        val out = LinkedHashSet<Int>()
+        val parts = text.replace(" ", "").split(',', ';').filter { it.isNotEmpty() }
+        if (parts.isEmpty()) return null
+        for (p in parts) {
+            val m = Regex("^(\\d+)(?:[-–](\\d+))?$").find(p) ?: return null
+            val a = m.groupValues[1].toInt()
+            val b = m.groupValues[2].takeIf { it.isNotEmpty() }?.toInt() ?: a
+            if (a < 1 || b < 1 || a > count || b > count) return null
+            val r = if (a <= b) a..b else b..a
+            for (i in r) out += i - 1
+        }
+        return out.toList()
+    }
+}

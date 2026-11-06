@@ -674,6 +674,131 @@ class EditorController(
         return null
     }
 
+    /* ---------- hazır kütüphane ---------- */
+
+    /** Hazır çizimi ekrandaki sayfanın ortasına ekler ve seçili bırakır (taşınabilir, ölçeklenebilir). */
+    fun insertLibrary(items: List<Item>) {
+        val v = view ?: return
+        val (pi, cx, cy) = v.visibleCenter()
+        val page = nb.pages[pi]
+        val placed = com.poyankee.note.core.Library.place(items.filter { it !is ImageItem }, cx, cy, page.width * 0.85f, page.height * 0.8f)
+        if (placed.isEmpty()) return
+        commit(page, emptyList(), placed)
+        selectTool(Tool.LASSO)
+        v.select(pi, placed)
+    }
+
+    /* ---------- yanlış defteri ---------- */
+
+    /** Açıkken kalemle çizilen dikdörtgen, soruyu yanlış defterine ekler. */
+    var captureMode by mutableStateOf(false)
+
+    /** Başka bir deftere gitme isteği (EditorScreen yerine getirir): (defter kimliği, sayfa). */
+    var openRequest by mutableStateOf<Pair<String, Int>?>(null)
+
+    fun captureToWrongNotebook(pageIndex: Int, l: Float, t: Float, r: Float, b: Float) {
+        captureMode = false
+        val page = nb.pages.getOrNull(pageIndex) ?: return
+        if (nb.id == settings.wrongNotebook.value) { message = "Yanlış defterinin içinden soru eklenemez"; return }
+        if (r - l < 12f || b - t < 12f) { message = "Soruyu dikdörtgen içine alın"; return }
+        val snapshot = Page(page.id, page.background, page.width, page.height).also { it.items.addAll(page.items) }
+        val scale = minOf(4f, 2600f / page.width, 1800f / (r - l)).coerceAtLeast(1f)
+        val srcName = nb.name
+        message = "Yanlış defterine ekleniyor…"
+        val job: () -> Unit = {
+            try {
+                val bg = (snapshot.background as? Background.PdfPage)?.let { pdf?.renderBlocking(it, scale) }
+                val full = thumbRenderer.renderPage(snapshot, scale, bg)
+                bg?.recycle()
+                val x = (l * scale).roundToInt().coerceIn(0, full.width - 1)
+                val y = (t * scale).roundToInt().coerceIn(0, full.height - 1)
+                val w = ((r - l) * scale).roundToInt().coerceIn(1, full.width - x)
+                val h = ((b - t) * scale).roundToInt().coerceIn(1, full.height - y)
+                val crop = Bitmap.createBitmap(full, x, y, w, h)
+                full.recycle()
+                val n = com.poyankee.note.data.WrongBook.add(store, settings, crop, nb.id, srcName, pageIndex)
+                crop.recycle()
+                main.post { message = "Yanlış defterine eklendi (soru ${n + 1})" }
+            } catch (e: Throwable) {
+                main.post { message = "Eklenemedi: ${e.message}" }
+            }
+        }
+        if (pdf != null) pdf.runOnPdfThread(job) else thumbExec.execute { job() }
+    }
+
+    /* ---------- arama ---------- */
+
+    private var pdfTexts: List<String>? = null
+
+    /**
+     * Metin kutularında, formüllerde ve PDF yazısında arar. Arka planda çağrılmalı.
+     * Sonuç: (sayfa sırası, kısa alıntı).
+     */
+    fun searchBlocking(query: String): List<Pair<Int, String>> {
+        val tr = java.util.Locale.forLanguageTag("tr")
+        val q = query.trim().lowercase(tr)
+        if (q.isEmpty()) return emptyList()
+        val pages = nb.pages.toList()
+        val out = ArrayList<Pair<Int, String>>()
+        fun snippet(text: String, at: Int): String {
+            val a = (at - 30).coerceAtLeast(0); val e = (at + q.length + 40).coerceAtMost(text.length)
+            return (if (a > 0) "…" else "") + text.substring(a, e).replace('\n', ' ') + (if (e < text.length) "…" else "")
+        }
+        val texts = if (nb.pdfFile != null) pdfTexts ?: loadPdfTexts().also { pdfTexts = it } else emptyList()
+        for ((i, p) in pages.withIndex()) {
+            for (it in ArrayList(p.items)) {
+                val t = when (it) { is TextItem -> it.text; is ImageItem -> it.source; else -> "" }
+                if (t.isEmpty()) continue
+                val at = t.lowercase(tr).indexOf(q)
+                if (at >= 0) out += i to snippet(t, at)
+            }
+            val bg = p.background
+            if (bg is Background.PdfPage) {
+                val t = texts.getOrNull(bg.index) ?: ""
+                val at = t.lowercase(tr).indexOf(q)
+                if (at >= 0) out += i to snippet(t, at)
+            }
+        }
+        return out
+    }
+
+    private fun loadPdfTexts(): List<String> = try {
+        Exporter.init(context)
+        val f = File(store.dir(nb.id), nb.pdfFile!!)
+        com.tom_roush.pdfbox.pdmodel.PDDocument.load(f).use { doc ->
+            val st = com.tom_roush.pdfbox.text.PDFTextStripper()
+            (1..doc.numberOfPages).map { n -> st.startPage = n; st.endPage = n; try { st.getText(doc) } catch (_: Exception) { "" } }
+        }
+    } catch (_: Throwable) { emptyList() }
+
+    /* ---------- değer tablosundan grafik ---------- */
+
+    /** (x, y) noktalarını ekrandaki sayfanın koordinat düzlemine işler; istenirse birleştirir. */
+    fun plotPoints(points: List<Pair<Float, Float>>, connect: Boolean, color: Int): String? {
+        if (points.isEmpty()) return "Değer girin"
+        val pi = view?.visibleCenter()?.first ?: currentPage
+        val page = nb.pages.getOrNull(pi) ?: return "Sayfa yok"
+        val (ox, oy, unit) = plotFrame(page)
+        val added = ArrayList<Item>()
+        val pts = points.map { (x, y) -> (ox + x * unit) to (oy - y * unit) }
+        if (pts.any { (x, y) -> x < 0f || y < 0f || x > page.width || y > page.height }) return "Bazı noktalar sayfanın dışında kalıyor"
+        if (connect && pts.size >= 2) {
+            val arr = FloatArray(pts.size * 2); pts.forEachIndexed { i, (x, y) -> arr[2 * i] = x; arr[2 * i + 1] = y }
+            added += ShapeItem(Ids.next(), Geom.Polyline(arr, false), color, 1.6f)
+        }
+        for ((k, p) in pts.withIndex()) {
+            added += ShapeItem(Ids.next(), Geom.Circle(p.first, p.second, 2.6f), color, 1f, false, color)
+            val (x, y) = points[k]
+            fun f(v: Float) = if (v == v.toInt().toFloat()) v.toInt().toString() else v.toString()
+            added += TextItem(Ids.next(), p.first + 5f, p.second - 16f, "(${f(x)}, ${f(y)})", 9f, color)
+        }
+        commit(page, emptyList(), added)
+        if ((page.background as? Background.Paper)?.template != Template.COORDINATE) {
+            message = "İpucu: \"Sayfa\" panelinden koordinat düzlemi deseni seçerseniz eksenler görünür."
+        }
+        return null
+    }
+
     /* ---------- ders araçları: sayaç ---------- */
 
     fun startTimer(seconds: Int) { timerEnd = SystemClock.elapsedRealtime() + seconds * 1000L; timerPaused = 0L; view?.invalidate() }

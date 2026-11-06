@@ -570,6 +570,107 @@ class SmokeTest {
     }
 
     @Test
+    fun libraryWrongBookSearch() {
+        val v = newNotebook()
+        val c = v.controller
+        val ctx = rule.activity
+
+        // hazır kütüphane: panel ve ekleme
+        rule.onNodeWithContentDescription("Kütüphane").performClick()
+        rule.waitForIdle()
+        shot("23-kutuphane")
+        val before = items(c).size
+        main { c.insertLibrary(com.poyankee.note.core.Library.entries.first { it.id == "unit_circle" }.build()) }
+        assertTrue(items(c).size > before + 10)
+        assertTrue(main { c.hasSelection })
+        rule.onAllNodesWithText("Kesir modelleri")[0].performClick()
+        shot("24-kesir-modelleri")
+        rule.onNodeWithContentDescription("Kütüphane").performClick()
+        // kütüphaneye kaydet
+        val sel = main { v.selectedItems() }
+        assertTrue(com.poyankee.note.data.UserLibrary.get(ctx).save("Birim çemberim", sel) > 0)
+        assertTrue(com.poyankee.note.data.UserLibrary.get(ctx).entries.any { it.name == "Birim çemberim" })
+        shot("25-secim-cubugu")
+        main { v.clearSelection() }
+
+        // arama
+        val req = com.poyankee.note.editor.TextRequest(0, 100f, 600f, null)
+        main { c.finishText(req, "Pisagor teoremi örneği", 16f) }
+        val found = c.searchBlocking("pisagor")
+        assertTrue("arama sonuç vermedi", found.any { it.first == 0 })
+
+        // değer tablosundan grafik
+        assertEquals(null, main { c.plotPoints(listOf(-1f to 1f, 0f to 0f, 1f to 1f), true, 0xFF1565C0.toInt()) })
+
+        // yanlış defteri: dikdörtgen içine alınan bölge ayrı deftere eklenir
+        val st = com.poyankee.note.data.Settings.get(ctx)
+        main { c.captureToWrongNotebook(0, 40f, 40f, 400f, 300f) }
+        rule.waitUntil(15_000) { st.wrongNotebook.value.isNotEmpty() && File(c.store.dir(st.wrongNotebook.value), "notebook.bin").exists() &&
+            (c.store.dir(st.wrongNotebook.value).listFiles()?.any { it.name.startsWith("wq_") } == true) }
+        Thread.sleep(500)
+        val wb = c.store.load(st.wrongNotebook.value)
+        assertTrue(wb.pages.last().items.any { it is com.poyankee.note.core.ImageItem })
+        assertEquals(c.nb.id, st.wrongSource(wb.pages.last().id)?.first)
+
+        // depolama ve hata kaydı
+        val u = com.poyankee.note.data.StorageInfo.usage(ctx, c.store)
+        assertTrue(u.total > 0)
+        com.poyankee.note.data.CrashLog.list(ctx)
+
+        // renkli seçim çubuğu, kaynağa git: yanlış defterini aç
+        main { c.goToPage(0) }
+    }
+
+    @Test
+    fun pdfOperations() {
+        val ctx = rule.activity
+        val src = File(ctx.cacheDir, "ornek3.pdf")
+        val doc = PdfDocument()
+        for (i in 1..3) {
+            val page = doc.startPage(PdfDocument.PageInfo.Builder(595, 842, i).create())
+            page.canvas.drawText("Sayfa $i", 100f, 100f, Paint().apply { textSize = 30f })
+            doc.finishPage(page)
+        }
+        FileOutputStream(src).use { doc.writeTo(it) }
+        doc.close()
+        val uri = FileProvider.getUriForFile(ctx, ctx.packageName + ".files", src)
+        val store = com.poyankee.note.data.Store(ctx)
+        val nb = store.importPdf(ctx, uri)
+        assertEquals(3, nb.pages.size)
+
+        fun pdfPages(id: String): Int {
+            val n = store.load(id)
+            val f = File(store.dir(id), n.pdfFile!!)
+            return ParcelFileDescriptor.open(f, ParcelFileDescriptor.MODE_READ_ONLY).use { fd -> PdfRenderer(fd).use { it.pageCount } }
+        }
+        // ayır: 2-3. sayfalar
+        val part = com.poyankee.note.data.PdfOps.extract(ctx, store, nb.id, listOf(1, 2), "Bölüm")
+        assertEquals(2, store.load(part.id).pages.size)
+        assertEquals(2, pdfPages(part.id))
+        // birleştir
+        val merged = com.poyankee.note.data.PdfOps.merge(ctx, store, listOf(nb.id, part.id), "Birleşik")
+        assertEquals(5, store.load(merged.id).pages.size)
+        assertEquals(5, pdfPages(merged.id))
+        // başka PDF'ten sayfa ekle (1. sayfadan sonra)
+        val added = com.poyankee.note.data.PdfOps.insertPdf(ctx, store, nb.id, uri, 0)
+        assertEquals(3, added)
+        val after = store.load(nb.id)
+        assertEquals(6, after.pages.size)
+        assertEquals(6, pdfPages(nb.id))
+        assertEquals(3, (after.pages[1].background as Background.PdfPage).index)
+        // fotoğraflardan defter
+        val png = File(ctx.cacheDir, "foto.png")
+        val bmp = android.graphics.Bitmap.createBitmap(400, 600, android.graphics.Bitmap.Config.ARGB_8888).apply { eraseColor(android.graphics.Color.LTGRAY) }
+        FileOutputStream(png).use { bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+        val imgUri = FileProvider.getUriForFile(ctx, ctx.packageName + ".files", png)
+        val photos = com.poyankee.note.data.PdfOps.fromImages(ctx, store, listOf(imgUri, imgUri), "Fotoğraflar", "")
+        assertEquals(2, store.load(photos.id).pages.size)
+        assertEquals(892f, store.load(photos.id).pages[0].height, 2f)
+        for (id in listOf(nb.id, part.id, merged.id, photos.id)) store.delete(id)
+        store.flush()
+    }
+
+    @Test
     fun pdfRotateCrop() {
         val ctx = rule.activity
         val src = File(ctx.cacheDir, "ornek2.pdf")

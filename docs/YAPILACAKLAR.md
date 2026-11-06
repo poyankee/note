@@ -170,6 +170,14 @@ Kenarda açılır "Kütüphane" paneli, kategorilere ayrılmış, aranabilir; ek
 - M2 çöp kutusu (defterler 30 gün; sayfa silme zaten Geri al ile geri alınıyor)
 - E renk temaları: Varsayılan, Okyanus, Orman, Gün batımı, Kağıt, Gece, Yüksek kontrast
 - D Yapılacaklar paneli (ana sayfa ve defter içi; renk, sıralama, deftere/sayfaya bağlama, yedeğe dahil). Tarih ve sürükleyerek sıralama sonra eklenebilir.
+- H hazır kütüphane (~80 çizim: trigonometri, geometri, analitik, katı cisimler + açınımlar, olasılık-istatistik, cebir karoları, formül kartları, genel; arama; "Benim çizimlerim")
+- I3 yanlış defteri (dikdörtgenle seç → ayrı "Yanlış defteri"ne kart; "Kaynağa git"). Etiketle filtreleme ve tekrar modu sonra.
+- I4 formül kartları (kütüphanede; kişisel formül kağıdı bunlarla sayfaya dizilerek yapılır)
+- I5 cebir karoları, I6 kesir modelleri (pasta, çubuk, sayı doğrusu, denk kesir), I8 değer tablosundan grafik
+- G birleştirme, ayırma ("3-7, 12"), başka PDF'ten sayfa ekleme, fotoğraflardan defter. Sıkıştırma, PDF metni vurgulama, sürükle-bırak sıralama sonra.
+- F arama (metin kutuları, formüller, PDF yazısı); soru alanları kütüphanede (Genel)
+- O1 yazdır, O2 depolama yönetimi, O3 hata kaydı (cihazda; paylaşmak isteğe bağlı)
+- Seçim çubuğunda renkler ve "Kütüphaneye kaydet"
 - A2'nin ilk adımı: Ayarlar › Kalem ve el › "Kalem testi" ekranı. Kullanıcı Focus Pen Pro ile deneyip sonucu bildirecek; sonuca göre çift dokunuş bağlanacak.
 - C10 küçük menüde kalem + silgi
 - M1 kaldığın sayfadan açılma

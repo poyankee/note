@@ -125,6 +125,8 @@ fun LibraryScreen(
     onPurge: (String) -> Unit = {},
     onEmptyTrash: () -> Unit = {},
     onOpenTodo: (String, Int) -> Unit = { _, _ -> },
+    onMerge: (List<String>) -> Unit = {},
+    onFromImages: () -> Unit = {},
 ) {
     var showTodos by remember { mutableStateOf(false) }
     val todos = com.poyankee.note.data.TodoList.get(androidx.compose.ui.platform.LocalContext.current)
@@ -184,6 +186,7 @@ fun LibraryScreen(
                     onClick = onQuickNote, modifier = Modifier.fillMaxWidth().height(44.dp),
                     shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, UI.Border),
                 ) { Icon(Icons.Rounded.FlashOn, null, tint = Color(0xFFF59E0B)); Spacer(Modifier.width(6.dp)); Text("Hızlı not", color = UI.Text) }
+                TextButton(onClick = onFromImages, modifier = Modifier.fillMaxWidth()) { Text("Fotoğraflardan defter", color = UI.TextSoft, fontSize = 13.sp) }
 
                 Spacer(Modifier.height(20.dp))
                 NavItem(Icons.Rounded.LibraryBooks, "Tüm defterler", notebooks.size, folder == null) { onSelectFolder(null) }
@@ -243,6 +246,11 @@ fun LibraryScreen(
                         val fav = !chosen.all { it.favorite }
                         chosen.forEach { if (it.favorite != fav) onFavorite(it.id, fav) }
                     }) { Icon(Icons.Rounded.Star, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); Text("Favori") }
+                    if (sel.size >= 2) TextButton(onClick = {
+                        // ekrandaki sırayla birleştir
+                        val order = notebooks.filter { it.id in sel }.sortedByDescending { it.updated }.map { it.id }
+                        selection = null; onMerge(order)
+                    }) { Text("Birleştir") }
                     TextButton(enabled = enabled, onClick = { bulkMove = true }) {
                         Icon(Icons.Rounded.Folder, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); Text("Klasöre taşı")
                     }
