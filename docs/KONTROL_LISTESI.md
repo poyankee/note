@@ -5,6 +5,9 @@ Kurulum: GitHub › Releases › en yeni **Note sürüm N** › `Note-N.apk` (es
 
 ---
 
+## 0. İlk açılış
+- [ ] İlk açılışta 5 sayfalık kısa tanıtım (Geç / İleri / Başla); Ayarlar › Hakkında › Tanıtımı göster ile tekrar açılıyor
+
 ## 1. Ana sayfa
 - [ ] Uygulama açılıyor, sol panel görünüyor (Yeni defter, PDF aç, Hızlı not, Fotoğraflardan defter, Şablondan yeni defter)
 - [ ] **Yeni defter** ad sormadan düz beyaz açılıyor
@@ -57,6 +60,7 @@ Kurulum: GitHub › Releases › en yeni **Note sürüm N** › `Note-N.apk` (es
 - [ ] Tek şekil seçince köşeleri sürükleme
 - [ ] **Hareketli geometri**: üçgen/dörtgen seçiliyken kenar (cm), açılar (°), alan ve çevre görünüyor; köşe sürüklenince değişiyor
 - [ ] **Kutu**: seçili yazıyı Kural / Tanım / Örnek / Dikkat / Formül / Özet kutusuna alıyor
+- [ ] **Bağlı oklar**: Kütüphane › Genel › Kavram haritası ekleyin; bir kutuyu seçip taşıyın → ona bağlı ok da uzayıp kısalarak takip ediyor
 - [ ] ⋮ › **Konu özeti oluştur**: bütün kutular sona eklenen "Konu özeti" sayfasında
 
 ## 6. Sayfa
@@ -71,6 +75,8 @@ Kurulum: GitHub › Releases › en yeni **Note sürüm N** › `Note-N.apk` (es
 - [ ] Sağ kenarda **sayfa çubuğu** (kaydırınca çıkıyor, sürükleyince sayfa no)
 - [ ] Sayfa gezgini: ‹ ›, "sayfaya git", sayfalar paneli
 - [ ] Sayfalar paneli: uzun bas → çoğalt, sil, taşı, döndür, kırp
+- [ ] Sayfalar paneli › uzun bas › **Taşı (yeni yerine dokun)**: sayfa dokunduğunuz yere gidiyor
+- [ ] Sayfalar paneli › **Seç**: birden çok sayfa → Döndür, Çoğalt, Sil, Ayrı deftere çıkar
 - [ ] ⋮ › Sayfaya sığdır, Yakınlaştırma kilidi, Sayfayı döndür
 - [ ] Kaldığın sayfadan açılma
 - [ ] Ayarlar › Sayfalar › **Sayfa altında**: sayfa no / sayfa no + tarih
@@ -83,6 +89,7 @@ Kurulum: GitHub › Releases › en yeni **Note sürüm N** › `Note-N.apk` (es
 - [ ] ⊕ › **Başka PDF'ten sayfa ekle**
 - [ ] ⋮ › **Sayfaları ayrı deftere çıkar** ("3-7, 12")
 - [ ] ⋮ › **Defterde ara** (metin, formül, PDF yazısı)
+- [ ] **PDF yazısını vurgulama**: PDF'te fosforlu kalemle bir satırın üzerinden geçin → çizgi, metin satırına oturan düzgün bir vurguya dönüşüyor (Ayarlar › Yazı'dan kapatılabilir)
 
 ## 8. Ekle (⊕)
 - [ ] Görsel, fotoğraf çek
@@ -92,6 +99,7 @@ Kurulum: GitHub › Releases › en yeni **Note sürüm N** › `Note-N.apk` (es
 - [ ] Yapışkan not, damgalar
 - [ ] **Hazır kütüphane** (üst çubukta da simgesi var): kategoriler, arama, kesir modelleri (pay/payda), Benim çizimlerim
 - [ ] **Soruyu yanlış defterine ekle** → dikdörtgen içine al → yanlış defterinde yeni sayfa; orada **Kaynağa git**
+- [ ] Yanlış defterinde üst çubuk: **Konu ekle**, **☐ Çözüldü**, **Tekrar modu** (çözüm alanına yazdıklarınız gizlenir), **Sorular ▾** (konuya / çözülmeyenlere göre süz, soruya git)
 
 ## 9. Ders anlatımı
 - [ ] **Odak modu** (üstte tam ekran simgesi): sadece küçük panel; sağ/sol kenara götürünce dikey
@@ -103,9 +111,11 @@ Kurulum: GitHub › Releases › en yeni **Note sürüm N** › `Note-N.apk` (es
 ## 10. Dışa aktarma ve yazdırma
 - [ ] Paylaş: tüm defter PDF, bu sayfa PDF, bu sayfa PNG
 - [ ] Dışa aktarırken **Çözümleri gizle (soru kağıdı)** ve **Sayfa numarası**
+- [ ] **Küçük dosya (sıkıştır)**: büyük bir PDF'i bununla dışa aktarın, dosya boyutu küçülüyor
 - [ ] ⋮ › **Yazdır**
 
 ## 11. Ayarlar
+- [ ] **Dil / Language**: English seçince uygulama yeniden açılıyor ve menüler İngilizce; Türkçe ile geri dönüyor
 - [ ] Tema: sistem / açık / koyu; **Renk teması** (Okyanus, Orman, Gün batımı, Kağıt, Gece, Yüksek kontrast)
 - [ ] **Arayüz boyutu** (Küçük … Çok büyük = erişilebilirlik)
 - [ ] **Göz dostu mod**
@@ -127,10 +137,7 @@ Kurulum: GitHub › Releases › en yeni **Note sürüm N** › `Note-N.apk` (es
 ---
 
 ## Henüz yapılmayanlar (sonraki adımlar)
-- İngilizce dil desteği (bütün yazıların çevrilmesi gerekiyor; ayrı bir çalışma)
-- Kavram haritasında kutular taşınınca okların da gelmesi (şimdilik kütüphanede hazır kavram haritası var)
-- Sayfalar panelinde sürükle-bırak sıralama ve çoklu sayfa seçimi, PDF sıkıştırma, PDF yazısını vurgulama
-- Yanlış defterinde konu etiketiyle filtreleme ve tekrar modu
-- Ders videoları listesi (ders kaydı beklemede olduğu için)
-- Mağaza için: imzalama anahtarı (Play'e yüklerken sizin oluşturmanız gerekir), ilk açılış tanıtımı, mağaza görselleri
+- Ders videoları listesi (ders kaydı beklemede olduğu için geliştirilmedi)
+- Mağaza için: imzalama anahtarı (Play'e yüklerken sizin oluşturmanız gerekir) ve mağaza görselleri
 - Xiaomi kalem çift dokunuşu: **Kalem testi** sonucunuza göre
+- İngilizce'de sayfaya çizilen hazır çizimlerin bazı küçük etiketleri ve el ile yazılan metinler çevrilmez (yalnızca arayüz çevrilir)

@@ -187,6 +187,7 @@ Kenarda açılır "Kütüphane" paneli, kategorilere ayrılmış, aranabilir; ek
 - Q hakkında, gizlilik politikası (docs/GIZLILIK.md), lisanslar, ayarların yedeğe girmesi, AAB (CI'da), telefonda daraltılabilir sol panel
 - S klavye kısayolları; T elle çalıştırılan "Cihaz uyumluluğu" iş akışı (Android 10 telefon, 12 ve 14 tablet)
 - Kontrol listesi: docs/KONTROL_LISTESI.md
+- Kalanlar da tamamlandı: bağlı oklar (kavram haritası), sayfalar panelinde çoklu seçim ve dokunarak taşıma, PDF sıkıştırma (küçük dosya), yanlış defteri konu etiketi / çözüldü / tekrar modu / süzme, PDF yazısını vurgulama, ilk açılış tanıtımı, İngilizce dil desteği (assets/i18n/en.tsv)
 - A2'nin ilk adımı: Ayarlar › Kalem ve el › "Kalem testi" ekranı. Kullanıcı Focus Pen Pro ile deneyip sonucu bildirecek; sonuca göre çift dokunuş bağlanacak.
 - C10 küçük menüde kalem + silgi
 - M1 kaldığın sayfadan açılma
