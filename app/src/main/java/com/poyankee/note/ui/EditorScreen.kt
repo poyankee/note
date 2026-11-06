@@ -342,10 +342,15 @@ private fun Draggable(
     // Dikey/yatay kararı yalnızca sürükleme bitince (ve ilk ölçümde) verilir; aksi halde boyut
     // değiştikçe karar da değişip sonsuz döngüye girebilir.
     var nearSide by remember { mutableStateOf(false) }
+    var decided by remember { mutableStateOf(false) }
     fun decide() {
         if (baseX.isNaN() || areaW.value <= 0f) return
-        val cx = baseX + x + w / 2
-        nearSide = cx < areaW.value * 0.22f || cx > areaW.value * 0.78f
+        // sol/sağ kenara değiyorsa (köşelerde değil) dikey
+        val left = baseX + x; val top = baseY + y
+        val touchesSide = left < 48f || left + w > areaW.value - 48f
+        val cy = top + h / 2
+        val inCorner = cy < areaH.value * 0.12f || cy > areaH.value * 0.88f
+        nearSide = touchesSide && !inCorner
     }
     val handle = Modifier.pointerInput(Unit) {
         detectDragGestures(
@@ -361,9 +366,8 @@ private fun Draggable(
     LaunchedEffect(areaW, areaH, w, h, baseX) {
         val cx = clampX(x); val cy = clampY(y)
         if (cx != x || cy != y) { x = cx; y = cy; px.value = x; py.value = y }
+        if (!baseX.isNaN() && !decided) { decided = true; decide() }
     }
-    val measured = !baseX.isNaN()
-    LaunchedEffect(measured, areaW) { decide() }
     Box(
         modifier
             .offset { androidx.compose.ui.unit.IntOffset((x * density).roundToInt(), (y * density).roundToInt()) }
