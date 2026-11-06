@@ -633,12 +633,7 @@ fun NameDialog(
         confirmButton = {
             Button(onClick = { onDone(text.trim()) }, shape = RoundedCornerShape(10.dp)) { Text(confirm) }
         },
-        dismissButton = {
-            Row {
-                if (onForgot != null) TextButton(onClick = onForgot) { Text("PIN'i unuttum", color = UI.TextSoft) }
-                TextButton(onClick = onDismiss) { Text("Vazgeç", color = UI.TextSoft) }
-            }
-        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Vazgeç", color = UI.TextSoft) } },
     )
 }
 
@@ -806,6 +801,11 @@ fun PinDialog(title: String, text: String, confirmTwice: Boolean = false, onForg
                 }
             }, shape = RoundedCornerShape(10.dp)) { Text("Tamam") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Vazgeç", color = UI.TextSoft) } },
+        dismissButton = {
+            Row {
+                if (onForgot != null) TextButton(onClick = onForgot) { Text("PIN'i unuttum", color = UI.TextSoft) }
+                TextButton(onClick = onDismiss) { Text("Vazgeç", color = UI.TextSoft) }
+            }
+        },
     )
 }
