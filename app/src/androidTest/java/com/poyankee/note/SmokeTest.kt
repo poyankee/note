@@ -577,7 +577,9 @@ class SmokeTest {
         rule.waitUntil(8000) { rule.onAllNodesWithText("Soru 2").fetchSemanticsNodes().isNotEmpty() }
         shot("21b-yanlis-galeri")
         rule.onAllNodesWithText("Soru 2")[0].performClick()
-        rule.waitUntil(15_000) { rule.onAllNodesWithContentDescription("Diğer").fetchSemanticsNodes().isNotEmpty() }
+        rule.waitUntil(15_000) { rule.onAllNodesWithText("Defter olarak aç").fetchSemanticsNodes().isEmpty() && rule.onAllNodesWithTag("add").fetchSemanticsNodes().isEmpty() }
+        Thread.sleep(1500)
+        shot("21c-galeriden-soru-2")
         assertEquals(1, st.lastPage(st.wrongNotebook.value))
         main { rule.activity.onBackPressedDispatcher.onBackPressed() }
         rule.waitUntil(5000) { rule.onAllNodesWithTag("add").fetchSemanticsNodes().isNotEmpty() }
