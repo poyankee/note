@@ -43,6 +43,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
@@ -65,7 +68,7 @@ class TodoLink(val nbId: String, val nbName: String, val page: Int)
  * [link] verilirse yeni görevler o deftere/sayfaya bağlanabilir; [onOpen] bağlı deftere gider.
  */
 @Composable
-fun TodoPanel(todos: TodoList, link: TodoLink?, onOpen: (String, Int) -> Unit, onClose: () -> Unit) {
+fun TodoPanel(todos: TodoList, link: TodoLink?, onOpen: (String, Int) -> Unit, onClose: () -> Unit, full: Boolean = false) {
     var text by remember { mutableStateOf("") }
     var attach by remember { mutableStateOf(false) }
     fun add() {
@@ -73,9 +76,18 @@ fun TodoPanel(todos: TodoList, link: TodoLink?, onOpen: (String, Int) -> Unit, o
         if (attach && link != null) todos.add(text, link.nbId, link.nbName, link.page) else todos.add(text)
         text = ""
     }
-    Surface(Modifier.width(340.dp).fillMaxHeight(), color = UI.Surface, shadowElevation = 16.dp) {
-        Column(Modifier.fillMaxHeight()) {
-            Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 14.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+    // full = ana sayfada tam sayfa; değilse defterin içinde yan panel
+    Surface(if (full) Modifier.fillMaxSize() else Modifier.width(340.dp).fillMaxHeight(), color = if (full) UI.Bg else UI.Surface, shadowElevation = if (full) 0.dp else 16.dp) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+        Column(if (full) Modifier.widthIn(max = 820.dp).fillMaxHeight().padding(horizontal = 24.dp) else Modifier.fillMaxHeight()) {
+            if (full) Row(Modifier.fillMaxWidth().padding(top = 24.dp, bottom = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onClose) { Icon(Icons.Rounded.ArrowBack, L.t("Kapat"), tint = UI.Text) }
+                Spacer(Modifier.width(8.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(L.t("Yapılacaklar"), fontSize = 32.sp, fontWeight = FontWeight.Bold, color = UI.Text)
+                    Text("${todos.items.count { !it.done }} " + L.t("görev"), fontSize = 16.sp, color = UI.TextSoft)
+                }
+            } else Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 14.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(L.t("Yapılacaklar"), fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = UI.Text, modifier = Modifier.weight(1f))
                 IconButton(onClick = onClose) { Icon(Icons.Rounded.Close, L.t("Kapat"), tint = UI.TextSoft) }
             }
@@ -125,6 +137,7 @@ fun TodoPanel(todos: TodoList, link: TodoLink?, onOpen: (String, Int) -> Unit, o
                 HorizontalDivider(color = UI.Border)
                 TextButton(onClick = { todos.clearDone() }, modifier = Modifier.padding(8.dp)) { Text(L.t("Tamamlananları temizle"), color = UI.TextSoft) }
             }
+        }
         }
     }
 }

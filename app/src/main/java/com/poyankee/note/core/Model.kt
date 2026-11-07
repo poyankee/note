@@ -277,6 +277,8 @@ enum class PageSize(val title: String, val w: Float, val h: Float) {
     A4_PORTRAIT("A4 dikey", 595f, 842f),
     A4_LANDSCAPE("A4 yatay", 842f, 595f),
     WIDE("16:9 (projeksiyon / video)", 960f, 540f),
+    /** Ekranın en-boy oranında sayfa (oluştururken ekrana göre hesaplanır; buradaki değerler yedek). */
+    SCREEN("Tam sayfa (ekran)", 842f, 561f),
 }
 
 class Notebook(

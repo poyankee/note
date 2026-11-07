@@ -11,6 +11,9 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.lerp
 import com.poyankee.note.core.L
 
+/** Uygulamanın adı (sol üstte). Ad ve simge daha sonra belirlenecek; kullanıcı değiştiremez. */
+const val APP_NAME = "Note+"
+
 /** Sol menünün üstündeki görsel. Resim dosyası yok; hepsi kodla çizilir (hafif). */
 enum class SideArt(val title: String) {
     MOUNTAIN("Dağlar"), SEA("Deniz"), HILLS("Tepeler"), NIGHT("Gece"), NONE("Yok");

@@ -188,6 +188,18 @@ Kurulum: GitHub › Releases › en yeni **Note sürüm N** › `Note-N.apk` (es
 - [ ] Ana sayfada arama kutusunun yanında ⚡ (Hızlı Notlar, tam sayfa) ve ✓ (Yapılacaklar) düğmeleri
 - [ ] Sol menüde Çöp Kutusu, klasörlerin altında "Sistem" başlığında
 
+## 17. Son düzenlemeler
+- [ ] Hızlı notlar tamamen kaldırıldı (eski hızlı notlar "Hızlı notlar" klasöründe duruyor)
+- [ ] ✓ Yapılacaklar tam sayfa açılıyor
+- [ ] Yanlış defteri "Tüm Notlar"da görünmüyor, sol menüden açılıyor
+- [ ] Sol üstteki ad ve simge sabit ("Note+"); Ayarlar'da değiştirme yok
+- [ ] Ayarlar › Sayfalar › "Yeni defterin sayfa boyutu": A4 dikey / Tam sayfa / A4 yatay / 16:9
+- [ ] "Tam sayfa" seçiliyken yeni defterin sayfası ekranın şeklinde; kaydırmadan tamamı görünüyor
+- [ ] Geri al, yinele ve ⊕ Ekle soldaki araç çubuğunda; başlıkta yok
+- [ ] Ayarlar › Menüler'de "Ekle", "Geri al", "Yinele" listede, sırası değiştirilebiliyor
+- [ ] Soldaki araç çubuğunda yazılar yok, yalnızca simgeler (daha dar)
+- [ ] GitHub sayfası (README) ve sürüm notları yenilendi
+
 ---
 
 ## Henüz yapılmayanlar (sonraki adımlar)

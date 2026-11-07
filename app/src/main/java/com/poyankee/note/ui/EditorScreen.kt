@@ -386,6 +386,21 @@ fun EditorScreen(
                         onTodos = { showTodos = !showTodos },
                         onWrong = { ctl.view?.clearSelection(); ctl.captureMode = true },
                         onImage = { pickImage.launch("image/*") }, showBack = false,
+                        insertMenu = { close ->
+                            InsertMenuItems(
+                                close, onImage = { pickImage.launch("image/*") }, onCamera = { openCamera() },
+                                onFormula = { ctl.requestFormula(ctl.view?.visibleCenter()?.first ?: ctl.currentPage, null) },
+                                onPlot = { showPlot = true }, onSticky = { ctl.requestStickyNote() }, onStamp = { showStamp = true },
+                                onExtra = { key ->
+                                    when (key) {
+                                        "library" -> panel = if (panel == Panel.LIBRARY) Panel.NONE else Panel.LIBRARY
+                                        "wrong" -> { ctl.view?.clearSelection(); ctl.captureMode = true }
+                                        "valuetable" -> showValueTable = true
+                                        "insertpdf" -> pickPdf.launch(arrayOf("application/pdf"))
+                                    }
+                                },
+                            )
+                        },
                     )
                 }
                 // geometri araçlarında kısa ipucu
@@ -723,6 +738,25 @@ private fun PagePill(ctl: EditorController, ink: InkView, modifier: Modifier) {
     }
 }
 
+/** "Ekle" menüsünün içeriği (sol araç çubuğundaki ⊕). */
+@Composable
+private fun InsertMenuItems(
+    close: () -> Unit, onImage: () -> Unit, onCamera: () -> Unit, onFormula: () -> Unit, onPlot: () -> Unit,
+    onSticky: () -> Unit, onStamp: () -> Unit, onExtra: (String) -> Unit,
+) {
+                DropdownMenuItem(text = { Text(L.t("Görsel (galeri)")) }, leadingIcon = { Icon(Icons.Rounded.Image, null) }, onClick = { close(); onImage() })
+                DropdownMenuItem(text = { Text(L.t("Fotoğraf çek")) }, leadingIcon = { Icon(Icons.Rounded.CameraAlt, null) }, onClick = { close(); onCamera() })
+                DropdownMenuItem(text = { Text(L.t("Formül")) }, leadingIcon = { Text("∑", fontSize = 20.sp, color = UI.Text) }, onClick = { close(); onFormula() })
+                DropdownMenuItem(text = { Text(L.t("Fonksiyon grafiği")) }, leadingIcon = { Text("ƒ", fontSize = 20.sp, color = UI.Text) }, onClick = { close(); onPlot() })
+                DropdownMenuItem(text = { Text(L.t("Yapışkan not")) }, leadingIcon = { Icon(Icons.Rounded.Description, null) }, onClick = { close(); onSticky() })
+                DropdownMenuItem(text = { Text(L.t("Damga (✓ ✗ ★ Dikkat!)")) }, leadingIcon = { Text("✓", fontSize = 20.sp, color = Color(0xFF16A34A)) }, onClick = { close(); onStamp() })
+                DropdownMenuItem(text = { Text(L.t("Değer tablosundan grafik")) }, leadingIcon = { Text("⋰", fontSize = 20.sp, color = UI.Text) }, onClick = { close(); onExtra("valuetable") })
+                DropdownMenuItem(text = { Text(L.t("Hazır kütüphane")) }, leadingIcon = { Icon(Icons.Rounded.Category, null) }, onClick = { close(); onExtra("library") })
+                HorizontalDivider(color = UI.Border)
+                DropdownMenuItem(text = { Text(L.t("Soruyu yanlış defterine ekle")) }, leadingIcon = { Text("✗", fontSize = 20.sp, color = UI.Danger) }, onClick = { close(); onExtra("wrong") })
+                DropdownMenuItem(text = { Text(L.t("Başka PDF'ten sayfa ekle")) }, leadingIcon = { Icon(Icons.Rounded.Description, null) }, onClick = { close(); onExtra("insertpdf") })
+            }
+
 /* ======================= üst çubuk ======================= */
 
 @Suppress("DEPRECATION")
@@ -740,7 +774,6 @@ private fun EditorTopBar(
     headerMode: Boolean = false,
 ) {
     var more by remember { mutableStateOf(false) }
-    var insert by remember { mutableStateOf(false) }
     var titleMenu by remember { mutableStateOf(false) }
     @Suppress("UNUSED_VARIABLE") val pv = ctl.pagesVersion
     Row(
@@ -784,24 +817,6 @@ private fun EditorTopBar(
                 }
             }
             Spacer(Modifier.width(6.dp))
-        }
-        BarIcon(Icons.Rounded.Undo, L.t("Geri al"), enabled = ctl.canUndo) { ctl.undo() }
-        BarIcon(Icons.Rounded.Redo, L.t("Yinele"), enabled = ctl.canRedo) { ctl.redo() }
-        Box {
-            BarIcon(Icons.Rounded.AddCircleOutline, L.t("Ekle")) { insert = true }
-            DropdownMenu(insert, { insert = false }, shape = RoundedCornerShape(18.dp), containerColor = UI.Surface, shadowElevation = 14.dp) {
-                DropdownMenuItem(text = { Text(L.t("Görsel (galeri)")) }, leadingIcon = { Icon(Icons.Rounded.Image, null) }, onClick = { insert = false; onImage() })
-                DropdownMenuItem(text = { Text(L.t("Fotoğraf çek")) }, leadingIcon = { Icon(Icons.Rounded.CameraAlt, null) }, onClick = { insert = false; onCamera() })
-                DropdownMenuItem(text = { Text(L.t("Formül")) }, leadingIcon = { Text("∑", fontSize = 20.sp, color = UI.Text) }, onClick = { insert = false; onFormula() })
-                DropdownMenuItem(text = { Text(L.t("Fonksiyon grafiği")) }, leadingIcon = { Text("ƒ", fontSize = 20.sp, color = UI.Text) }, onClick = { insert = false; onPlot() })
-                DropdownMenuItem(text = { Text(L.t("Yapışkan not")) }, leadingIcon = { Icon(Icons.Rounded.Description, null) }, onClick = { insert = false; onSticky() })
-                DropdownMenuItem(text = { Text(L.t("Damga (✓ ✗ ★ Dikkat!)")) }, leadingIcon = { Text("✓", fontSize = 20.sp, color = Color(0xFF16A34A)) }, onClick = { insert = false; onStamp() })
-                DropdownMenuItem(text = { Text(L.t("Değer tablosundan grafik")) }, leadingIcon = { Text("⋰", fontSize = 20.sp, color = UI.Text) }, onClick = { insert = false; onExtra("valuetable") })
-                DropdownMenuItem(text = { Text(L.t("Hazır kütüphane")) }, leadingIcon = { Icon(Icons.Rounded.Category, null) }, onClick = { insert = false; onExtra("library") })
-                HorizontalDivider(color = UI.Border)
-                DropdownMenuItem(text = { Text(L.t("Soruyu yanlış defterine ekle")) }, leadingIcon = { Text("✗", fontSize = 20.sp, color = UI.Danger) }, onClick = { insert = false; onExtra("wrong") })
-                DropdownMenuItem(text = { Text(L.t("Başka PDF'ten sayfa ekle")) }, leadingIcon = { Icon(Icons.Rounded.Description, null) }, onClick = { insert = false; onExtra("insertpdf") })
-            }
         }
         BarIcon(Icons.Rounded.BookmarkBorder, L.t("Yer imleri"), onClick = onBookmarks)
         BarIcon(Icons.Rounded.Share, L.t("Dışa aktar / paylaş"), onClick = onExport)
@@ -905,6 +920,7 @@ private fun ToolDock(
     ctl: EditorController, handle: Modifier, vertical: Boolean = true, onClear: () -> Unit, onEditPalette: (Boolean) -> Unit,
     onBack: () -> Unit, onPages: () -> Unit, onLibrary: () -> Unit, onTodos: () -> Unit, onWrong: () -> Unit,
     onImage: () -> Unit = {}, showBack: Boolean = false,
+    insertMenu: @Composable (close: () -> Unit) -> Unit = {},
 ) {
     // seçili araca tekrar dokununca o aracın seçenekleri açılır
     var optionsFor by remember { mutableStateOf<Tool?>(null) }
@@ -967,6 +983,13 @@ private fun ToolDock(
             RailItem.TEXT -> Btn(Tool.TEXT)
             RailItem.SHAPES -> Btn(Tool.SHAPE, label = L.t("Şekiller"))
             RailItem.IMAGE -> Act(Icons.Outlined.OImage, L.t("Resim"), onClick = onImage)
+            RailItem.INSERT -> Box {
+                var open by remember { mutableStateOf(false) }
+                Act(Icons.Rounded.AddCircleOutline, L.t("Ekle")) { open = true }
+                DropdownMenu(open, { open = false }, shape = RoundedCornerShape(18.dp), containerColor = UI.Surface, shadowElevation = 14.dp) {
+                    insertMenu { open = false }
+                }
+            }
             RailItem.LASER -> Btn(Tool.LASER)
             RailItem.TEMP -> Btn(Tool.TEMP)
             RailItem.RULER -> Box {
@@ -1061,10 +1084,10 @@ enum class RailItem(val title: String) {
     PEN("Kalem"), HIGHLIGHTER("Fosforlu"), ERASER("Silgi"), LASSO("Seçim"), GEOMETRY("Geometri"), TEXT("Metin"),
     LASER("Lazer"), TEMP("Geçici kalem"), RULER("Cetvel"), UNDO("Geri al"), REDO("Yinele"), PAGES("Sayfalar"),
     NEW_PAGE("Yeni sayfa"), LIBRARY("Kütüphane"), TODO("Yapılacaklar"), WRONG("Yanlış defteri"), COLORS("Renkler"),
-    SHAPES("Şekiller"), IMAGE("Resim");
+    SHAPES("Şekiller"), IMAGE("Resim"), INSERT("Ekle");
 
     companion object {
-        const val DEFAULT = "PEN,ERASER,HIGHLIGHTER,SHAPES,LASSO,IMAGE,TEXT,GEOMETRY,COLORS"
+        const val DEFAULT = "UNDO,REDO,PEN,ERASER,HIGHLIGHTER,SHAPES,LASSO,IMAGE,TEXT,GEOMETRY,INSERT,COLORS"
         const val OLD_DEFAULT = "UNDO,REDO,PEN,HIGHLIGHTER,ERASER,LASSO,GEOMETRY,TEXT,RULER,PAGES,COLORS"
         /** Menü daraltılınca görünenler (Ayarlar › Menüler). */
         const val COLLAPSED_DEFAULT = "PEN,ERASER,COLORS"
@@ -1089,15 +1112,14 @@ private fun DockButton(ctl: EditorController, t: Tool, selectedOverride: Boolean
 @Composable
 private fun DockItem(selected: Boolean, label: String, onClick: () -> Unit, content: @Composable () -> Unit) {
     Column(
-        Modifier.width(68.dp).clip(RoundedCornerShape(14.dp))
+        Modifier.size(52.dp).clip(RoundedCornerShape(14.dp))
             .background(if (selected) UI.PrimarySoft else Color.Transparent)
-            .clickable(onClick = onClick).padding(vertical = 8.dp),
+            .clickable(onClick = onClick)
+            .semantics { contentDescription = label },
         horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
     ) {
         content()
-        Spacer(Modifier.height(3.dp))
-        Text(label, fontSize = 12.sp, color = UI.Text, maxLines = 1,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal)
     }
 }
 

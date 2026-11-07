@@ -34,6 +34,17 @@ jobs:
           path: |
             out/*.apk
             out/*.aab
+      - name: Sürüm notu
+        run: |
+          {
+            echo "### Kurulum"
+            echo "Tablete kurmak için aşağıdaki **Note-${{ github.run_number }}.apk** dosyasını indirip açın. Önceki sürümün üzerine kurulur, defterleriniz silinmez."
+            echo
+            echo "### Bu sürümde"
+            git log -1 --format=%B | grep -v -e '^Co-Authored-By' -e '^Claude-Session' | sed '/^$/N;/^\n$/D'
+            echo
+            echo "[Kullanım kılavuzu](https://github.com/${{ github.repository }}/blob/${{ github.sha }}/docs/KULLANIM.md) · [Kontrol listesi](https://github.com/${{ github.repository }}/blob/${{ github.sha }}/docs/KONTROL_LISTESI.md)"
+          } > out/notes.md
       - name: Tablete kolay indirme için sürüm yayınla
         uses: softprops/action-gh-release@v2
         with:
@@ -41,7 +52,5 @@ jobs:
           name: Note sürüm ${{ github.run_number }}
           target_commitish: ${{ github.sha }}
           prerelease: true
-          body: |
-            Tablete kurmak için **Note-${{ github.run_number }}.apk** dosyasını indirip açın.
-            Önceki sürümün üzerine kurulur, defterleriniz silinmez.
+          body_path: out/notes.md
           files: out/Note-${{ github.run_number }}.apk

@@ -203,25 +203,6 @@ fun SettingsScreen(
                 }
                 if (cat == Cat.PERSONAL || cat == Cat.MENUS) Group(if (cat == Cat.MENUS) L.t("Menüler") else L.t("Kişiselleştirme")) {
                     if (cat == Cat.PERSONAL) Column(Modifier.padding(vertical = 10.dp)) {
-                        Text(L.t("Sol üstteki başlık"), fontSize = 16.sp, color = UI.Text)
-                        Spacer(Modifier.height(6.dp))
-                        OutlinedTextField(s.appTitle.value, { s.appTitle.value = it.take(24) }, label = { Text(L.t("Başlık")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                        Spacer(Modifier.height(6.dp))
-                        OutlinedTextField(s.appSubtitle.value, { s.appSubtitle.value = it.take(40) }, label = { Text(L.t("Alt başlık")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                        Spacer(Modifier.height(10.dp))
-                        Text(L.t("Simge"), fontSize = 14.sp, color = UI.TextSoft)
-                        Spacer(Modifier.height(6.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            AppIcon.entries.forEach { ic ->
-                                val sel = s.appIcon.value == ic.name
-                                Box(
-                                    Modifier.size(46.dp).clip(RoundedCornerShape(14.dp)).background(if (sel) UI.Primary else UI.SurfaceAlt)
-                                        .clickable { s.appIcon.value = ic.name },
-                                    contentAlignment = Alignment.Center,
-                                ) { Icon(ic.icon, L.t(ic.title), tint = if (sel) androidx.compose.ui.graphics.Color.White else UI.TextSoft) }
-                            }
-                        }
-                        Spacer(Modifier.height(12.dp))
                         Text(L.t("Sol menünün üstündeki görsel"), fontSize = 14.sp, color = UI.TextSoft)
                         Spacer(Modifier.height(6.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
@@ -248,7 +229,7 @@ fun SettingsScreen(
                         Text(L.t("Ana sayfadaki sol menü"), fontSize = 16.sp, color = UI.Text)
                         Text(L.t("Kutucukla göster / gizle, oklarla sırasını değiştirin"), fontSize = 13.sp, color = UI.TextSoft)
                         ReorderList(
-                            all = SideItem.entries.map { it.name to L.t(it.title) },
+                            all = SideItem.entries.filter { it != SideItem.QUICK }.map { it.name to L.t(it.title) },
                             chosen = SideItem.parse(s.sideItems.value).map { it.name },
                         ) { s.sideItems.value = it.joinToString(",") }
                         TextButton(onClick = { s.sideItems.value = SideItem.DEFAULT }) { Text(L.t("Varsayılana dön")) }
@@ -325,6 +306,17 @@ fun SettingsScreen(
                         s.smoothing.value.toFloat(), 0f..4f, 3) { s.smoothing.value = it.roundToInt() }
                 }
                 if (cat == Cat.PAGES) Group(L.t("Sayfalar")) {
+                    Column(Modifier.padding(vertical = 10.dp)) {
+                        Text(L.t("Yeni defterin sayfa boyutu"), fontSize = 16.sp, color = UI.Text)
+                        Text(L.t("Tam sayfa: sayfa ekranın şeklinde olur, kaydırmadan bütün sayfa görünür"), fontSize = 13.sp, color = UI.TextSoft)
+                        Spacer(Modifier.height(8.dp))
+                        PillRow {
+                            listOf(com.poyankee.note.core.PageSize.A4_PORTRAIT to L.t("A4 dikey"), com.poyankee.note.core.PageSize.SCREEN to L.t("Tam sayfa"),
+                                com.poyankee.note.core.PageSize.A4_LANDSCAPE to L.t("A4 yatay"), com.poyankee.note.core.PageSize.WIDE to "16:9").forEach { (ps, t) ->
+                                Pill(t, s.newSize.value == ps.name) { s.newSize.value = ps.name }
+                            }
+                        }
+                    }
                     Column(Modifier.padding(vertical = 10.dp)) {
                         Text(L.t("Yeni eklenen sayfa"), fontSize = 16.sp, color = UI.Text)
                         Spacer(Modifier.height(8.dp))
@@ -520,7 +512,7 @@ private fun Group(title: String, content: @Composable ColumnScope.() -> Unit) {
 /** Ayar kategorileri (soldaki liste). */
 private enum class Cat(val title: String, val sub: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
     APPEARANCE("Görünüm", "Dil, tema, renkler, boyut", Icons.Rounded.Palette),
-    PERSONAL("Kişiselleştirme", "Başlık, simge, görsel, profil", Icons.Rounded.Person),
+    PERSONAL("Kişiselleştirme", "Sol menü görseli ve profil", Icons.Rounded.Person),
     MENUS("Menüler", "Sol menü ve araç listesi", Icons.Rounded.ViewSidebar),
     PEN("Kalem ve yazı", "Çizim, parmak, yakınlaştırma", Icons.Rounded.Edit),
     PAGES("Sayfalar", "Yeni sayfa, sayfa no, çözüm katmanı", Icons.Rounded.Description),

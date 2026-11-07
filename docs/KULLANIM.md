@@ -8,26 +8,27 @@
 
 > HyperOS ilk kurulumda bir güvenlik taraması yapabilir; "Yine de yükle" deyin.
 
-## Ana sayfa ve klasörler
+## Ana sayfa
 
-- **Yeni defter**: sadece ad sorulur. Desen, kağıt rengi ve aralık defterin içinde **Sayfa** panelinden değiştirilir.
-- **PDF aç**: PDF kopyalanıp yeni bir deftere dönüştürülür; orijinal dosyaya dokunulmaz. Başka bir uygulamadan "Paylaş → Note" ile de açılabilir.
-- **Klasörler**: soldaki "Klasörler" başlığının yanındaki simgeyle klasör oluşturun. Defter kapağındaki **⋯** menüsünden "Klasöre taşı". Klasöre uzun basınca: yeniden adlandır / sil (içindeki defterler silinmez).
-- Kapaklarda defterin ilk sayfasının önizlemesi görünür.
+- **Sol menü**: Tüm Notlar, Favoriler, Yanlış Defteri; altında **Klasörler** (+ ile yeni klasör, klasöre uzun basınca: yeniden adlandır / renk / sil); en altta **Sistem › Çöp Kutusu** ve **Ayarlar** kartı.
+- **Ortada notlar**: arama kutusu; yanında **✓ Yapılacaklar** (tam sayfa açılır) ve **⚙ sırala / kapak boyutu / seç** düğmeleri. Filtreler: Tümü · Defterler · PDF · Favoriler. Sağ üstteki düğmeyle ızgara ↔ liste.
+- **Kartlar**: sağ üstte ⋯ (aç, seç, yeniden adlandır, klasöre taşı, favori, kilitle, şablon olarak kaydet, sil), sağ altta ☆ favori.
+- **Sağ alttaki mavi +**: Yeni defter · PDF aç · Fotoğraflardan defter · Şablondan yeni defter · Yeni klasör.
+- **PDF aç**: PDF kopyalanıp yeni bir deftere dönüştürülür; orijinal dosyaya dokunulmaz. Başka uygulamadan "Paylaş → Note" ile de açılabilir.
+- **Yanlış Defteri** notlar arasında görünmez; sol menüden açılınca bütün sorular galeri olarak gelir, bir soruya dokununca o sayfa açılır.
 - Her çizgi anında kaydedilir; "kaydet" düğmesi yoktur.
 
 ## Defterin içi
 
-- **Solda yüzen araç menüsü**: Kalem, Fosforlu, Silgi, Seçim, Geometri, Metin, Lazer, Geçici kalem, Cetvel.
-- **Üstte ortada**: seçili aracın renkleri ve kalınlıkları (renge uzun basınca rengi değiştirebilirsiniz). Silgide tür ve boyut, geometride alt araçlar burada.
-- **Sağ altta**: ‹ önceki · **3 / 12** (dokununca sayfa numarasına git) · sonraki › · tüm sayfalar · **+ Sayfa** (bulunduğunuz sayfanın arkasına yeni sayfa).
-- **Üst çubuktaki "Sayfa" düğmesi** sağdan bir panel açar:
-  - **Desen**: boş, çizgili, kareli, noktalı, izometrik, koordinat, milimetrik
-  - **Kağıt rengi**: beyaz, krem, gri, kara tahta, gece
-  - **Desen görünürlüğü**: noktaları/çizgileri daha saydam yapın
-  - **Aralık**: kareler/noktalar arası mesafe (mm)
-  - "Tüm sayfalara uygula" ve "Bu desenle yeni sayfa ekle"
-- Defter adına dokunarak adını değiştirebilirsiniz.
+- **Defter her zaman tam ekran açılır.** Birden çok defter açıksa üstte **sekmeler** görünür; aşağı kaydırınca gizlenir, yukarı kaydırınca geri gelir.
+- **Başlık kartı** ilk sayfanın üstündedir, sayfayla birlikte kayar: ← | **defter adı ▾** (yeniden adlandır, sayfalar, sayfa düzeni, kütüphane, yapılacaklar, ders kaydı, odak modu) | yer imleri | paylaş | ⋮ (ara, yazdır, konu özeti, ayarlar, sayfaya sığdır, yakınlaştırma kilidi, sayfayı döndür/temizle, yapıştır, sayfaları ayrı deftere çıkar, çözümleri gizle).
+- **Soldaki araç çubuğu** (yalnızca simgeler): geri al, yinele, kalem, silgi, fosforlu, şekiller, seçim, resim, metin, geometri, **⊕ Ekle** (görsel, fotoğraf, formül, grafik, yapışkan not, damga, değer tablosu, kütüphane, yanlış defterine soru, başka PDF'ten sayfa) ve renkler.
+  - Tutamaktan sürükleyip taşıyın; ekranın altına/üstüne bırakınca yatay olur.
+  - Alttaki **˄/˅** ile daraltın (daraltınca görünenler: Ayarlar › Menüler), **göz** ile tamamen gizleyin.
+  - Hangi araçların hangi sırayla görüneceği: **Ayarlar › Menüler**.
+- **Renk topu** (gökkuşağı düğmesi): parmağınızı/kaleminizi topun üzerinde kaydırarak renk seçin, alttan parlaklığı ayarlayın. Renk noktasına uzun basınca palet düzenlenir.
+- **Alttaki çubuk**: ‹ 3 / 12 › ve − %100 + (yüzdeye dokununca sayfaya sığar).
+- **Sayfa düzeni** (başlıktaki ▾ menüsünden): desen, kağıt rengi, desen görünürlüğü, aralık, tüm sayfalara uygula.
 
 ## Kalem ve el
 

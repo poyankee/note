@@ -95,15 +95,8 @@ class MainActivity : ComponentActivity() {
         store.purgeOldTrash()
         refresh()
         handleIntent(intent)
-        // ana ekranda uygulama simgesine uzun basınca "Hızlı not" kısayolu
-        try {
-            val sc = androidx.core.content.pm.ShortcutInfoCompat.Builder(this, "quick_note")
-                .setShortLabel(L.t("Hızlı not"))
-                .setIcon(androidx.core.graphics.drawable.IconCompat.createWithResource(this, R.mipmap.ic_launcher))
-                .setIntent(Intent(this, MainActivity::class.java).setAction(ACTION_QUICK_NOTE))
-                .build()
-            androidx.core.content.pm.ShortcutManagerCompat.pushDynamicShortcut(this, sc)
-        } catch (_: Exception) {}
+        // eski "Hızlı not" kısayolu kaldırıldı
+        try { androidx.core.content.pm.ShortcutManagerCompat.removeAllDynamicShortcuts(this) } catch (_: Exception) {}
         // otomatik yedek (günde bir, ayarlıysa)
         bg.execute { try { AutoBackup.runIfDue(applicationContext, store, settings) } catch (_: Exception) {} }
 
@@ -163,7 +156,6 @@ class MainActivity : ComponentActivity() {
                             onSort = { settings.sortMode.value = it.name },
                             onFavorite = { id, fav -> store.setFavorite(id, fav); notebooks = notebooks.map { if (it.id == id) it.copy(favorite = fav) else it } },
                             onLock = { id, hash -> store.setLock(id, hash); notebooks = notebooks.map { if (it.id == id) it.copy(lockHash = hash) else it } },
-                            onQuickNote = { quickNote() },
                             compact = compact, currentId = cur,
                         )
             }
@@ -343,11 +335,7 @@ class MainActivity : ComponentActivity() {
 
     private fun handleIntent(intent: Intent?) {
         intent ?: return
-        if (intent.action == ACTION_QUICK_NOTE) {
-            intent.action = null
-            quickNote()
-            return
-        }
+        if (intent.action == ACTION_QUICK_NOTE) { intent.action = null; return }
         val uri: Uri? = when (intent.action) {
             Intent.ACTION_VIEW -> intent.data
             Intent.ACTION_SEND -> IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)
@@ -496,10 +484,15 @@ class MainActivity : ComponentActivity() {
         val title = name.ifBlank { L.t("Adsız defter") }
         // yeni defter ve hızlı not her zaman düz beyaz açılır (desen defter içinden değiştirilir)
         val size = runCatching { PageSize.valueOf(settings.newSize.value) }.getOrDefault(PageSize.A4_PORTRAIT)
+        // "Tam sayfa": sayfa ekranın en-boy oranında (üst/alt çubuklar için biraz pay bırakılır)
+        val dm = resources.displayMetrics
+        val landscape = dm.widthPixels > dm.heightPixels
+        val pw = if (size == PageSize.SCREEN) (if (landscape) 842f else 595f) else size.w
+        val ph = if (size == PageSize.SCREEN) pw * ((dm.heightPixels - 90 * dm.density) / dm.widthPixels).coerceIn(0.45f, 2.2f) else size.h
         val paper = Background.Paper(Template.BLANK, com.poyankee.note.core.PaperColors.WHITE)
         val f = inFolder ?: folder?.takeIf { it != com.poyankee.note.ui.FAVORITES && it != com.poyankee.note.ui.TRASH } ?: ""
         bg.execute {
-            val nb = store.create(title, paper, size, f)
+            val nb = store.create(title, paper, size, f, pw, ph)
             runOnUiThread { showEditor(EditorController(this, store, settings, nb)); refresh() }
         }
     }

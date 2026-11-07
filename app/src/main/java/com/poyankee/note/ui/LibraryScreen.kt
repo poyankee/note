@@ -45,6 +45,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.School
 import androidx.compose.material.icons.rounded.Menu
@@ -167,9 +168,6 @@ fun LibraryScreen(
     var showTemplates by remember { mutableStateOf(false) }
     var kind by remember { mutableStateOf(0) }
     var showTodos by remember { mutableStateOf(false) }
-    // hızlı notlar: tam sayfa görünüm
-    var quickPage by remember { mutableStateOf(false) }
-    androidx.activity.compose.BackHandler(quickPage) { quickPage = false }
     val todos = com.poyankee.note.data.TodoList.get(androidx.compose.ui.platform.LocalContext.current)
     var query by remember { mutableStateOf("") }
     var showNew by remember { mutableStateOf(false) }
@@ -188,6 +186,9 @@ fun LibraryScreen(
     var bulkDelete by remember { mutableStateOf(false) }
     var bulkMove by remember { mutableStateOf(false) }
     val settings = com.poyankee.note.data.Settings.get(androidx.compose.ui.platform.LocalContext.current)
+    // yanlış defteri notlar arasında görünmez (sol menüdeki "Yanlış Defteri"nden açılır)
+    val wrongId = settings.wrongNotebook.value
+    @Suppress("NAME_SHADOWING") val notebooks = if (wrongId.isEmpty()) notebooks else notebooks.filter { it.id != wrongId }
     val view = settings.libraryViewValue
     val isFav = folder == FAVORITES
     val isTrash = folder == TRASH
@@ -213,13 +214,11 @@ fun LibraryScreen(
                     Box(
                         Modifier.size(46.dp).shadow(6.dp, RoundedCornerShape(13.dp)).clip(RoundedCornerShape(13.dp)).background(UI.LogoBg),
                         contentAlignment = Alignment.Center,
-                    ) { Icon(AppIcon.of(settings.appIcon.value).icon, null, tint = Color.White, modifier = Modifier.size(26.dp)) }
+                    ) { Icon(Icons.Rounded.Edit, null, tint = Color.White, modifier = Modifier.size(26.dp)) }
                     Spacer(Modifier.width(14.dp))
                     Column {
-                        Text(settings.appTitle.value.ifBlank { "Note" }, style = TextStyle(fontSize = 25.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.4).sp),
+                        Text(APP_NAME, style = TextStyle(fontSize = 25.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.4).sp),
                             color = if (art == SideArt.NIGHT || UI.dark) Color.White else Color(0xFF1B2A3A), maxLines = 1)
-                        if (settings.appSubtitle.value.isNotBlank()) Text(settings.appSubtitle.value, fontSize = 13.sp,
-                            color = if (art == SideArt.NIGHT || UI.dark) Color.White.copy(alpha = 0.8f) else Color(0xFF3B4D60), maxLines = 1)
                     }
                 }
                 Column(
@@ -231,7 +230,7 @@ fun LibraryScreen(
                         for (it in SideItem.parse(settings.sideItems.value)) when (it) {
                             SideItem.ALL -> NavItem(Icons.Outlined.OStickyNote, L.t("Tüm Notlar"), notebooks.size, folder == null && !showTodos) { showTodos = false; onSelectFolder(null) }
                             SideItem.FAVORITES -> NavItem(Icons.Rounded.StarOutline, L.t("Favoriler"), notebooks.count { it.favorite }, isFav) { showTodos = false; onSelectFolder(FAVORITES) }
-                            SideItem.QUICK -> NavItem(Icons.Outlined.OBolt, L.t("Hızlı Notlar"), notebooks.count { it.folder == quick }, folder == quick) { showTodos = false; onSelectFolder(quick) }
+                            SideItem.QUICK -> {}
                             SideItem.WRONG -> NavItem(Icons.Outlined.OWrong, L.t("Yanlış Defteri"), null, false) { onWrongBook() }
                             SideItem.TODO -> NavItem(Icons.Rounded.Checklist, L.t("Yapılacaklar"), todos.items.count { !it.done }.takeIf { it > 0 }, showTodos) { showTodos = !showTodos }
                             SideItem.TRASH -> {} // klasörlerin altında, "Sistem" başlığında
@@ -244,7 +243,7 @@ fun LibraryScreen(
                                 contentAlignment = Alignment.Center,
                             ) { Icon(Icons.Rounded.Add, L.t("Yeni klasör"), tint = UI.Text, modifier = Modifier.size(20.dp)) }
                         }
-                        folders.filter { it != quick }.forEach { f ->
+                        folders.forEach { f ->
                             Box {
                                 var menu by remember { mutableStateOf(false) }
                                 NavItem(Icons.Rounded.Folder, f, notebooks.count { it.folder == f }, folder == f, onLong = { menu = true },
@@ -331,8 +330,6 @@ fun LibraryScreen(
                     }
                     Row(Modifier.fillMaxWidth().padding(start = pad, end = pad, bottom = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                         SearchField(query, Modifier.weight(1f)) { query = it }
-                        Spacer(Modifier.width(10.dp))
-                        SquareButton(Icons.Outlined.OBolt, L.t("Hızlı Notlar"), badge = notebooks.count { it.folder == quick }) { quickPage = true }
                         Spacer(Modifier.width(10.dp))
                         SquareButton(Icons.Rounded.Checklist, L.t("Yapılacaklar"), selected = showTodos, badge = todos.items.count { !it.done }) { showTodos = !showTodos }
                         Spacer(Modifier.width(10.dp))
@@ -424,7 +421,6 @@ fun LibraryScreen(
                 ) { Icon(Icons.Rounded.Add, L.t("Yeni"), tint = Color.White, modifier = Modifier.size(34.dp)) }
                 DropdownMenu(addMenu, { addMenu = false }, shape = RoundedCornerShape(18.dp), containerColor = UI.Surface) {
                     DropdownMenuItem(text = { Text(L.t("Yeni defter")) }, leadingIcon = { Icon(Icons.Rounded.LibraryBooks, null, tint = UI.Primary) }, onClick = { addMenu = false; onCreate("") })
-                    DropdownMenuItem(text = { Text(L.t("Hızlı not")) }, leadingIcon = { Icon(Icons.Rounded.FlashOn, null, tint = Color(0xFFF59E0B)) }, onClick = { addMenu = false; onQuickNote() })
                     DropdownMenuItem(text = { Text(L.t("PDF aç")) }, leadingIcon = { Icon(Icons.Rounded.PictureAsPdf, null, tint = Color(0xFFD92D20)) }, onClick = { addMenu = false; onImportPdf() })
                     DropdownMenuItem(text = { Text(L.t("Fotoğraflardan defter")) }, leadingIcon = { Icon(Icons.Rounded.Image, null) }, onClick = { addMenu = false; onFromImages() })
                     DropdownMenuItem(text = { Text(L.t("Şablondan yeni defter")) }, leadingIcon = { Icon(Icons.Rounded.Description, null) }, onClick = { addMenu = false; showTemplates = true })
@@ -434,42 +430,9 @@ fun LibraryScreen(
             }
             }
         }
-        if (quickPage) {
-            val quick = com.poyankee.note.MainActivity.QUICK_FOLDER
-            val qs = notebooks.filter { it.folder == quick }.sortedByDescending { it.updated }
-            Column(Modifier.fillMaxSize().background(UI.Bg)) {
-                Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 30.dp, top = 22.dp, bottom = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { quickPage = false }) { Icon(Icons.Rounded.ArrowBack, L.t("Geri"), tint = UI.Text) }
-                    Spacer(Modifier.width(6.dp))
-                    Icon(Icons.Outlined.OBolt, null, tint = Color(0xFFF59E0B), modifier = Modifier.size(30.dp))
-                    Spacer(Modifier.width(10.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(L.t("Hızlı Notlar"), style = TextStyle(fontSize = 32.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.6).sp), color = UI.Text)
-                        Text("${qs.size} " + L.t("not"), color = UI.TextSoft, fontSize = 16.sp)
-                    }
-                    Button(onClick = { quickPage = false; onQuickNote() }, shape = RoundedCornerShape(16.dp), modifier = Modifier.height(52.dp).testTag("quick-new")) {
-                        Icon(Icons.Rounded.Add, null); Spacer(Modifier.width(8.dp)); Text(L.t("Yeni hızlı not"), fontSize = 16.sp)
-                    }
-                }
-                if (qs.isEmpty()) EmptyState(L.t("Henüz hızlı not yok"), L.t("Aklınıza geleni hemen yazmak için \"Yeni hızlı not\"a dokunun. Tarihli boş bir sayfa açılır."))
-                else LazyVerticalGrid(
-                    columns = GridCells.Adaptive(190.dp),
-                    contentPadding = PaddingValues(start = 30.dp, end = 30.dp, top = 6.dp, bottom = 40.dp),
-                    horizontalArrangement = Arrangement.spacedBy(18.dp), verticalArrangement = Arrangement.spacedBy(18.dp),
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    items(qs, key = { it.id }) { nb ->
-                        NotebookCard(nb, null, CardActions(
-                            onOpen = { quickPage = false; onOpen(nb.id) }, onLongPress = {},
-                            onRename = { renameTarget = nb }, onMove = { moveTarget = nb }, onDelete = { deleteTarget = nb },
-                            onFavorite = { onFavorite(nb.id, !nb.favorite) }, onLock = { lockTarget = nb }, onTemplate = { onSaveTemplate(nb.id) },
-                        ))
-                    }
-                }
-            }
-        }
-        if (showTodos) Box(Modifier.padding(start = sideW + 1.dp)) {
-            TodoPanel(todos, null, onOpen = { id, page -> showTodos = false; onOpenTodo(id, page) }, onClose = { showTodos = false })
+        if (showTodos) {
+            androidx.activity.compose.BackHandler { showTodos = false }
+            TodoPanel(todos, null, onOpen = { id, page -> showTodos = false; onOpenTodo(id, page) }, onClose = { showTodos = false }, full = true)
         }
     }
 

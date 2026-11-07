@@ -576,13 +576,6 @@ class SmokeTest {
         shot("21-yapilacaklar")
         rule.onNodeWithContentDescription("Kapat").performClick()
 
-        // hızlı notlar: tam sayfa
-        rule.onNodeWithContentDescription("Hızlı Notlar").performClick()
-        rule.waitUntil(5000) { rule.onAllNodesWithTag("quick-new").fetchSemanticsNodes().isNotEmpty() }
-        shot("21d-hizli-notlar")
-        main { rule.activity.onBackPressedDispatcher.onBackPressed() }
-        rule.waitUntil(5000) { rule.onAllNodesWithTag("quick-new").fetchSemanticsNodes().isEmpty() }
-
         // ayarlar: kategoriler
         rule.onAllNodesWithText("Ayarlar")[0].performClick()
         rule.waitUntil(5000) { rule.onAllNodesWithText("Kalem ve yazı").fetchSemanticsNodes().isNotEmpty() }

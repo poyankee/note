@@ -110,12 +110,12 @@ class Store(context: Context) {
         io.execute { listTrash().filter { it.second < limit }.forEach { File(trashRoot, it.first.id).deleteRecursively() } }
     }
 
-    fun create(name: String, paper: Background.Paper, size: PageSize, folder: String): Notebook {
+    fun create(name: String, paper: Background.Paper, size: PageSize, folder: String, w: Float = size.w, h: Float = size.h): Notebook {
         val id = UUID.randomUUID().toString()
         dir(id).mkdirs()
         val now = System.currentTimeMillis()
         val nb = Notebook(id, name, now, now, null, 0, paper, size, folder)
-        nb.pages += Page(Ids.next(), paper, size.w, size.h)
+        nb.pages += Page(Ids.next(), paper, w, h)
         writeMetaNow(nb)
         return nb
     }
