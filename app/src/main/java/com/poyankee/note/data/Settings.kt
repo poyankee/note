@@ -139,7 +139,7 @@ class Settings(context: Context) {
     /** Defter başlığı sabit değil, ilk sayfanın üstünde sayfayla birlikte kaysın (Gelişmiş). */
     val headerScroll = bool("headerScroll", false)
     /** Geniş ekranda defter açıkken notlar listesi solda kalsın. */
-    val splitView = bool("splitView", true)
+    val splitView = bool("splitView", false)
     /** Tasarım sürümü: eski ayarları yeni tasarıma bir kez taşımak için. */
     val designVersion = int("designVersion", 0)
     /** Soldaki araç listesi tamamen gizli mi (ör. video çekerken). */
@@ -187,13 +187,16 @@ class Settings(context: Context) {
     val themeValue get() = try { ThemeMode.valueOf(theme.value) } catch (_: Exception) { ThemeMode.SYSTEM }
     /** Yeni tasarıma geçiş (bir kez): eski varsayılanları yenileriyle değiştirir; kullanıcının seçtikleri korunur. */
     fun migrateDesign() {
-        if (designVersion.value >= 2) return
+        if (designVersion.value >= 3) return
+        // defter tam ekran açılsın (notlar yanda değil); ☰ ile istenirse açılır
+        splitView.value = false
+        if (designVersion.value >= 2) { designVersion.value = 3; return }
         if (customAccent.value == 0xFFF5A000.toInt()) customAccent.value = 0xFF1F5C99.toInt()
         if (libraryView.value == LibraryView.LIST.name) libraryView.value = LibraryView.MEDIUM.name
         if (appTitle.value == "Note") appTitle.value = "Note+"
         if (appSubtitle.value == "Not defterim") appSubtitle.value = ""
         if (railItems.value == "UNDO,REDO,PEN,HIGHLIGHTER,ERASER,LASSO,GEOMETRY,TEXT,RULER,PAGES,COLORS") railItems.value = "PEN,ERASER,HIGHLIGHTER,SHAPES,LASSO,IMAGE,TEXT,GEOMETRY,COLORS"
-        designVersion.value = 2
+        designVersion.value = 3
     }
 
     val libraryViewValue get() = try { LibraryView.valueOf(libraryView.value) } catch (_: Exception) { LibraryView.MEDIUM }

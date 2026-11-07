@@ -162,7 +162,7 @@ Kurulum: GitHub › Releases › en yeni **Note sürüm N** › `Note-N.apk` (es
 - [ ] Ayarlar › Kişiselleştirme: sol menü görseli (Dağlar, Deniz, Tepeler, Gece, Yok)
 - [ ] "Tüm Notlar" başlığı, sağda ızgara/liste düğmesi; arama kutusu ve yanında ayar (sırala, kapak boyutu, seç) düğmesi
 - [ ] Filtreler: Tümü / Defterler / PDF / Favoriler; kartlarda ⋯ sağ üstte, ☆ sağ altta, "N sayfa · 7 Kas"
-- [ ] Tablet yatayken defter açınca **notlar solda, defter sağda** (3 bölme); sekmelerin solundaki ☰ ile notlar gizlenir/gösterilir
+- [ ] Deftere dokununca defter **tam ekran** açılıyor; tablet yatayken sekmelerin solundaki ☰ ile notlar listesi yanda açılıp kapanıyor
 - [ ] Soldaki listeden başka bir deftere dokununca sağda o defter açılıyor
 - [ ] Sekmeler üstte, seçili sekme mavi ve altı çizili; "+" ile yeni defter
 - [ ] Defter başlık kartı: ← | ad ▾ (sayfalar, sayfa düzeni, kütüphane, yapılacaklar, ders kaydı, odak modu) | geri al, yinele, ⊕, yer imi, paylaş, ⋮
