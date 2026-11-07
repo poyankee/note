@@ -173,6 +173,21 @@ Kurulum: GitHub › Releases › en yeni **Note sürüm N** › `Note-N.apk` (es
 - [ ] **Seçim aracıyla bir çizimi seçince** alttaki çubukta "Yanlış defterine" var
 - [ ] **PDF'teki bir soruyu seçim aracıyla çevirince** (çizim yoksa) "Bu alanı yanlış defterine ekle" çıkıyor
 
+## 16. Düzeltmeler (7 Kasım akşam)
+- [ ] PDF ve fotoğraflı defterler **ilk dokunuşta** açılıyor (uygulama yeni açılmışken de)
+- [ ] Defterin yanda yarım açılma özelliği kaldırıldı; her zaman tam ekran
+- [ ] Defter başlığı sabit değil: ilk sayfanın üstünde, sayfayla birlikte kayıyor
+- [ ] Tek defter açıkken sekme çubuğu yok; birden çok defter açıkken üstte görünüyor, aşağı kaydırınca gizleniyor, yukarı kaydırınca geri geliyor
+- [ ] Sekmeler arasında geçerken ana sayfa görünmüyor, takılma yok, "Kaydedildi" yazısı çıkmıyor
+- [ ] Sol araç çubuğunda ⋯ yok; altta daralt (˄/˅) ve gizle (göz) düğmeleri
+- [ ] Ayarlar › Menüler › "Araç listesi daraltılınca görünenler" (renkler dahil) seçilebiliyor
+- [ ] Gökkuşağı düğmesi → **renk topu**: üzerinde kaydırınca kalem rengi anında değişiyor; altta parlaklık
+- [ ] Palet düzenleme ve "+ renk ekle" de renk topu ile
+- [ ] Ayarlar: solda kategoriler (Görünüm, Kişiselleştirme, Menüler, Kalem ve yazı, Sayfalar, Geometri, Ders anlatımı, Yedekleme ve depolama, Gelişmiş, Hakkında), sağda kartlar
+- [ ] Dil English seçilince uygulama İngilizce açılıyor
+- [ ] Ana sayfada arama kutusunun yanında ⚡ (Hızlı Notlar, tam sayfa) ve ✓ (Yapılacaklar) düğmeleri
+- [ ] Sol menüde Çöp Kutusu, klasörlerin altında "Sistem" başlığında
+
 ---
 
 ## Henüz yapılmayanlar (sonraki adımlar)

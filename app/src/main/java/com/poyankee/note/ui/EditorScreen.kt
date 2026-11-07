@@ -291,8 +291,20 @@ fun EditorScreen(
 
     val dockLeft = !s.leftHanded.value
     // yeni tasarım: üst çubuk sabit bir kart; Gelişmiş ayarlardan "sayfayla birlikte kaysın" seçilebilir
-    val fixedHeader = !s.headerScroll.value
-    LaunchedEffect(fixedHeader) { if (fixedHeader) ink.setHeaderHeight(0f) }
+    // başlık sabit değil: ilk sayfanın üstünde, sayfayla birlikte kayar
+    val fixedHeader = false
+    // birden çok defter açıksa üstte sekmeler: aşağı kaydırınca gizlenir, yukarı kaydırınca görünür
+    val showTabs = tabs.size > 1 && !ctl.presentation
+    var tabsShown by remember { mutableStateOf(true) }
+    LaunchedEffect(ink) {
+        var last = ink.sy
+        androidx.compose.runtime.snapshotFlow { ctl.viewTick }.collect {
+            val y = ink.sy
+            if (y > last + 0.5f) tabsShown = false else if (y < last - 0.5f) tabsShown = true
+            last = y
+        }
+    }
+    val tabsReserve = if (showTabs) 64.dp else 0.dp
     val topBar: @Composable () -> Unit = {
                 EditorTopBar(
                     ctl, secondActive, recState, recTime, panel,
@@ -325,7 +337,6 @@ fun EditorScreen(
                 )
     }
     Column(Modifier.fillMaxSize().background(UI.Desk)) {
-        if (!ctl.presentation) TabsRow(tabs.ifEmpty { listOf(ctl.nb.id to ctl.nb.name) }, ctl.nb.id, onTab, onCloseTab, onNew, split, onSplit)
         if (!ctl.presentation && fixedHeader) Box(
             Modifier.padding(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 10.dp).fillMaxWidth()
                 .shadow(4.dp, RoundedCornerShape(20.dp), ambientColor = UI.Shadow, spotColor = UI.Shadow).clip(RoundedCornerShape(20.dp)),
@@ -343,15 +354,25 @@ fun EditorScreen(
                 val minW = minOf(viewW - 24 * dens, 760 * dens)
                 val wPx = r.width().coerceIn(minW, viewW - 24 * dens)
                 val xPx = (r.centerX() - wPx / 2).coerceIn(12 * dens, viewW - wPx - 12 * dens)
-                val yPx = r.top - ink.headerPx - 10 * dens
+                val reservePx = tabsReserve.value * dens
+                val yPx = r.top - (ink.headerPx - reservePx) - 10 * dens
                 if (yPx + ink.headerPx > -20) Box(
                     Modifier.offset { androidx.compose.ui.unit.IntOffset(xPx.roundToInt(), yPx.roundToInt()) }
                         .width((wPx / dens).dp)
-                        .onGloballyPositioned { c -> val h = c.size.height.toFloat(); if (h != ink.headerPx) ink.setHeaderHeight(h) }
+                        .onGloballyPositioned { c -> val h = c.size.height.toFloat() + reservePx; if (h != ink.headerPx) ink.setHeaderHeight(h) }
                         .shadow(8.dp, RoundedCornerShape(UI.radius.dp)).clip(RoundedCornerShape(UI.radius.dp)),
                 ) {
                     topBar()
                 }
+            }
+
+            androidx.compose.animation.AnimatedVisibility(
+                showTabs && tabsShown,
+                enter = androidx.compose.animation.slideInVertically { -it } + androidx.compose.animation.fadeIn(),
+                exit = androidx.compose.animation.slideOutVertically { -it } + androidx.compose.animation.fadeOut(),
+                modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth(),
+            ) {
+                TabsRow(tabs, ctl.nb.id, onTab, onCloseTab, onNew, null, {})
             }
 
             if (!ctl.presentation) {
@@ -643,7 +664,7 @@ private fun Grip(modifier: Modifier, vertical: Boolean = false) {
 @Composable
 private fun TabsRow(tabs: List<Pair<String, String>>, current: String, onTab: (String) -> Unit, onClose: (String) -> Unit, onNew: () -> Unit, split: Boolean?, onSplit: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 10.dp, bottom = 6.dp),
+        Modifier.fillMaxWidth().background(UI.Desk.copy(alpha = 0.97f)).padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (split != null) {
@@ -922,15 +943,22 @@ private fun ToolDock(
         if (vertical) Box(Modifier.padding(vertical = 3.dp).width(30.dp).height(1.dp).background(UI.Border))
         else Box(Modifier.padding(horizontal = 3.dp).height(30.dp).width(1.dp).background(UI.Border))
     }
-    var moreMenu by remember { mutableStateOf(false) }
     @Composable
     fun Items() {
         Grip(handle, vertical = !vertical)
         if (showBack) { Act(Icons.Rounded.ArrowBack, L.t("Defterler"), onClick = onBack); Sep() }
+        val shownItems = if (collapsed) RailItem.parse(ctl.settings.railCollapsed.value, RailItem.COLLAPSED_DEFAULT) else items
+        // daraltılmışken seçili araç listede yoksa o da görünsün
         if (collapsed) {
-            Btn(Tool.PEN); Btn(Tool.ERASER)
-            if (ctl.tool != Tool.PEN && ctl.tool != Tool.ERASER) Btn(ctl.tool, selectedOverride = true)
-        } else for (it in items) when (it) {
+            val curItem = when {
+                ctl.tool == Tool.PEN -> RailItem.PEN; ctl.tool == Tool.HIGHLIGHTER -> RailItem.HIGHLIGHTER; ctl.tool == Tool.ERASER -> RailItem.ERASER
+                ctl.tool == Tool.LASSO -> RailItem.LASSO; ctl.tool == Tool.TEXT -> RailItem.TEXT; ctl.tool == Tool.LASER -> RailItem.LASER
+                ctl.tool == Tool.TEMP -> RailItem.TEMP; ctl.tool == Tool.SHAPE -> RailItem.SHAPES; ctl.tool.isGeometry -> RailItem.GEOMETRY
+                else -> null
+            }
+            if (curItem != null && curItem !in shownItems) Btn(ctl.tool, selectedOverride = true)
+        }
+        for (it in shownItems) when (it) {
             RailItem.PEN -> Btn(Tool.PEN)
             RailItem.HIGHLIGHTER -> Btn(Tool.HIGHLIGHTER)
             RailItem.ERASER -> Btn(Tool.ERASER)
@@ -971,49 +999,39 @@ private fun ToolDock(
                 val colors = (if (hl) ctl.settings.highlighterColors() else ctl.settings.paletteColors()).take(5)
                 val active = ctl.activeColor or 0xFF000000.toInt()
                 colors.forEach { c -> Box(Modifier.padding(3.dp)) { ColorDot(c, (c or 0xFF000000.toInt()) == active, 30, onLongClick = { onEditPalette(hl) }) { ctl.setColor(c) } } }
-                Box(
-                    Modifier.padding(3.dp).size(30.dp).clip(CircleShape)
-                        .background(Brush.sweepGradient(listOf(Color.Red, Color.Yellow, Color.Green, Color.Cyan, Color.Blue, Color.Magenta, Color.Red)))
-                        .clickable { onEditPalette(hl) },
-                )
-            }
-        }
-        Sep()
-        // ⋯ : listede olmayan araçlar, daralt, gizle
-        Box {
-            Box(Modifier.size(44.dp).clip(CircleShape).clickable { moreMenu = true }, contentAlignment = Alignment.Center) {
-                Icon(Icons.Rounded.MoreHoriz, L.t("Diğer araçlar"), tint = UI.Text, modifier = Modifier.size(26.dp))
-            }
-            DropdownMenu(moreMenu, { moreMenu = false }, shape = RoundedCornerShape(18.dp), containerColor = UI.Surface, shadowElevation = 14.dp) {
-                val rest = RailItem.entries.filter { it !in items && it != RailItem.COLORS }
-                for (r in rest) {
-                    val icon: ImageVector = when (r) {
-                        RailItem.UNDO -> Icons.Rounded.Undo; RailItem.REDO -> Icons.Rounded.Redo; RailItem.PAGES -> Icons.Rounded.ViewModule
-                        RailItem.NEW_PAGE -> Icons.Rounded.Add; RailItem.LIBRARY -> Icons.Rounded.Category; RailItem.TODO -> Icons.Rounded.Checklist
-                        RailItem.WRONG -> Icons.Rounded.AssignmentLate; RailItem.IMAGE -> Icons.Outlined.OImage; RailItem.RULER -> Icons.Rounded.Straighten
-                        else -> Icons.Rounded.Edit
-                    }
-                    MenuRow(icon, L.t(r.title)) {
-                        moreMenu = false
-                        when (r) {
-                            RailItem.PEN -> ctl.selectTool(Tool.PEN); RailItem.HIGHLIGHTER -> ctl.selectTool(Tool.HIGHLIGHTER)
-                            RailItem.ERASER -> ctl.selectTool(Tool.ERASER); RailItem.LASSO -> ctl.selectTool(Tool.LASSO)
-                            RailItem.GEOMETRY -> ctl.selectTool(if (ctl.tool.isGeometry) ctl.tool else ctl.lastGeometryTool)
-                            RailItem.TEXT -> ctl.selectTool(Tool.TEXT); RailItem.LASER -> ctl.selectTool(Tool.LASER); RailItem.TEMP -> ctl.selectTool(Tool.TEMP)
-                            RailItem.SHAPES -> ctl.selectTool(Tool.SHAPE); RailItem.IMAGE -> onImage()
-                            RailItem.RULER -> instMenu = true
-                            RailItem.UNDO -> ctl.undo(); RailItem.REDO -> ctl.redo(); RailItem.PAGES -> onPages()
-                            RailItem.NEW_PAGE -> ctl.insertPageAfter(ctl.currentPage); RailItem.LIBRARY -> onLibrary()
-                            RailItem.TODO -> onTodos(); RailItem.WRONG -> onWrong(); RailItem.COLORS -> {}
+                Box {
+                    var wheel by remember { mutableStateOf(false) }
+                    Box(
+                        Modifier.padding(3.dp).size(30.dp).clip(CircleShape)
+                            .background(Brush.sweepGradient(listOf(Color.Red, Color.Yellow, Color.Green, Color.Cyan, Color.Blue, Color.Magenta, Color.Red)))
+                            .clickable { wheel = true }.testTag("color-wheel"),
+                    )
+                    DropdownMenu(wheel, { wheel = false }, shape = RoundedCornerShape(22.dp), containerColor = UI.Surface, shadowElevation = 14.dp) {
+                        Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp).width(260.dp)) {
+                            Text(L.t("Parmağınızla / kalemle renk topunun üzerinde kaydırın"), fontSize = 13.sp, color = UI.TextSoft)
+                            Spacer(Modifier.height(10.dp))
+                            ColorWheel(ctl.activeColor, Modifier.fillMaxWidth()) { c -> ctl.setColor(c) }
+                            Spacer(Modifier.height(8.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                androidx.compose.material3.TextButton(onClick = { wheel = false; onEditPalette(hl) }) { Text(L.t("Paleti düzenle")) }
+                                Spacer(Modifier.weight(1f))
+                                androidx.compose.material3.TextButton(onClick = { wheel = false }) { Text(L.t("Tamam")) }
+                            }
                         }
                     }
                 }
-                if (rest.isNotEmpty()) HorizontalDivider(color = UI.Border, modifier = Modifier.padding(vertical = 4.dp))
-                MenuRow(if (collapsed) Icons.Rounded.UnfoldMore else Icons.Rounded.UnfoldLess, L.t(if (collapsed) "Menüyü aç" else "Menüyü daralt")) {
-                    moreMenu = false; ctl.settings.dockCollapsed.value = !collapsed
-                }
-                MenuRow(Icons.Rounded.VisibilityOff, L.t("Araçları gizle")) { moreMenu = false; ctl.settings.dockHidden.value = true }
             }
+        }
+        Sep()
+        // daralt / genişlet (daraltınca görünecekler Ayarlar › Menüler'den seçilir) ve tamamen gizle
+        Box(Modifier.size(44.dp).clip(CircleShape).clickable { ctl.settings.dockCollapsed.value = !collapsed }.testTag("dock-collapse"), contentAlignment = Alignment.Center) {
+            Icon(
+                if (collapsed) (if (vertical) Icons.Rounded.KeyboardArrowDown else Icons.Rounded.ChevronRight) else (if (vertical) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.ChevronLeft),
+                L.t(if (collapsed) "Menüyü aç" else "Menüyü daralt"), tint = UI.Text, modifier = Modifier.size(26.dp),
+            )
+        }
+        Box(Modifier.size(40.dp).clip(CircleShape).clickable { ctl.settings.dockHidden.value = true }, contentAlignment = Alignment.Center) {
+            Icon(Icons.Rounded.VisibilityOff, L.t("Araçları gizle"), tint = UI.TextSoft, modifier = Modifier.size(20.dp))
         }
         // cetvel menüsü listede yoksa da açılabilsin
         if (RailItem.RULER !in items) DropdownMenu(instMenu, { instMenu = false }) {
@@ -1048,7 +1066,9 @@ enum class RailItem(val title: String) {
     companion object {
         const val DEFAULT = "PEN,ERASER,HIGHLIGHTER,SHAPES,LASSO,IMAGE,TEXT,GEOMETRY,COLORS"
         const val OLD_DEFAULT = "UNDO,REDO,PEN,HIGHLIGHTER,ERASER,LASSO,GEOMETRY,TEXT,RULER,PAGES,COLORS"
-        fun parse(s: String): List<RailItem> = s.split(',').mapNotNull { n -> entries.firstOrNull { it.name == n.trim() } }.ifEmpty { parse(DEFAULT) }
+        /** Menü daraltılınca görünenler (Ayarlar › Menüler). */
+        const val COLLAPSED_DEFAULT = "PEN,ERASER,COLORS"
+        fun parse(s: String, def: String = DEFAULT): List<RailItem> = s.split(',').mapNotNull { n -> entries.firstOrNull { it.name == n.trim() } }.ifEmpty { parse(def, DEFAULT) }
     }
 }
 

@@ -57,6 +57,8 @@ class MainActivity : ComponentActivity() {
     private lateinit var store: Store
     private lateinit var settings: Settings
     private val bg = Executors.newSingleThreadExecutor()
+    /** Defter açma ayrı iş parçacığında: yedekleme vb. uzun işler açılışı bekletmesin. */
+    private val openExec = Executors.newSingleThreadExecutor()
 
     private var notebooks by mutableStateOf<List<NotebookInfo>>(emptyList())
     private var folders by mutableStateOf<List<String>>(emptyList())
@@ -131,7 +133,7 @@ class MainActivity : ComponentActivity() {
                             folder = folder,
                             busy = busy,
                             onSelectFolder = { folder = it },
-                            onOpen = { id -> if (editor?.nb?.id != id) { if (editor != null) closeEditor(keepTab = true); openById(id) } },
+                            onOpen = { openById(it) },
                             onCreate = { create(it) },
                             onImportPdf = { openPdf.launch(arrayOf("application/pdf")) },
                             onRename = { id, name -> if (name.isNotBlank()) { store.rename(id, name); notebooks = notebooks.map { if (it.id == id) it.copy(name = name) else it } } },
@@ -187,28 +189,16 @@ class MainActivity : ComponentActivity() {
                                 onOpenPage = { p -> if (p >= 0) settings.setLastPage(wid, p); wrongGallery = null; open(wid) },
                                 onBack = { wrongGallery = null })
                         }
-                        ed != null -> androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
-                            // geniş ekranda (tablet yatay) notlar solda, defter sağda
-                            val areaW = maxWidth
-                            val canSplit = areaW >= 1000.dp && !presenting
-                            val split = canSplit && settings.splitView.value
-                            androidx.compose.foundation.layout.Row(Modifier.fillMaxSize()) {
-                                if (split) Box(Modifier.width(if (areaW > 1400.dp) 680.dp else 620.dp).fillMaxHeight()) { libraryUi(true, ed.nb.id) }
-                                Box(Modifier.weight(1f).fillMaxHeight()) {
-                                    EditorScreen(
-                                        ed, onClose = { closeEditor() }, onSettings = { showSettings = true },
-                                        tabs = tabs, onTab = { id -> if (id != ed.nb.id) { closeEditor(keepTab = true); openById(id) } },
-                                        onCloseTab = { id -> closeTab(id) },
-                                        onOpenTodo = { id, page -> settings.setLastPage(id, page); closeEditor(keepTab = true); openById(id) },
-                                        onInsertPdf = { uri, after -> insertPdfInto(ed.nb.id, uri, after) },
-                                        onExtract = { idx, name -> extractPages(ed.nb.id, idx, name) },
-                                        onNew = { closeEditor(keepTab = true); create("") },
-                                        split = if (canSplit) split else null,
-                                        onSplit = { settings.splitView.value = !settings.splitView.value },
-                                    )
-                                }
-                            }
-                        }
+                        // her defter kendi ekran durumuyla açılsın (sekme geçişinde eski çizim alanı kullanılmasın)
+                        ed != null -> androidx.compose.runtime.key(ed) { EditorScreen(
+                            ed, onClose = { closeEditor() }, onSettings = { showSettings = true },
+                            tabs = tabs, onTab = { id -> if (id != ed.nb.id) openById(id) },
+                            onCloseTab = { id -> closeTab(id) },
+                            onOpenTodo = { id, page -> settings.setLastPage(id, page); if (id != ed.nb.id) openById(id) },
+                            onInsertPdf = { uri, after -> insertPdfInto(ed.nb.id, uri, after) },
+                            onExtract = { idx, name -> extractPages(ed.nb.id, idx, name) },
+                            onNew = { create("") },
+                        ) }
                         else -> libraryUi(false, null)
                     }
                     if (!settings.introShown.value && !introSuppressed) com.poyankee.note.ui.IntroDialog { settings.introShown.value = true }
@@ -530,7 +520,7 @@ class MainActivity : ComponentActivity() {
 
     private fun open(id: String) {
         loading = true
-        bg.execute {
+        openExec.execute {
             try {
                 store.flush() // önceki defterin kaydı bitsin (arka planda)
                 val nb = store.load(id)
@@ -547,7 +537,7 @@ class MainActivity : ComponentActivity() {
     private fun showEditor(c: EditorController) {
         // yanda başka bir defter açıksa önce onu kaydedip kapat
         val old = editor
-        if (old != null && old !== c) closeEditor(keepTab = true)
+        if (old != null && old !== c) closeEditor(keepTab = true, quiet = true)
         editor = c
         if (tabs.none { it.first == c.nb.id }) tabs = (tabs + (c.nb.id to c.nb.name)).takeLast(6)
     }
@@ -562,13 +552,13 @@ class MainActivity : ComponentActivity() {
         } else tabs = rest
     }
 
-    private fun closeEditor(keepTab: Boolean = true) {
+    private fun closeEditor(keepTab: Boolean = true, quiet: Boolean = false) {
         val ed = editor ?: return
         editor = null
         if (!keepTab) tabs = tabs.filter { it.first != ed.nb.id }
         tabs = tabs.map { if (it.first == ed.nb.id) it.first to ed.nb.name else it }
         ed.close()
-        android.widget.Toast.makeText(this, L.t("Kaydedildi"), android.widget.Toast.LENGTH_SHORT).show()
+        if (!quiet) android.widget.Toast.makeText(this, L.t("Kaydedildi"), android.widget.Toast.LENGTH_SHORT).show()
         refresh()
         bg.execute { Thread.sleep(800); runOnUiThread { refresh() } }
     }
@@ -597,6 +587,8 @@ class MainActivity : ComponentActivity() {
 
         /** Dil değişince uygulamayı yeniden başlatır (bütün yazılar yeni dille açılır). */
         fun restart(activity: android.app.Activity) {
+            // ayarlar diske yazılmadan süreç kapanırsa dil değişikliği kaybolur: önce eşzamanlı yaz
+            try { activity.getSharedPreferences("settings", MODE_PRIVATE).edit().commit() } catch (_: Exception) {}
             val i = android.content.Intent(activity, MainActivity::class.java).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
             activity.startActivity(i)
             Runtime.getRuntime().exit(0)

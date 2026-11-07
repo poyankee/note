@@ -366,7 +366,7 @@ enum class AppIcon(val title: String, val icon: androidx.compose.ui.graphics.vec
 enum class SideItem(val title: String) {
     ALL("Tüm Notlar"), FAVORITES("Favoriler"), QUICK("Hızlı Notlar"), WRONG("Yanlış Defteri"), TODO("Yapılacaklar"), TRASH("Çöp Kutusu");
     companion object {
-        const val DEFAULT = "ALL,FAVORITES,QUICK,WRONG,TODO,TRASH"
+        const val DEFAULT = "ALL,FAVORITES,WRONG,TRASH"
         fun parse(s: String): List<SideItem> = s.split(',').mapNotNull { n -> entries.firstOrNull { it.name == n.trim() } }
     }
 }

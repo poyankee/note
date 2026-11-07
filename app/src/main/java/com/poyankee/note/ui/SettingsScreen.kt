@@ -48,6 +48,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Backup
+import androidx.compose.material.icons.rounded.School
+import androidx.compose.material.icons.rounded.Category
+import androidx.compose.material.icons.rounded.Description
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.ViewSidebar
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.ui.text.font.FontWeight
@@ -93,19 +103,46 @@ fun SettingsScreen(
     var learning by remember { mutableStateOf(false) }
     var penTest by remember { mutableStateOf(false) }
     var confirmRestore by remember { mutableStateOf(false) }
-    var advanced by remember { mutableStateOf(false) }
-    androidx.activity.compose.BackHandler(advanced) { advanced = false }
+    var cat by remember { mutableStateOf(Cat.APPEARANCE) }
 
-    Column(Modifier.fillMaxSize().background(UI.Bg)) {
-        Row(Modifier.fillMaxWidth().background(UI.Surface).padding(horizontal = 8.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { if (advanced) advanced = false else onBack() }) { Icon(Icons.Rounded.ArrowBack, L.t("Geri"), tint = UI.Text) }
-            Text(if (advanced) L.t("Gelişmiş ayarlar") else L.t("Ayarlar"), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = UI.Text)
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize().background(UI.Bg)) {
+    val narrowS = maxWidth < 700.dp
+    Row(Modifier.fillMaxSize()) {
+        // sol: kategoriler
+        if (!narrowS) Column(Modifier.width(290.dp).fillMaxHeight().background(UI.SideBg).padding(horizontal = 14.dp, vertical = 18.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 18.dp)) {
+                IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, L.t("Geri"), tint = UI.Text) }
+                Text(L.t("Ayarlar"), fontSize = 28.sp, fontWeight = FontWeight.Bold, color = UI.Text)
+            }
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                Cat.entries.forEach { c -> CatItem(c, c == cat) { cat = c } }
+            }
         }
-        HorizontalDivider(color = UI.Border)
+        // sağ: seçili kategori
+        Column(Modifier.weight(1f).fillMaxHeight()) {
+            if (narrowS) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 8.dp, top = 8.dp)) {
+                    IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, L.t("Geri"), tint = UI.Text) }
+                    Text(L.t("Ayarlar"), fontSize = 22.sp, fontWeight = FontWeight.Bold, color = UI.Text)
+                }
+                Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Cat.entries.forEach { c -> Pill(L.t(c.title), c == cat) { cat = c } }
+                }
+            }
         Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), contentAlignment = Alignment.TopCenter) {
-            Column(Modifier.widthIn(max = 720.dp).fillMaxWidth().padding(horizontal = 24.dp, vertical = 12.dp)) {
-                Group(L.t("Görünüm")) {
-                    if (!advanced) Column(Modifier.padding(vertical = 10.dp)) {
+            Column(Modifier.widthIn(max = 760.dp).fillMaxWidth().padding(horizontal = 32.dp, vertical = 24.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 4.dp)) {
+                    Box(Modifier.size(48.dp).clip(RoundedCornerShape(14.dp)).background(UI.PrimarySoft), contentAlignment = Alignment.Center) {
+                        Icon(cat.icon, null, tint = UI.Primary, modifier = Modifier.size(26.dp))
+                    }
+                    Spacer(Modifier.width(14.dp))
+                    Column {
+                        Text(L.t(cat.title), fontSize = 28.sp, fontWeight = FontWeight.Bold, color = UI.Text)
+                        Text(L.t(cat.sub), fontSize = 14.sp, color = UI.TextSoft)
+                    }
+                }
+                if (cat == Cat.APPEARANCE) Group(L.t("Görünüm")) {
+                    Column(Modifier.padding(vertical = 10.dp)) {
                         Text("Dil / Language", fontSize = 16.sp, color = UI.Text)
                         Spacer(Modifier.height(8.dp))
                         val act = ctx as? android.app.Activity
@@ -114,12 +151,12 @@ fun SettingsScreen(
                             Pill("English", s.language.value == "en") { if (s.language.value != "en") { s.language.value = "en"; act?.let { com.poyankee.note.MainActivity.restart(it) } } }
                         }
                     }
-                    if (!advanced) Column(Modifier.padding(vertical = 10.dp)) {
+                    Column(Modifier.padding(vertical = 10.dp)) {
                         Text(L.t("Tema"), fontSize = 16.sp, color = UI.Text)
                         Spacer(Modifier.height(8.dp))
                         PillRow { ThemeMode.entries.forEach { m -> Pill(m.title, s.themeValue == m) { s.theme.value = m.name } } }
                     }
-                    if (!advanced) Column(Modifier.padding(vertical = 10.dp)) {
+                    Column(Modifier.padding(vertical = 10.dp)) {
                         Text(L.t("Uygulama rengi"), fontSize = 16.sp, color = UI.Text)
                         Text(L.t("Önerilen renklerden birini seçin ya da + ile kendi renginizi ekleyin (eklediğinize uzun basınca silinir)"), fontSize = 13.sp, color = UI.TextSoft)
                         Spacer(Modifier.height(8.dp))
@@ -132,7 +169,7 @@ fun SettingsScreen(
                             onRemove = { c -> s.removeColor(s.savedAccents, c) },
                         )
                     }
-                    if (advanced) Column(Modifier.padding(vertical = 10.dp)) {
+                    Column(Modifier.padding(vertical = 10.dp)) {
                         Text(L.t("Sayfanın arkası (masa) rengi"), fontSize = 16.sp, color = UI.Text)
                         Spacer(Modifier.height(8.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -146,15 +183,15 @@ fun SettingsScreen(
                             )
                         }
                     }
-                    if (!advanced) Column(Modifier.padding(vertical = 10.dp)) {
+                    Column(Modifier.padding(vertical = 10.dp)) {
                         Text(L.t("Arayüz boyutu"), fontSize = 16.sp, color = UI.Text)
                         Text("Düğmeler, menüler ve yazılar. \"Çok büyük\" görme güçlüğü olanlar için (erişilebilirlik).", fontSize = 13.sp, color = UI.TextSoft)
                         Spacer(Modifier.height(8.dp))
                         PillRow { listOf(L.t("Küçük"), L.t("Normal"), L.t("Büyük"), L.t("Çok büyük")).forEachIndexed { i, t -> Pill(t, s.uiSize.value == i) { s.uiSize.value = i } } }
                     }
-                    if (!advanced) Toggle(L.t("Göz dostu mod"), L.t("Koyu tema ve ekrana hafif sıcak renk filtresi; akşam çalışırken gözü yormaz"), s.eyeComfort.value) { s.eyeComfort.value = it }
-                    if (!advanced) Toggle(L.t("Solak kullanım"), L.t("Araç menüsü sağ tarafa geçer"), s.leftHanded.value) { s.leftHanded.value = it }
-                    if (advanced) Column(Modifier.padding(vertical = 10.dp)) {
+                    Toggle(L.t("Göz dostu mod"), L.t("Koyu tema ve ekrana hafif sıcak renk filtresi; akşam çalışırken gözü yormaz"), s.eyeComfort.value) { s.eyeComfort.value = it }
+                    Toggle(L.t("Solak kullanım"), L.t("Araç menüsü sağ tarafa geçer"), s.leftHanded.value) { s.leftHanded.value = it }
+                    Column(Modifier.padding(vertical = 10.dp)) {
                         Text(L.t("Panelleri varsayılan yerine al"), fontSize = 16.sp, color = UI.Text)
                         Text(L.t("Araç menüsü ve sayfa gezgini taşındıysa"), fontSize = 13.sp, color = UI.TextSoft)
                         Spacer(Modifier.height(6.dp))
@@ -164,12 +201,8 @@ fun SettingsScreen(
                         }
                     }
                 }
-                if (advanced) Group(L.t("Defter görünümü")) {
-                    Toggle(L.t("Notlar listesi defterin yanında"), L.t("Geniş ekranda defter açıkken notlar solda kalır (sekmelerin yanındaki düğmeyle de açılıp kapanır)"), s.splitView.value) { s.splitView.value = it }
-                    Toggle(L.t("Defter başlığı sayfayla birlikte kaysın"), L.t("Kapalıyken başlık üstte sabit durur"), s.headerScroll.value) { s.headerScroll.value = it }
-                }
-                Group(L.t("Kişiselleştirme")) {
-                    if (!advanced) Column(Modifier.padding(vertical = 10.dp)) {
+                if (cat == Cat.PERSONAL || cat == Cat.MENUS) Group(if (cat == Cat.MENUS) L.t("Menüler") else L.t("Kişiselleştirme")) {
+                    if (cat == Cat.PERSONAL) Column(Modifier.padding(vertical = 10.dp)) {
                         Text(L.t("Sol üstteki başlık"), fontSize = 16.sp, color = UI.Text)
                         Spacer(Modifier.height(6.dp))
                         OutlinedTextField(s.appTitle.value, { s.appTitle.value = it.take(24) }, label = { Text(L.t("Başlık")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
@@ -202,7 +235,7 @@ fun SettingsScreen(
                             }
                         }
                     }
-                    if (advanced) Column(Modifier.padding(vertical = 10.dp)) {
+                    if (cat == Cat.PERSONAL) Column(Modifier.padding(vertical = 10.dp)) {
                         Text(L.t("Profil (sol altta)"), fontSize = 16.sp, color = UI.Text)
                         Spacer(Modifier.height(6.dp))
                         OutlinedTextField(s.profileName.value, { s.profileName.value = it.take(32) }, label = { Text(L.t("Ad")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
@@ -211,7 +244,7 @@ fun SettingsScreen(
                         Spacer(Modifier.height(6.dp))
                         OutlinedTextField(s.folderTitle.value, { s.folderTitle.value = it.take(24) }, label = { Text(L.t("Klasörler bölümünün adı (ör. Dersler)")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                     }
-                    if (advanced) Column(Modifier.padding(vertical = 10.dp)) {
+                    if (cat == Cat.MENUS) Column(Modifier.padding(vertical = 10.dp)) {
                         Text(L.t("Ana sayfadaki sol menü"), fontSize = 16.sp, color = UI.Text)
                         Text(L.t("Kutucukla göster / gizle, oklarla sırasını değiştirin"), fontSize = 13.sp, color = UI.TextSoft)
                         ReorderList(
@@ -220,7 +253,7 @@ fun SettingsScreen(
                         ) { s.sideItems.value = it.joinToString(",") }
                         TextButton(onClick = { s.sideItems.value = SideItem.DEFAULT }) { Text(L.t("Varsayılana dön")) }
                     }
-                    if (advanced) Column(Modifier.padding(vertical = 10.dp)) {
+                    if (cat == Cat.MENUS) Column(Modifier.padding(vertical = 10.dp)) {
                         Text(L.t("Defterdeki araç listesi"), fontSize = 16.sp, color = UI.Text)
                         Text(L.t("Kutucukla göster / gizle, oklarla sırasını değiştirin"), fontSize = 13.sp, color = UI.TextSoft)
                         ReorderList(
@@ -229,24 +262,33 @@ fun SettingsScreen(
                         ) { s.railItems.value = it.joinToString(",") }
                         TextButton(onClick = { s.railItems.value = com.poyankee.note.ui.RailItem.DEFAULT }) { Text(L.t("Varsayılana dön")) }
                     }
+                    if (cat == Cat.MENUS) Column(Modifier.padding(vertical = 10.dp)) {
+                        Text(L.t("Araç listesi daraltılınca görünenler"), fontSize = 16.sp, color = UI.Text)
+                        Text(L.t("Daralt düğmesine basınca yalnızca bunlar kalır (renkler dahil)"), fontSize = 13.sp, color = UI.TextSoft)
+                        ReorderList(
+                            all = com.poyankee.note.ui.RailItem.entries.map { it.name to L.t(it.title) },
+                            chosen = com.poyankee.note.ui.RailItem.parse(s.railCollapsed.value, com.poyankee.note.ui.RailItem.COLLAPSED_DEFAULT).map { it.name },
+                        ) { s.railCollapsed.value = it.joinToString(",") }
+                        TextButton(onClick = { s.railCollapsed.value = com.poyankee.note.ui.RailItem.COLLAPSED_DEFAULT }) { Text(L.t("Varsayılana dön")) }
+                    }
                 }
-                Group(L.t("Kalem ve el")) {
-                    if (!advanced) Toggle(L.t("Sadece kalemle çiz"), L.t("El ve avuç dokunuşları asla çizim yapmaz"), s.penOnly.value) { s.penOnly.value = it }
-                    if (!advanced) Toggle(L.t("Parmakla kaydır / yakınlaştır"), L.t("Kapalıysa parmak dokunuşları tamamen yok sayılır"), s.fingerGestures.value) { s.fingerGestures.value = it }
-                    if (advanced) Toggle(L.t("İki parmakla dokun = geri al"), L.t("Üç parmakla dokun = yinele"), s.twoFingerUndo.value) { s.twoFingerUndo.value = it }
-                    if (advanced) SliderRow(L.t("Avuç algılama"), when {
+                if (cat == Cat.PEN || cat == Cat.ADVANCED) Group(L.t("Kalem ve el")) {
+                    if (cat == Cat.PEN) Toggle(L.t("Sadece kalemle çiz"), L.t("El ve avuç dokunuşları asla çizim yapmaz"), s.penOnly.value) { s.penOnly.value = it }
+                    if (cat == Cat.PEN) Toggle(L.t("Parmakla kaydır / yakınlaştır"), L.t("Kapalıysa parmak dokunuşları tamamen yok sayılır"), s.fingerGestures.value) { s.fingerGestures.value = it }
+                    if (cat == Cat.ADVANCED) Toggle(L.t("İki parmakla dokun = geri al"), L.t("Üç parmakla dokun = yinele"), s.twoFingerUndo.value) { s.twoFingerUndo.value = it }
+                    if (cat == Cat.ADVANCED) SliderRow(L.t("Avuç algılama"), when {
                         s.palmSizeDp.value < 50 -> L.t("çok hassas"); s.palmSizeDp.value < 80 -> "normal"; else -> L.t("az hassas")
                     }, s.palmSizeDp.value.toFloat(), 30f..140f) { s.palmSizeDp.value = it.roundToInt() }
-                    if (advanced) Text(L.t("Elin yanlışlıkla kaydırıyorsa sola (daha hassas) çekin."), fontSize = 12.sp, color = UI.TextFaint)
-                    if (advanced) SliderRow(L.t("Kalem kalkınca parmakları yok say"), "${s.palmHoldMs.value} ms", s.palmHoldMs.value.toFloat(), 0f..1200f) {
+                    if (cat == Cat.ADVANCED) Text(L.t("Elin yanlışlıkla kaydırıyorsa sola (daha hassas) çekin."), fontSize = 12.sp, color = UI.TextFaint)
+                    if (cat == Cat.ADVANCED) SliderRow(L.t("Kalem kalkınca parmakları yok say"), "${s.palmHoldMs.value} ms", s.palmHoldMs.value.toFloat(), 0f..1200f) {
                         s.palmHoldMs.value = (it / 50).roundToInt() * 50
                     }
-                    if (advanced) Column(Modifier.padding(vertical = 10.dp)) {
+                    if (cat == Cat.ADVANCED) Column(Modifier.padding(vertical = 10.dp)) {
                         Text(L.t("Kalem yan tuşu (basılı tutarken)"), fontSize = 16.sp, color = UI.Text)
                         Spacer(Modifier.height(8.dp))
                         PillRow { ButtonAction.entries.forEach { a -> Pill(a.title, s.buttonActionValue == a) { s.buttonAction.value = a.name } } }
                     }
-                    if (advanced) Column(Modifier.padding(vertical = 10.dp)) {
+                    if (cat == Cat.ADVANCED) Column(Modifier.padding(vertical = 10.dp)) {
                         Text(L.t("Kalemde çift dokunuş / tuşa basma"), fontSize = 16.sp, color = UI.Text)
                         Text(L.t("Kaleminiz çift dokunuşu bir tuş olarak gönderiyorsa burada ne yapacağını seçin."), fontSize = 13.sp, color = UI.TextSoft)
                         Spacer(Modifier.height(8.dp))
@@ -270,19 +312,19 @@ fun SettingsScreen(
                         }
                     }
                 }
-                Group(L.t("Yazı")) {
-                    if (!advanced) Toggle(L.t("Basınç duyarlılığı"), L.t("Kalemi bastırdıkça çizgi kalınlaşır"), s.pressure.value) { s.pressure.value = it }
-                    if (!advanced) Toggle(L.t("Yazarken otomatik yeni sayfa"), L.t("Son sayfanın alt kısmına yazınca yeni düz sayfa eklenir"), s.autoNewPage.value) { s.autoNewPage.value = it }
-                    if (!advanced) Toggle(L.t("Yakınlaştırma kilidi"), L.t("İki parmak sayfayı yakınlaştırmaz, sadece kaydırır"), s.zoomLock.value) { s.zoomLock.value = it }
-                    if (advanced) Toggle(L.t("Silgiden kaleme otomatik dön"), L.t("Silgiyle sildikten sonra önceki araca geri geçer"), s.eraserReturn.value) { s.eraserReturn.value = it }
-                    if (advanced) SliderRow(L.t("Kalem basıncı eğrisi"), listOf(L.t("Çok yumuşak"), L.t("Yumuşak"), L.t("Normal"), L.t("Sert"), L.t("Çok sert"))[s.pressureCurve.value.coerceIn(0, 4)],
+                if (cat == Cat.PEN || cat == Cat.ADVANCED) Group(L.t("Yazı")) {
+                    if (cat == Cat.PEN) Toggle(L.t("Basınç duyarlılığı"), L.t("Kalemi bastırdıkça çizgi kalınlaşır"), s.pressure.value) { s.pressure.value = it }
+                    if (cat == Cat.PEN) Toggle(L.t("Yazarken otomatik yeni sayfa"), L.t("Son sayfanın alt kısmına yazınca yeni düz sayfa eklenir"), s.autoNewPage.value) { s.autoNewPage.value = it }
+                    if (cat == Cat.PEN) Toggle(L.t("Yakınlaştırma kilidi"), L.t("İki parmak sayfayı yakınlaştırmaz, sadece kaydırır"), s.zoomLock.value) { s.zoomLock.value = it }
+                    if (cat == Cat.ADVANCED) Toggle(L.t("Silgiden kaleme otomatik dön"), L.t("Silgiyle sildikten sonra önceki araca geri geçer"), s.eraserReturn.value) { s.eraserReturn.value = it }
+                    if (cat == Cat.ADVANCED) SliderRow(L.t("Kalem basıncı eğrisi"), listOf(L.t("Çok yumuşak"), L.t("Yumuşak"), L.t("Normal"), L.t("Sert"), L.t("Çok sert"))[s.pressureCurve.value.coerceIn(0, 4)],
                         s.pressureCurve.value.toFloat(), 0f..4f, 3) { s.pressureCurve.value = it.roundToInt() }
-                    if (advanced) Toggle(L.t("PDF'te metni vurgula"), L.t("Fosforlu kalem PDF yazısının üzerinde satırlara oturur"), s.textHighlight.value) { s.textHighlight.value = it }
-                    if (advanced) Toggle(L.t("Gecikme azaltma (tahmin)"), L.t("Çizgi kalemin ucunu daha yakından takip eder"), s.prediction.value) { s.prediction.value = it }
-                    if (advanced) SliderRow(L.t("Çizgi yumuşatma"), listOf(L.t("Kapalı"), L.t("Az"), L.t("Orta"), L.t("Çok"), L.t("En çok"))[s.smoothing.value.coerceIn(0, 4)],
+                    if (cat == Cat.ADVANCED) Toggle(L.t("PDF'te metni vurgula"), L.t("Fosforlu kalem PDF yazısının üzerinde satırlara oturur"), s.textHighlight.value) { s.textHighlight.value = it }
+                    if (cat == Cat.ADVANCED) Toggle(L.t("Gecikme azaltma (tahmin)"), L.t("Çizgi kalemin ucunu daha yakından takip eder"), s.prediction.value) { s.prediction.value = it }
+                    if (cat == Cat.ADVANCED) SliderRow(L.t("Çizgi yumuşatma"), listOf(L.t("Kapalı"), L.t("Az"), L.t("Orta"), L.t("Çok"), L.t("En çok"))[s.smoothing.value.coerceIn(0, 4)],
                         s.smoothing.value.toFloat(), 0f..4f, 3) { s.smoothing.value = it.roundToInt() }
                 }
-                if (advanced) Group(L.t("Sayfalar")) {
+                if (cat == Cat.PAGES) Group(L.t("Sayfalar")) {
                     Column(Modifier.padding(vertical = 10.dp)) {
                         Text(L.t("Yeni eklenen sayfa"), fontSize = 16.sp, color = UI.Text)
                         Spacer(Modifier.height(8.dp))
@@ -307,7 +349,7 @@ fun SettingsScreen(
                         }
                     }
                 }
-                if (advanced) Group(L.t("Geometri")) {
+                if (cat == Cat.GEOMETRY) Group(L.t("Geometri")) {
                     Toggle(L.t("Çizip bekleyince şekle dönüştür"), L.t("Kalemi çizginin sonunda bir an bekletin"), s.shapeHold.value) { s.shapeHold.value = it }
                     SliderRow(L.t("Bekleme süresi"), "${s.holdMs.value} ms", s.holdMs.value.toFloat(), 300f..1200f) { s.holdMs.value = (it / 50).roundToInt() * 50 }
                     Toggle(L.t("Izgaraya ve köşelere yapıştır"), L.t("Şekil köşeleri desene ve diğer köşelere yapışır"), s.gridSnap.value) { s.gridSnap.value = it }
@@ -315,7 +357,7 @@ fun SettingsScreen(
                     Toggle(L.t("Köşelere harf (A, B, C)"), L.t("Çokgen çizince köşelere otomatik harf"), s.autoLetters.value) { s.autoLetters.value = it }
                     Toggle(L.t("Ölçüleri yaz"), L.t("Doğru parçası uzunluğu ve açı dereceleri sayfada kalır"), s.autoMeasures.value) { s.autoMeasures.value = it }
                 }
-                if (advanced) Group(L.t("Ders anlatımı")) {
+                if (cat == Cat.TEACH) Group(L.t("Ders anlatımı")) {
                     SliderRow(L.t("Lazer izinin kaybolma süresi"), "${"%.1f".format(s.laserMs.value / 1000f)} sn", s.laserMs.value.toFloat(), 500f..5000f) {
                         s.laserMs.value = (it / 100).roundToInt() * 100
                     }
@@ -325,7 +367,7 @@ fun SettingsScreen(
                     Toggle(L.t("İkinci ekran (projeksiyon / HDMI)"), L.t("Harici ekranda sadece temiz sayfa görünür, araçlar tablette kalır"), s.secondScreen.value) { s.secondScreen.value = it }
                     Toggle(L.t("Ders kaydında mikrofon"), L.t("Video kaydına sesinizi de ekler"), s.recordAudio.value) { s.recordAudio.value = it }
                 }
-                if (!advanced) Group(L.t("Yedekleme")) {
+                if (cat == Cat.DATA) Group(L.t("Yedekleme")) {
                     Column(Modifier.padding(vertical = 10.dp)) {
                         Text(L.t("Tüm defterleriniz tek bir .zip dosyasına yedeklenir. Dosyayı Google Drive'a veya bilgisayara kaydedebilirsiniz."),
                             fontSize = 13.sp, color = UI.TextSoft)
@@ -352,7 +394,7 @@ fun SettingsScreen(
                         )
                     }
                 }
-                if (advanced) Group(L.t("Depolama")) {
+                if (cat == Cat.DATA) Group(L.t("Depolama")) {
                     val u = usage
                     Column(Modifier.padding(vertical = 10.dp)) {
                         if (u == null) Text(L.t("Hesaplanıyor…"), fontSize = 13.sp, color = UI.TextSoft)
@@ -383,7 +425,7 @@ fun SettingsScreen(
                         Text("Çöp kutusu ana sayfadaki \"Çöp kutusu\" bölümünden boşaltılır.", fontSize = 12.sp, color = UI.TextFaint, modifier = Modifier.padding(top = 6.dp))
                     }
                 }
-                if (advanced) Group(L.t("Hata kayıtları")) {
+                if (cat == Cat.DATA) Group(L.t("Hata kayıtları")) {
                     Column(Modifier.padding(vertical = 10.dp)) {
                         Text(
                             if (crashCount == 0) L.t("Kayıtlı hata yok.") else "$crashCount hata kaydı var. Bir sorun yaşadıysanız bu kaydı paylaşarak bildirebilirsiniz; hiçbir şey kendiliğinden gönderilmez.",
@@ -402,20 +444,7 @@ fun SettingsScreen(
                         }
                     }
                 }
-                if (!advanced) Row(
-                    Modifier.fillMaxWidth().padding(vertical = 10.dp).clip(RoundedCornerShape(16.dp)).background(UI.Surface)
-                        .border(1.dp, UI.Border, RoundedCornerShape(16.dp)).clickable { advanced = true }.padding(horizontal = 18.dp, vertical = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(Icons.Rounded.Tune, null, tint = UI.Primary)
-                    Spacer(Modifier.width(14.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(L.t("Gelişmiş ayarlar"), fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = UI.Text)
-                        Text(L.t("Kalem ayrıntıları, sayfa, geometri, ders anlatımı, depolama, menüleri düzenleme"), fontSize = 13.sp, color = UI.TextSoft)
-                    }
-                    Icon(Icons.Rounded.ChevronRight, null, tint = UI.TextSoft)
-                }
-                if (!advanced) Group(L.t("Hakkında")) {
+                if (cat == Cat.ABOUT) Group(L.t("Hakkında")) {
                     Column(Modifier.padding(vertical = 10.dp)) {
                         val ver = try { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName } catch (_: Exception) { "" }
                         Text("Note $ver", fontSize = 16.sp, color = UI.Text)
@@ -437,12 +466,15 @@ fun SettingsScreen(
                         }
                     }
                 }
-                Text(
+                if (cat == Cat.TEACH) Text(
                     L.t("Not: Kablosuz yansıtma tüm ekranı gösterir; temiz görüntü için odak modunu (menüler gizli) kullanın."),
                     fontSize = 13.sp, color = UI.TextSoft, modifier = Modifier.padding(vertical = 16.dp),
                 )
+                Spacer(Modifier.height(40.dp))
             }
         }
+        }
+    }
     }
 
     if (penTest) PenTestDialog(s) { penTest = false }
@@ -476,9 +508,43 @@ fun SettingsScreen(
 
 @Composable
 private fun Group(title: String, content: @Composable ColumnScope.() -> Unit) {
-    SectionTitle(title)
-    Surface(shape = RoundedCornerShape(16.dp), color = UI.Surface, border = BorderStroke(1.dp, UI.Border), modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(horizontal = 18.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(0.dp), content = content)
+    Text(title, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = UI.TextSoft, modifier = Modifier.padding(start = 6.dp, top = 22.dp, bottom = 8.dp))
+    Surface(
+        shape = RoundedCornerShape(20.dp), color = UI.Surface, shadowElevation = 2.dp,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(0.dp), content = content)
+    }
+}
+
+/** Ayar kategorileri (soldaki liste). */
+private enum class Cat(val title: String, val sub: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
+    APPEARANCE("Görünüm", "Dil, tema, renkler, boyut", Icons.Rounded.Palette),
+    PERSONAL("Kişiselleştirme", "Başlık, simge, görsel, profil", Icons.Rounded.Person),
+    MENUS("Menüler", "Sol menü ve araç listesi", Icons.Rounded.ViewSidebar),
+    PEN("Kalem ve yazı", "Çizim, parmak, yakınlaştırma", Icons.Rounded.Edit),
+    PAGES("Sayfalar", "Yeni sayfa, sayfa no, çözüm katmanı", Icons.Rounded.Description),
+    GEOMETRY("Geometri", "Şekle dönüştürme, yapıştırma, ölçüler", Icons.Rounded.Category),
+    TEACH("Ders anlatımı", "Lazer, projeksiyon, kayıt", Icons.Rounded.School),
+    DATA("Yedekleme ve depolama", "Yedek, alan, hata kayıtları", Icons.Rounded.Backup),
+    ADVANCED("Gelişmiş", "Kalem tuşları, avuç, basınç, yumuşatma", Icons.Rounded.Tune),
+    ABOUT("Hakkında", "Sürüm, gizlilik, lisanslar", Icons.Rounded.Info),
+}
+
+@Composable
+private fun CatItem(c: Cat, selected: Boolean, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = 2.dp).clip(RoundedCornerShape(16.dp))
+            .background(if (selected) UI.PrimarySoft else androidx.compose.ui.graphics.Color.Transparent)
+            .clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(c.icon, null, tint = if (selected) UI.Primary else UI.Text, modifier = Modifier.size(24.dp))
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            Text(L.t(c.title), fontSize = 16.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium, color = UI.Text, maxLines = 1)
+            Text(L.t(c.sub), fontSize = 12.sp, color = UI.TextSoft, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        }
     }
 }
 

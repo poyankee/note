@@ -335,8 +335,10 @@ fun PaletteDialog(ctl: EditorController, highlighter: Boolean, onDismiss: () -> 
                     }
                 }
                 SectionTitle(L.t("Özel renk"))
-                HsvPicker(current) { c ->
-                    if (highlighter) s.setHighlighterColor(slot, c) else s.setPaletteColor(slot, c)
+                androidx.compose.runtime.key(slot) {
+                    HsvPicker(current) { c ->
+                        if (highlighter) s.setHighlighterColor(slot, c) else s.setPaletteColor(slot, c)
+                    }
                 }
             }
         },
@@ -345,26 +347,10 @@ fun PaletteDialog(ctl: EditorController, highlighter: Boolean, onDismiss: () -> 
     )
 }
 
-/** Ton / doygunluk / parlaklık kaydırıcılarıyla renk seçici. */
+/** Renk seçici: renk topu (kaydırarak) + parlaklık. */
 @Composable
 fun HsvPicker(color: Int, onChange: (Int) -> Unit) {
-    val hsv = remember(color) { FloatArray(3).also { android.graphics.Color.colorToHSV(color, it) } }
-    var h by remember(color) { mutableFloatStateOf(hsv[0]) }
-    var sat by remember(color) { mutableFloatStateOf(hsv[1]) }
-    var v by remember(color) { mutableFloatStateOf(hsv[2]) }
-    fun out() = android.graphics.Color.HSVToColor(floatArrayOf(h, sat, v))
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(48.dp).clip(CircleShape).background(Color(out())).border(1.dp, UI.Border, CircleShape))
-        Spacer(Modifier.width(12.dp))
-        Text("#" + String.format("%06X", out() and 0xFFFFFF), color = UI.TextSoft, fontFamily = FontFamily.Monospace)
-    }
-    val hues = (0..6).map { Color(android.graphics.Color.HSVToColor(floatArrayOf(it * 60f, 1f, 1f))) }
-    Box(Modifier.fillMaxWidth().height(10.dp).padding(horizontal = 10.dp).clip(RoundedCornerShape(5.dp)).background(Brush.horizontalGradient(hues)))
-    Slider(h, { h = it; onChange(out()) }, valueRange = 0f..360f, colors = SliderDefaults.colors(thumbColor = Color(android.graphics.Color.HSVToColor(floatArrayOf(h, 1f, 1f))), activeTrackColor = Color.Transparent, inactiveTrackColor = Color.Transparent))
-    Text(L.t("Doygunluk"), fontSize = 12.sp, color = UI.TextSoft)
-    Slider(sat, { sat = it; onChange(out()) }, colors = SliderDefaults.colors(thumbColor = UI.Primary, activeTrackColor = Color(out())))
-    Text(L.t("Parlaklık"), fontSize = 12.sp, color = UI.TextSoft)
-    Slider(v, { v = it; onChange(out()) }, colors = SliderDefaults.colors(thumbColor = UI.Primary, activeTrackColor = Color(out())))
+    ColorWheel(color, Modifier.fillMaxWidth().padding(horizontal = 24.dp), onChange)
 }
 
 /* ======================= metin / yapışkan not ======================= */

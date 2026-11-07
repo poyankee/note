@@ -21,6 +21,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.core.content.FileProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -543,6 +544,13 @@ class SmokeTest {
         main { st.dockHidden.value = true }
         shot("18b-araclar-gizli")
         main { st.dockHidden.value = false }
+        rule.onNodeWithTag("color-wheel").performScrollTo().performClick()
+        rule.waitForIdle()
+        shot("18c-renk-topu")
+        rule.onNodeWithText("Tamam").performClick()
+        rule.onNodeWithTag("dock-collapse").performScrollTo().performClick()
+        shot("18d-arac-daraltilmis")
+        rule.onNodeWithTag("dock-collapse").performScrollTo().performClick()
         main { rule.activity.onBackPressedDispatcher.onBackPressed() }
         rule.waitUntil(5000) { rule.onAllNodesWithTag("add").fetchSemanticsNodes().isNotEmpty() }
         main { st.libraryView.value = "LIST" }
@@ -564,9 +572,25 @@ class SmokeTest {
         main { todos.toggle(t0) }
         assertTrue(main { todos.items.first { it.id == t0.id }.done })
         assertEquals(t0.copy(done = true), todos.decode(todos.encode(t0.copy(done = true))))
-        rule.onAllNodesWithText("Yapılacaklar")[0].performClick()
+        rule.onNodeWithContentDescription("Yapılacaklar").performClick()
         shot("21-yapilacaklar")
         rule.onNodeWithContentDescription("Kapat").performClick()
+
+        // hızlı notlar: tam sayfa
+        rule.onNodeWithContentDescription("Hızlı Notlar").performClick()
+        rule.waitUntil(5000) { rule.onAllNodesWithTag("quick-new").fetchSemanticsNodes().isNotEmpty() }
+        shot("21d-hizli-notlar")
+        main { rule.activity.onBackPressedDispatcher.onBackPressed() }
+        rule.waitUntil(5000) { rule.onAllNodesWithTag("quick-new").fetchSemanticsNodes().isEmpty() }
+
+        // ayarlar: kategoriler
+        rule.onAllNodesWithText("Ayarlar")[0].performClick()
+        rule.waitUntil(5000) { rule.onAllNodesWithText("Kalem ve yazı").fetchSemanticsNodes().isNotEmpty() }
+        shot("35-ayarlar")
+        rule.onAllNodesWithText("Menüler")[0].performClick()
+        shot("36-ayarlar-menuler")
+        main { rule.activity.onBackPressedDispatcher.onBackPressed() }
+        rule.waitUntil(5000) { rule.onAllNodesWithTag("add").fetchSemanticsNodes().isNotEmpty() }
 
         // yanlış defteri galerisi
         val store0 = com.poyankee.note.data.Store(rule.activity)

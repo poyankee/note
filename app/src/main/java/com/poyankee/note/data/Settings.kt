@@ -125,7 +125,7 @@ class Settings(context: Context) {
     val profileName = str("profileName", "")
     val profileSubtitle = str("profileSubtitle", "")
     val folderTitle = str("folderTitle", "")
-    val sideItems = str("sideItems", "ALL,FAVORITES,QUICK,WRONG,TODO,TRASH")
+    val sideItems = str("sideItems", "ALL,FAVORITES,WRONG,TRASH")
     val savedAccents = str("savedAccents", "")
     val savedDesks = str("savedDesks", "")
     /** Arayüz stili: CLEAN (Sade), VIVID (Canlı), DARK (Koyu). */
@@ -136,6 +136,8 @@ class Settings(context: Context) {
     val railItems = str("railItems", "PEN,ERASER,HIGHLIGHTER,SHAPES,LASSO,IMAGE,TEXT,GEOMETRY,COLORS")
     /** Sol menünün üstündeki görsel (Dağlar, Deniz...). */
     val sideArt = str("sideArt", "MOUNTAIN")
+    /** Araç menüsü daraltılınca görünenler (virgülle). */
+    val railCollapsed = str("railCollapsed", "PEN,ERASER,COLORS")
     /** Defter başlığı sabit değil, ilk sayfanın üstünde sayfayla birlikte kaysın (Gelişmiş). */
     val headerScroll = bool("headerScroll", false)
     /** Geniş ekranda defter açıkken notlar listesi solda kalsın. */
@@ -187,16 +189,19 @@ class Settings(context: Context) {
     val themeValue get() = try { ThemeMode.valueOf(theme.value) } catch (_: Exception) { ThemeMode.SYSTEM }
     /** Yeni tasarıma geçiş (bir kez): eski varsayılanları yenileriyle değiştirir; kullanıcının seçtikleri korunur. */
     fun migrateDesign() {
-        if (designVersion.value >= 3) return
+        if (designVersion.value >= 4) return
+        // hızlı notlar ve yapılacaklar artık arama kutusunun yanında; çöp kutusu "Sistem" başlığı altında
+        if (sideItems.value == "ALL,FAVORITES,QUICK,WRONG,TODO,TRASH") sideItems.value = "ALL,FAVORITES,WRONG,TRASH"
+        if (designVersion.value >= 3) { designVersion.value = 4; return }
         // defter tam ekran açılsın (notlar yanda değil); ☰ ile istenirse açılır
         splitView.value = false
-        if (designVersion.value >= 2) { designVersion.value = 3; return }
+        if (designVersion.value >= 2) { designVersion.value = 4; return }
         if (customAccent.value == 0xFFF5A000.toInt()) customAccent.value = 0xFF1F5C99.toInt()
         if (libraryView.value == LibraryView.LIST.name) libraryView.value = LibraryView.MEDIUM.name
         if (appTitle.value == "Note") appTitle.value = "Note+"
         if (appSubtitle.value == "Not defterim") appSubtitle.value = ""
         if (railItems.value == "UNDO,REDO,PEN,HIGHLIGHTER,ERASER,LASSO,GEOMETRY,TEXT,RULER,PAGES,COLORS") railItems.value = "PEN,ERASER,HIGHLIGHTER,SHAPES,LASSO,IMAGE,TEXT,GEOMETRY,COLORS"
-        designVersion.value = 3
+        designVersion.value = 4
     }
 
     val libraryViewValue get() = try { LibraryView.valueOf(libraryView.value) } catch (_: Exception) { LibraryView.MEDIUM }
