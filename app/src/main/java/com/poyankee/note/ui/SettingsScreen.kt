@@ -37,6 +37,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -101,40 +102,6 @@ fun SettingsScreen(
             Column(Modifier.widthIn(max = 720.dp).fillMaxWidth().padding(horizontal = 24.dp, vertical = 12.dp)) {
                 Group(L.t("Görünüm")) {
                     Column(Modifier.padding(vertical = 10.dp)) {
-                        Text(L.t("Arayüz stili"), fontSize = 16.sp, color = UI.Text)
-                        Text(L.t("Sade: ferah ve sakin · Canlı: renkli çubuklar · Koyu: koyu masa, cam görünümlü araçlar"), fontSize = 13.sp, color = UI.TextSoft)
-                        Spacer(Modifier.height(10.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            com.poyankee.note.ui.UiStyle.entries.forEach { st ->
-                                val sel = UI.style == st
-                                Column(
-                                    Modifier.clip(RoundedCornerShape(14.dp)).border(if (sel) 2.5.dp else 1.dp, if (sel) UI.Primary else UI.Border, RoundedCornerShape(14.dp))
-                                        .clickable { s.uiStyle.value = st.name }.padding(8.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                ) {
-                                    StylePreview(st)
-                                    Text(L.t(st.title), fontSize = 13.sp, fontWeight = if (sel) FontWeight.SemiBold else FontWeight.Normal, color = if (sel) UI.Primary else UI.Text, modifier = Modifier.padding(top = 6.dp))
-                                }
-                            }
-                        }
-                    }
-                    Column(Modifier.padding(vertical = 10.dp)) {
-                        Text(L.t("Araç listesi"), fontSize = 16.sp, color = UI.Text)
-                        Text(L.t("Defterde solda dikey duran listede nelerin olacağını seçin"), fontSize = 13.sp, color = UI.TextSoft)
-                        Spacer(Modifier.height(8.dp))
-                        val chosen = com.poyankee.note.ui.RailItem.parse(s.railItems.value)
-                        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            com.poyankee.note.ui.RailItem.entries.forEach { it ->
-                                val on = it in chosen
-                                Pill((if (on) "✓ " else "") + L.t(it.title), on) {
-                                    val next = if (on) chosen - it else chosen + it
-                                    s.railItems.value = com.poyankee.note.ui.RailItem.entries.filter { e -> e in next }.joinToString(",") { e -> e.name }
-                                }
-                            }
-                        }
-                        TextButton(onClick = { s.railItems.value = com.poyankee.note.ui.RailItem.DEFAULT }) { Text(L.t("Varsayılana dön")) }
-                    }
-                    Column(Modifier.padding(vertical = 10.dp)) {
                         Text("Dil / Language", fontSize = 16.sp, color = UI.Text)
                         Spacer(Modifier.height(8.dp))
                         val act = ctx as? android.app.Activity
@@ -149,34 +116,13 @@ fun SettingsScreen(
                         PillRow { ThemeMode.entries.forEach { m -> Pill(m.title, s.themeValue == m) { s.theme.value = m.name } } }
                     }
                     Column(Modifier.padding(vertical = 10.dp)) {
-                        Text(L.t("Renk teması"), fontSize = 16.sp, color = UI.Text)
-                        Spacer(Modifier.height(8.dp))
-                        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Palette.entries.filter { it != Palette.CUSTOM }.forEach { pal ->
-                                val sel = UI.palette == pal
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    modifier = Modifier.clip(RoundedCornerShape(10.dp)).clickable { s.colorTheme.value = pal.name }.padding(4.dp),
-                                ) {
-                                    Box(
-                                        Modifier.size(38.dp).clip(androidx.compose.foundation.shape.CircleShape)
-                                            .border(if (sel) 3.dp else 1.dp, if (sel) UI.Text else UI.Border, androidx.compose.foundation.shape.CircleShape)
-                                            .padding(if (sel) 5.dp else 0.dp).clip(androidx.compose.foundation.shape.CircleShape)
-                                            .background(androidx.compose.ui.graphics.Color(pal.c[if (UI.dark) 1 else 0])),
-                                    )
-                                    Text(pal.title, fontSize = 11.sp, color = if (sel) UI.Text else UI.TextSoft, modifier = Modifier.padding(top = 4.dp))
-                                }
-                            }
-                        }
-                    }
-                    Column(Modifier.padding(vertical = 10.dp)) {
-                        Text(L.t("Kendi tema renginiz"), fontSize = 16.sp, color = UI.Text)
+                        Text(L.t("Uygulama rengi"), fontSize = 16.sp, color = UI.Text)
                         Text(L.t("Önerilen renklerden birini seçin ya da + ile kendi renginizi ekleyin (eklediğinize uzun basınca silinir)"), fontSize = 13.sp, color = UI.TextSoft)
                         Spacer(Modifier.height(8.dp))
                         ColorChoiceRow(
-                            presets = listOf(0xFF7C3AED, 0xFF0EA5E9, 0xFF10B981, 0xFFF43F5E, 0xFFF59E0B, 0xFF334155).map { it.toInt() },
+                            presets = ACCENT_PRESETS,
                             saved = s.savedAccentList(),
-                            selected = if (UI.palette == Palette.CUSTOM) s.customAccent.value else 0,
+                            selected = s.customAccent.value,
                             onPick = { c -> s.customAccent.value = c; s.colorTheme.value = Palette.CUSTOM.name },
                             onAdd = { c -> s.addColor(s.savedAccents, c) },
                             onRemove = { c -> s.removeColor(s.savedAccents, c) },
@@ -212,6 +158,55 @@ fun SettingsScreen(
                             s.dockX.value = 0f; s.dockY.value = 0f; s.navX.value = 0f; s.navY.value = 0f; s.presX.value = 0f; s.presY.value = 0f
                             s.dockCollapsed.value = false
                         }
+                    }
+                }
+                Group(L.t("Kişiselleştirme")) {
+                    Column(Modifier.padding(vertical = 10.dp)) {
+                        Text(L.t("Sol üstteki başlık"), fontSize = 16.sp, color = UI.Text)
+                        Spacer(Modifier.height(6.dp))
+                        OutlinedTextField(s.appTitle.value, { s.appTitle.value = it.take(24) }, label = { Text(L.t("Başlık")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                        Spacer(Modifier.height(6.dp))
+                        OutlinedTextField(s.appSubtitle.value, { s.appSubtitle.value = it.take(40) }, label = { Text(L.t("Alt başlık")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                        Spacer(Modifier.height(10.dp))
+                        Text(L.t("Simge"), fontSize = 14.sp, color = UI.TextSoft)
+                        Spacer(Modifier.height(6.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            AppIcon.entries.forEach { ic ->
+                                val sel = s.appIcon.value == ic.name
+                                Box(
+                                    Modifier.size(46.dp).clip(RoundedCornerShape(14.dp)).background(if (sel) UI.Primary else UI.SurfaceAlt)
+                                        .clickable { s.appIcon.value = ic.name },
+                                    contentAlignment = Alignment.Center,
+                                ) { Icon(ic.icon, L.t(ic.title), tint = if (sel) androidx.compose.ui.graphics.Color.White else UI.TextSoft) }
+                            }
+                        }
+                    }
+                    Column(Modifier.padding(vertical = 10.dp)) {
+                        Text(L.t("Profil (sol altta)"), fontSize = 16.sp, color = UI.Text)
+                        Spacer(Modifier.height(6.dp))
+                        OutlinedTextField(s.profileName.value, { s.profileName.value = it.take(32) }, label = { Text(L.t("Ad")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                        Spacer(Modifier.height(6.dp))
+                        OutlinedTextField(s.profileSubtitle.value, { s.profileSubtitle.value = it.take(40) }, label = { Text(L.t("Açıklama (ör. Matematik öğretmeni)")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                        Spacer(Modifier.height(6.dp))
+                        OutlinedTextField(s.folderTitle.value, { s.folderTitle.value = it.take(24) }, label = { Text(L.t("Klasörler bölümünün adı (ör. Dersler)")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    }
+                    Column(Modifier.padding(vertical = 10.dp)) {
+                        Text(L.t("Ana sayfadaki sol menü"), fontSize = 16.sp, color = UI.Text)
+                        Text(L.t("Kutucukla göster / gizle, oklarla sırasını değiştirin"), fontSize = 13.sp, color = UI.TextSoft)
+                        ReorderList(
+                            all = SideItem.entries.map { it.name to L.t(it.title) },
+                            chosen = SideItem.parse(s.sideItems.value).map { it.name },
+                        ) { s.sideItems.value = it.joinToString(",") }
+                        TextButton(onClick = { s.sideItems.value = SideItem.DEFAULT }) { Text(L.t("Varsayılana dön")) }
+                    }
+                    Column(Modifier.padding(vertical = 10.dp)) {
+                        Text(L.t("Defterdeki araç listesi"), fontSize = 16.sp, color = UI.Text)
+                        Text(L.t("Kutucukla göster / gizle, oklarla sırasını değiştirin"), fontSize = 13.sp, color = UI.TextSoft)
+                        ReorderList(
+                            all = com.poyankee.note.ui.RailItem.entries.map { it.name to L.t(it.title) },
+                            chosen = com.poyankee.note.ui.RailItem.parse(s.railItems.value).map { it.name },
+                        ) { s.railItems.value = it.joinToString(",") }
+                        TextButton(onClick = { s.railItems.value = com.poyankee.note.ui.RailItem.DEFAULT }) { Text(L.t("Varsayılana dön")) }
                     }
                 }
                 Group(L.t("Kalem ve el")) {
@@ -391,6 +386,7 @@ fun SettingsScreen(
                         val ver = try { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName } catch (_: Exception) { "" }
                         Text("Note $ver", fontSize = 16.sp, color = UI.Text)
                         Text(L.t("Öğretmenler ve öğrenciler için ücretsiz, reklamsız, internete bağlanmayan not uygulaması."), fontSize = 13.sp, color = UI.TextSoft)
+                        Text(L.t("Geliştiren") + ": Poyraz DOĞAN", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = UI.Text, modifier = Modifier.padding(top = 6.dp))
                         Spacer(Modifier.height(10.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Pill(L.t("Gizlilik politikası"), false) { info = L.t("Gizlilik politikası") to PRIVACY_TEXT }
@@ -475,16 +471,26 @@ private fun SliderRow(title: String, valueText: String, value: Float, range: Clo
     }
 }
 
-/** Arayüz stilinin küçük önizlemesi: üst çubuk, araçlar ve sayfa. */
+/** Seçilebilir ve sırası değiştirilebilir liste: kutucuk = göster/gizle, ↑ ↓ = sıra. */
 @Composable
-private fun StylePreview(st: com.poyankee.note.ui.UiStyle) {
-    val bar = when (st) { com.poyankee.note.ui.UiStyle.CLEAN -> androidx.compose.ui.graphics.Color.White; com.poyankee.note.ui.UiStyle.VIVID -> UI.Primary; else -> androidx.compose.ui.graphics.Color(0xFF171A20) }
-    val desk = when (st) { com.poyankee.note.ui.UiStyle.DARK -> androidx.compose.ui.graphics.Color(0xFF0B0D10); com.poyankee.note.ui.UiStyle.VIVID -> UI.PrimarySoft; else -> androidx.compose.ui.graphics.Color(0xFFE9EBEF) }
-    val dot = when (st) { com.poyankee.note.ui.UiStyle.CLEAN -> UI.Primary; else -> androidx.compose.ui.graphics.Color.White }
-    Column(Modifier.width(110.dp).height(78.dp).clip(RoundedCornerShape(8.dp)).background(desk)) {
-        Row(Modifier.fillMaxWidth().height(16.dp).background(bar).padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            repeat(5) { k -> Box(Modifier.size(6.dp).clip(androidx.compose.foundation.shape.CircleShape).background(if (k == 0) dot else dot.copy(alpha = 0.45f))) }
+fun ReorderList(all: List<Pair<String, String>>, chosen: List<String>, onChange: (List<String>) -> Unit) {
+    val order = chosen + all.map { it.first }.filter { it !in chosen }
+    Column(Modifier.padding(top = 6.dp)) {
+        order.forEachIndexed { i, key ->
+            val title = all.firstOrNull { it.first == key }?.second ?: key
+            val on = key in chosen
+            Row(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(if (on) UI.PrimarySoft.copy(alpha = 0.5f) else androidx.compose.ui.graphics.Color.Transparent).padding(horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                androidx.compose.material3.Checkbox(on, { v -> onChange(if (v) chosen + key else chosen - key) })
+                Text(title, fontSize = 15.sp, color = if (on) UI.Text else UI.TextFaint, modifier = Modifier.weight(1f))
+                if (on) {
+                    val ci = chosen.indexOf(key)
+                    TextButton(onClick = { if (ci > 0) onChange(chosen.toMutableList().apply { removeAt(ci); add(ci - 1, key) }) }, enabled = ci > 0) { Text("↑") }
+                    TextButton(onClick = { if (ci < chosen.size - 1) onChange(chosen.toMutableList().apply { removeAt(ci); add(ci + 1, key) }) }, enabled = ci < chosen.size - 1) { Text("↓") }
+                }
+            }
         }
-        Box(Modifier.padding(start = 22.dp, top = 8.dp).width(66.dp).height(46.dp).clip(RoundedCornerShape(3.dp)).background(androidx.compose.ui.graphics.Color.White))
     }
 }

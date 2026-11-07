@@ -16,6 +16,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.LaunchedEffect
@@ -60,6 +63,8 @@ class MainActivity : ComponentActivity() {
     private var busy by mutableStateOf<String?>(null)
     private var editor by mutableStateOf<EditorController?>(null)
     private var showSettings by mutableStateOf(false)
+    /** Açık olan yanlış defteri galerisi (defter kimliği). */
+    private var wrongGallery by mutableStateOf<String?>(null)
     private var loading by mutableStateOf(false)
     /** Açık defter sekmeleri (kimlik, ad). */
     private var tabs by mutableStateOf<List<Pair<String, String>>>(emptyList())
@@ -99,14 +104,15 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val systemDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-            val st = try { com.poyankee.note.ui.UiStyle.valueOf(settings.uiStyle.value) } catch (_: Exception) { com.poyankee.note.ui.UiStyle.CLEAN }
+            // tek tasarım: renkleri ayarlardaki uygulama rengi belirler
+            val st = com.poyankee.note.ui.UiStyle.CLEAN
             if (UI.style != st) UI.style = st
             val wantDark = settings.eyeComfort.value || st == com.poyankee.note.ui.UiStyle.DARK || when (settings.themeValue) { ThemeMode.DARK -> true; ThemeMode.LIGHT -> false; ThemeMode.SYSTEM -> systemDark }
             val sc = listOf(0.88f, 1f, 1.15f, 1.32f)[settings.uiSize.value.coerceIn(0, 3)]
             if (UI.scale != sc) UI.scale = sc
             if (UI.warm != settings.eyeComfort.value) UI.warm = settings.eyeComfort.value
             if (UI.dark != wantDark) UI.dark = wantDark
-            val pal = try { com.poyankee.note.ui.Palette.valueOf(settings.colorTheme.value) } catch (_: Exception) { com.poyankee.note.ui.Palette.DEFAULT }
+            val pal = com.poyankee.note.ui.Palette.CUSTOM
             if (UI.palette != pal) UI.palette = pal
             if (UI.customAccent != settings.customAccent.value) UI.customAccent = settings.customAccent.value
             LaunchedEffect(UI.dark) {
@@ -130,6 +136,13 @@ class MainActivity : ComponentActivity() {
                                 editorOpen = ed != null,
                             )
                         }
+                        wrongGallery != null && ed == null -> {
+                            val wid = wrongGallery!!
+                            BackHandler { wrongGallery = null }
+                            com.poyankee.note.ui.WrongGallery(store, settings, wid,
+                                onOpenPage = { p -> if (p >= 0) settings.setLastPage(wid, p); wrongGallery = null; open(wid) },
+                                onBack = { wrongGallery = null })
+                        }
                         ed != null -> EditorScreen(
                             ed, onClose = { closeEditor() }, onSettings = { showSettings = true },
                             tabs = tabs, onTab = { id -> if (id != ed.nb.id) { closeEditor(keepTab = true); openById(id) } },
@@ -138,7 +151,6 @@ class MainActivity : ComponentActivity() {
                             onInsertPdf = { uri, after -> insertPdfInto(ed.nb.id, uri, after) },
                             onExtract = { idx, name -> extractPages(ed.nb.id, idx, name) },
                         )
-                        loading -> Box(Modifier.fillMaxSize().background(UI.Bg), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                         else -> LibraryScreen(
                             notebooks = notebooks,
                             folders = folders,
@@ -163,7 +175,7 @@ class MainActivity : ComponentActivity() {
                             onWrongBook = {
                                 bg.execute {
                                     val id = com.poyankee.note.data.WrongBook.ensure(store, settings)
-                                    runOnUiThread { refresh(); open(id) }
+                                    runOnUiThread { refresh(); wrongGallery = id }
                                 }
                             },
                             onMove = { id, f -> store.setFolder(id, f); notebooks = notebooks.map { if (it.id == id) it.copy(folder = f) else it } },
@@ -179,6 +191,12 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     if (!settings.introShown.value && !introSuppressed) com.poyankee.note.ui.IntroDialog { settings.introShown.value = true }
+                    // açılıyor / kaydediliyor: ekranı bekletmeden sağ üstte küçük gösterge
+                    if (loading) Box(Modifier.fillMaxSize().padding(top = 10.dp, end = 14.dp), contentAlignment = Alignment.TopEnd) {
+                        androidx.compose.material3.Surface(shape = androidx.compose.foundation.shape.CircleShape, color = UI.Surface, shadowElevation = 6.dp) {
+                            CircularProgressIndicator(Modifier.padding(8.dp).size(22.dp), strokeWidth = 2.5.dp)
+                        }
+                    }
                     pinFor?.let { nb ->
                         PinDialog(L.t("Kilitli defter"), "\"${nb.name}\" defterini açmak için PIN girin", onForgot = { pinFor = null; forgotPin(nb) }, onDismiss = { pinFor = null }) { pin ->
                             if (Lock.check(nb.id, pin, nb.lockHash)) { pinFor = null; open(nb.id); true } else false
@@ -493,6 +511,7 @@ class MainActivity : ComponentActivity() {
         loading = true
         bg.execute {
             try {
+                store.flush() // önceki defterin kaydı bitsin (arka planda)
                 val nb = store.load(id)
                 runOnUiThread { loading = false; showEditor(EditorController(this, store, settings, nb)) }
             } catch (e: Exception) {

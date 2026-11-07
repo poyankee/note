@@ -1111,7 +1111,10 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
 
     private fun pressureOf(e: MotionEvent, idx: Int, h: Int = -1): Float {
         if (e.getToolType(idx) == MotionEvent.TOOL_TYPE_FINGER) return 0.6f
-        val p = (if (h >= 0) e.getHistoricalPressure(idx, h) else e.getPressure(idx)).coerceIn(0.05f, 1f)
+        val raw = if (h >= 0) e.getHistoricalPressure(idx, h) else e.getPressure(idx)
+        // bazı kalemler (ör. Xiaomi Focus Pen Pro) basınç bildirmez, hep 0 gönderir: o zaman sabit kalınlık
+        if (raw <= 0.001f) return 0.6f
+        val p = raw.coerceIn(0.05f, 1f)
         val g = floatArrayOf(0.5f, 0.72f, 1f, 1.4f, 2f)[settings.pressureCurve.value.coerceIn(0, 4)]
         return if (g == 1f) p else Math.pow(p.toDouble(), g.toDouble()).toFloat().coerceIn(0.05f, 1f)
     }

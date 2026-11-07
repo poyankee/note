@@ -45,6 +45,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.School
 import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.AssignmentLate
@@ -85,6 +86,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
@@ -146,6 +148,7 @@ fun LibraryScreen(
     onFromTemplate: (String) -> Unit = {},
 ) {
     var showTemplates by remember { mutableStateOf(false) }
+    var kind by remember { mutableStateOf(0) }
     var showTodos by remember { mutableStateOf(false) }
     val todos = com.poyankee.note.data.TodoList.get(androidx.compose.ui.platform.LocalContext.current)
     var query by remember { mutableStateOf("") }
@@ -177,44 +180,70 @@ fun LibraryScreen(
         val wide = maxWidth > 720.dp
         // telefonda (dar ekran) kenar çubuğu gizli; üstteki ☰ ile açılır
         val narrow = maxWidth < 600.dp
+        var sideOpen by remember { mutableStateOf(false) }
         Row(Modifier.fillMaxSize()) {
-            // ---------- sade sol şerit: tek "+" düğmesi ve birkaç bölüm ----------
-            Column(
-                Modifier.width(96.dp).fillMaxHeight().background(UI.BarBg).padding(vertical = 14.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
+            // ---------- sol menü (yeni tasarım): başlık, bölümler, klasörler, profil ----------
+            val quick = com.poyankee.note.MainActivity.QUICK_FOLDER
+            if (!narrow || sideOpen) Column(
+                Modifier.width(if (wide) 280.dp else 236.dp).fillMaxHeight().background(UI.SurfaceAlt.copy(alpha = 0.55f)).padding(horizontal = 16.dp, vertical = 18.dp),
             ) {
-                Box(
-                    Modifier.size(40.dp).clip(RoundedCornerShape(12.dp))
-                        .background(Brush.linearGradient(listOf(Color(0xFF6366F1), Color(0xFF4338CA)))),
-                    contentAlignment = Alignment.Center,
-                ) { ToolGlyph(com.poyankee.note.editor.Tool.PEN, Color.White, Color(0xFFFDE68A), 24.dp) }
-                Spacer(Modifier.height(18.dp))
-                Box {
-                    var addMenu by remember { mutableStateOf(false) }
+                // başlık
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 4.dp, bottom = 18.dp)) {
                     Box(
-                        Modifier.size(58.dp).shadow(6.dp, RoundedCornerShape(UI.radius.dp + 2.dp)).clip(RoundedCornerShape(UI.radius.dp + 2.dp))
-                            .background(if (UI.style == UiStyle.VIVID) Color.White else UI.Primary)
-                            .clickable { addMenu = true }.testTag("add"),
+                        Modifier.size(52.dp).shadow(4.dp, RoundedCornerShape(16.dp)).clip(RoundedCornerShape(16.dp)).background(UI.Primary),
                         contentAlignment = Alignment.Center,
-                    ) { Icon(Icons.Rounded.Add, L.t("Yeni"), tint = if (UI.style == UiStyle.VIVID) UI.Primary else Color.White, modifier = Modifier.size(30.dp)) }
-                    DropdownMenu(addMenu, { addMenu = false }) {
-                        DropdownMenuItem(text = { Text(L.t("Yeni defter")) }, leadingIcon = { Icon(Icons.Rounded.LibraryBooks, null) }, onClick = { addMenu = false; onCreate("") })
-                        DropdownMenuItem(text = { Text(L.t("Hızlı not")) }, leadingIcon = { Icon(Icons.Rounded.FlashOn, null, tint = Color(0xFFF59E0B)) }, onClick = { addMenu = false; onQuickNote() })
-                        DropdownMenuItem(text = { Text(L.t("PDF aç")) }, leadingIcon = { Icon(Icons.Rounded.PictureAsPdf, null, tint = Color(0xFFD92D20)) }, onClick = { addMenu = false; onImportPdf() })
-                        DropdownMenuItem(text = { Text(L.t("Fotoğraflardan defter")) }, leadingIcon = { Icon(Icons.Rounded.Image, null) }, onClick = { addMenu = false; onFromImages() })
-                        DropdownMenuItem(text = { Text(L.t("Şablondan yeni defter")) }, leadingIcon = { Icon(Icons.Rounded.Description, null) }, onClick = { addMenu = false; showTemplates = true })
-                        HorizontalDivider(color = UI.Border)
-                        DropdownMenuItem(text = { Text(L.t("Yeni klasör")) }, leadingIcon = { Icon(Icons.Rounded.CreateNewFolder, null) }, onClick = { addMenu = false; newFolder = true })
+                    ) { Icon(AppIcon.of(settings.appIcon.value).icon, null, tint = Color.White, modifier = Modifier.size(28.dp)) }
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text(settings.appTitle.value.ifBlank { "Note" }, style = TextStyle(fontSize = 22.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.4).sp), color = UI.Text, maxLines = 1)
+                        if (settings.appSubtitle.value.isNotBlank()) Text(settings.appSubtitle.value, fontSize = 13.sp, color = UI.TextSoft, maxLines = 1)
+                        Box(Modifier.padding(top = 4.dp).width(46.dp).height(3.dp).clip(RoundedCornerShape(2.dp)).background(UI.Primary))
                     }
                 }
-                Spacer(Modifier.height(18.dp))
-                Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
-                    RailItem(Icons.Rounded.LibraryBooks, L.t("Defterler"), !isTrash && !showTodos) { showTodos = false; if (isTrash) onSelectFolder(null) }
-                    RailItem(Icons.Rounded.AssignmentLate, L.t("Yanlış defteri"), false) { onWrongBook() }
-                    RailItem(Icons.Rounded.Checklist, L.t("Yapılacaklar"), showTodos, todos.items.count { !it.done }) { showTodos = !showTodos }
-                    RailItem(Icons.Rounded.Delete, L.t("Çöp kutusu"), isTrash, trash.size) { showTodos = false; onSelectFolder(TRASH) }
+                Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                    for (it in SideItem.parse(settings.sideItems.value)) when (it) {
+                        SideItem.ALL -> NavItem(Icons.Rounded.LibraryBooks, L.t("Tüm defterler"), notebooks.size, folder == null && !showTodos) { showTodos = false; onSelectFolder(null) }
+                        SideItem.FAVORITES -> NavItem(Icons.Rounded.Star, L.t("Favoriler"), notebooks.count { it.favorite }, isFav) { showTodos = false; onSelectFolder(FAVORITES) }
+                        SideItem.QUICK -> NavItem(Icons.Rounded.FlashOn, L.t("Hızlı notlar"), notebooks.count { it.folder == quick }, folder == quick) { showTodos = false; onSelectFolder(quick) }
+                        SideItem.WRONG -> NavItem(Icons.Rounded.AssignmentLate, L.t("Yanlış defteri"), null, false) { onWrongBook() }
+                        SideItem.TODO -> NavItem(Icons.Rounded.Checklist, L.t("Yapılacaklar"), todos.items.count { !it.done }.takeIf { it > 0 }, showTodos) { showTodos = !showTodos }
+                        SideItem.TRASH -> NavItem(Icons.Rounded.Delete, L.t("Çöp kutusu"), trash.size.takeIf { it > 0 }, isTrash) { showTodos = false; onSelectFolder(TRASH) }
+                    }
+                    Box(Modifier.padding(vertical = 10.dp).fillMaxWidth().height(1.dp).background(UI.Border))
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 8.dp, bottom = 4.dp)) {
+                        Text(settings.folderTitle.value.ifBlank { L.t("Klasörler") }, fontSize = 13.sp, color = UI.TextSoft, modifier = Modifier.weight(1f))
+                        IconButton(onClick = { newFolder = true }, modifier = Modifier.size(30.dp)) {
+                            Icon(Icons.Rounded.CreateNewFolder, L.t("Yeni klasör"), tint = UI.TextSoft, modifier = Modifier.size(20.dp))
+                        }
+                    }
+                    folders.filter { it != quick }.forEach { f ->
+                        Box {
+                            var menu by remember { mutableStateOf(false) }
+                            NavItem(Icons.Rounded.Folder, f, notebooks.count { it.folder == f }, folder == f, onLong = { menu = true },
+                                iconTint = Color(settings.folderColor(f) ?: folderAutoColor(f))) { showTodos = false; onSelectFolder(f) }
+                            DropdownMenu(menu, { menu = false }) {
+                                DropdownMenuItem(text = { Text(L.t("Yeniden adlandır")) }, onClick = { menu = false; folderRename = f })
+                                DropdownMenuItem(text = { Text(L.t("Renk")) }, onClick = { menu = false; folderColorFor = f })
+                                DropdownMenuItem(text = { Text(L.t("Klasörü sil")) }, onClick = { menu = false; folderDelete = f })
+                            }
+                        }
+                    }
                 }
-                RailItem(Icons.Rounded.Settings, L.t("Ayarlar"), false) { onSettings() }
+                // profil kartı → ayarlar
+                Row(
+                    Modifier.fillMaxWidth().padding(top = 10.dp).clip(RoundedCornerShape(16.dp)).background(UI.Surface).clickable { onSettings() }.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(Modifier.size(42.dp).clip(CircleShape).background(UI.PrimarySoft), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Rounded.School, null, tint = UI.Primary, modifier = Modifier.size(24.dp))
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(settings.profileName.value.ifBlank { L.t("Ayarlar") }, fontWeight = FontWeight.SemiBold, color = UI.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(settings.profileSubtitle.value.ifBlank { L.t("Profil ve görünüm") }, fontSize = 12.sp, color = UI.TextSoft, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    Icon(Icons.Rounded.Settings, L.t("Ayarlar"), tint = UI.TextSoft)
+                }
             }
             Box(Modifier.width(1.dp).fillMaxHeight().background(UI.Border))
 
@@ -254,6 +283,7 @@ fun LibraryScreen(
                         Text(L.t("Sil"), color = if (enabled) UI.Danger else UI.TextFaint)
                     }
                 } else Row(Modifier.fillMaxWidth().padding(start = 32.dp, end = 32.dp, top = 26.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    if (narrow) IconButton(onClick = { sideOpen = !sideOpen }) { Icon(Icons.Rounded.Menu, L.t("Menü"), tint = UI.Text) }
                     Column(Modifier.weight(1f)) {
                         Text(if (isFav) L.t("Favoriler") else folder ?: L.t("Tüm defterler"), style = TextStyle(fontSize = 28.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.6).sp), color = UI.Text)
                         val count = notebooks.count { matches(it, folder) }
@@ -279,31 +309,20 @@ fun LibraryScreen(
                     Spacer(Modifier.width(10.dp))
                     SearchField(query, if (narrow) 120.dp else 280.dp) { query = it }
                 }
-                // klasörler: defterlerin üstünde sekmeler (uzun basınca: yeniden adlandır, renk, sil)
+                // filtreler
                 if (sel == null) Row(
-                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(start = 28.dp, end = 28.dp, bottom = 6.dp),
+                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(start = 28.dp, end = 28.dp, bottom = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    FolderTab(L.t("Tümü"), notebooks.size, folder == null, null) { onSelectFolder(null) }
-                    FolderTab("★ " + L.t("Favoriler"), notebooks.count { it.favorite }, isFav, null) { onSelectFolder(FAVORITES) }
-                    folders.forEach { f ->
-                        Box {
-                            var menu by remember { mutableStateOf(false) }
-                            FolderTab(f, notebooks.count { it.folder == f }, folder == f, settings.folderColor(f)?.let { Color(it) }, onLong = { menu = true }) { onSelectFolder(f) }
-                            DropdownMenu(menu, { menu = false }) {
-                                DropdownMenuItem(text = { Text(L.t("Yeniden adlandır")) }, onClick = { menu = false; folderRename = f })
-                                DropdownMenuItem(text = { Text(L.t("Renk")) }, onClick = { menu = false; folderColorFor = f })
-                                DropdownMenuItem(text = { Text(L.t("Klasörü sil")) }, onClick = { menu = false; folderDelete = f })
-                            }
-                        }
-                    }
-                    Box(
-                        Modifier.height(36.dp).clip(RoundedCornerShape(18.dp)).border(1.dp, UI.Border, RoundedCornerShape(18.dp))
-                            .clickable { newFolder = true }.padding(horizontal = 12.dp),
-                        contentAlignment = Alignment.Center,
-                    ) { Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Rounded.CreateNewFolder, null, tint = UI.TextSoft, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); Text(L.t("Klasör"), color = UI.TextSoft, fontSize = 14.sp) } }
+                    FolderTab(L.t("Tümü"), notebooks.count { matches(it, folder) }, kind == 0, null) { kind = 0 }
+                    FolderTab(L.t("Defterler"), notebooks.count { matches(it, folder) && !it.isPdf }, kind == 1, null) { kind = 1 }
+                    FolderTab("PDF", notebooks.count { matches(it, folder) && it.isPdf }, kind == 2, null) { kind = 2 }
+                    FolderTab("★ " + L.t("Favoriler"), notebooks.count { matches(it, folder) && it.favorite }, kind == 3, null) { kind = 3 }
                 }
-                val filtered = notebooks.filter { matches(it, folder) && (query.isBlank() || it.name.contains(query, ignoreCase = true)) }
+                val filtered = notebooks.filter {
+                    matches(it, folder) && (query.isBlank() || it.name.contains(query, ignoreCase = true)) &&
+                        when (kind) { 1 -> !it.isPdf; 2 -> it.isPdf; 3 -> it.favorite; else -> true }
+                }
                 val sorted = when (sort) {
                     SortMode.UPDATED -> filtered.sortedByDescending { it.updated }
                     SortMode.NAME -> filtered.sortedBy { it.name.lowercase(Locale.forLanguageTag("tr")) }
@@ -354,8 +373,25 @@ fun LibraryScreen(
                 }
             }
         }
-        if (showTodos) Box(Modifier.padding(start = 97.dp)) {
+        if (showTodos) Box(Modifier.padding(start = if (wide) 281.dp else 237.dp)) {
             TodoPanel(todos, null, onOpen = { id, page -> showTodos = false; onOpenTodo(id, page) }, onClose = { showTodos = false })
+        }
+        // yeni: sağ altta "+" (defter, hızlı not, PDF, fotoğraf, şablon, klasör)
+        if (!isTrash && selection == null) Box(Modifier.align(Alignment.BottomEnd).padding(28.dp)) {
+            var addMenu by remember { mutableStateOf(false) }
+            Box(
+                Modifier.size(64.dp).shadow(10.dp, CircleShape).clip(CircleShape).background(UI.Primary).clickable { addMenu = true }.testTag("add"),
+                contentAlignment = Alignment.Center,
+            ) { Icon(Icons.Rounded.Add, L.t("Yeni"), tint = Color.White, modifier = Modifier.size(32.dp)) }
+            DropdownMenu(addMenu, { addMenu = false }, shape = RoundedCornerShape(18.dp), containerColor = UI.Surface) {
+                DropdownMenuItem(text = { Text(L.t("Yeni defter")) }, leadingIcon = { Icon(Icons.Rounded.LibraryBooks, null, tint = UI.Primary) }, onClick = { addMenu = false; onCreate("") })
+                DropdownMenuItem(text = { Text(L.t("Hızlı not")) }, leadingIcon = { Icon(Icons.Rounded.FlashOn, null, tint = Color(0xFFF59E0B)) }, onClick = { addMenu = false; onQuickNote() })
+                DropdownMenuItem(text = { Text(L.t("PDF aç")) }, leadingIcon = { Icon(Icons.Rounded.PictureAsPdf, null, tint = Color(0xFFD92D20)) }, onClick = { addMenu = false; onImportPdf() })
+                DropdownMenuItem(text = { Text(L.t("Fotoğraflardan defter")) }, leadingIcon = { Icon(Icons.Rounded.Image, null) }, onClick = { addMenu = false; onFromImages() })
+                DropdownMenuItem(text = { Text(L.t("Şablondan yeni defter")) }, leadingIcon = { Icon(Icons.Rounded.Description, null) }, onClick = { addMenu = false; showTemplates = true })
+                HorizontalDivider(color = UI.Border)
+                DropdownMenuItem(text = { Text(L.t("Yeni klasör")) }, leadingIcon = { Icon(Icons.Rounded.CreateNewFolder, null) }, onClick = { addMenu = false; newFolder = true })
+            }
         }
     }
 
@@ -446,6 +482,12 @@ private fun RailItem(icon: ImageVector, text: String, selected: Boolean, badge: 
         Text(text, fontSize = 12.sp, color = if (selected) UI.ToolSelFg else UI.BarFgSoft, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
             maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
     }
+}
+
+/** Klasöre renk verilmemişse adından sabit, hoş bir renk. */
+fun folderAutoColor(name: String): Int {
+    val c = listOf(0xFF8B5CF6, 0xFF3B82F6, 0xFFEF4444, 0xFF22C55E, 0xFFF59E0B, 0xFF14B8A6, 0xFFEC4899)
+    return c[(name.hashCode() and 0x7fffffff) % c.size].toInt()
 }
 
 /** Klasör sekmesi (defterlerin üstünde). */
@@ -557,37 +599,45 @@ private fun NotebookRow(nb: NotebookInfo, selected: Boolean?, folderColor: Color
     var menu by remember { mutableStateOf(false) }
     val img = rememberCover(nb)
     Row(
-        Modifier.fillMaxWidth().padding(vertical = 3.dp).clip(RoundedCornerShape(12.dp))
-            .background(if (selected == true) UI.PrimarySoft else Color.Transparent)
-            .combinedClickable(onClick = a.onOpen, onLongClick = a.onLongPress).padding(horizontal = 10.dp, vertical = 8.dp),
+        Modifier.fillMaxWidth().padding(vertical = 5.dp)
+            .shadow(3.dp, RoundedCornerShape(16.dp), ambientColor = UI.Shadow, spotColor = UI.Shadow)
+            .clip(RoundedCornerShape(16.dp))
+            .background(if (selected == true) UI.PrimarySoft else UI.Surface)
+            .border(1.dp, if (selected == true) UI.Primary else UI.Border.copy(alpha = 0.6f), RoundedCornerShape(16.dp))
+            .combinedClickable(onClick = a.onOpen, onLongClick = a.onLongPress).padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (selected != null) { SelectMark(selected, Modifier); Spacer(Modifier.width(12.dp)) }
-        Box(Modifier.width(44.dp).height(60.dp).clip(RoundedCornerShape(6.dp)).background(UI.SurfaceAlt), contentAlignment = Alignment.Center) {
+        Box(Modifier.width(56.dp).height(72.dp).clip(RoundedCornerShape(10.dp)).background(UI.SurfaceAlt).border(1.dp, UI.Border.copy(alpha = 0.5f), RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
             when {
                 nb.locked -> Icon(Icons.Rounded.Lock, null, tint = UI.TextSoft, modifier = Modifier.size(22.dp))
                 img != null -> Image(img, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                nb.isPdf -> Icon(Icons.Rounded.PictureAsPdf, null, tint = Color(0xFFD92D20), modifier = Modifier.size(22.dp))
-                else -> Text(nb.name.take(1).uppercase(), color = UI.TextSoft, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                nb.isPdf -> Icon(Icons.Rounded.PictureAsPdf, null, tint = Color(0xFFD92D20), modifier = Modifier.size(24.dp))
+                else -> Text(nb.name.take(1).uppercase(), color = UI.TextSoft, fontSize = 22.sp, fontWeight = FontWeight.Bold)
             }
         }
-        Spacer(Modifier.width(14.dp))
+        Spacer(Modifier.width(16.dp))
         Column(Modifier.weight(1f)) {
+            Text(nb.name, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = UI.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Spacer(Modifier.height(3.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (nb.favorite) { Icon(Icons.Rounded.Star, L.t("Favori"), tint = Color(0xFFF59E0B), modifier = Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)) }
-                Text(nb.name, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = UI.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (nb.folder.isNotEmpty()) {
+                    Icon(Icons.Rounded.Folder, null, tint = folderColor ?: folderAutoColor(nb.folder), modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(nb.folder + " · ", fontSize = 13.sp, color = UI.TextSoft, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 180.dp))
+                }
+                Text("${nb.pageCount} " + L.t("sayfa") + (if (nb.isPdf) " · PDF" else ""), fontSize = 13.sp, color = UI.TextSoft, maxLines = 1)
             }
-            Text("${nb.pageCount} sayfa · ${dateFmt.format(Date(nb.updated))}" + (if (nb.isPdf) L.t(" · PDF") else ""), fontSize = 13.sp, color = UI.TextSoft, maxLines = 1)
         }
-        if (nb.folder.isNotEmpty()) {
-            Icon(Icons.Rounded.Folder, null, tint = folderColor ?: UI.TextFaint, modifier = Modifier.size(16.dp))
-            Spacer(Modifier.width(4.dp))
-            Text(nb.folder, fontSize = 13.sp, color = UI.TextSoft, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 160.dp))
-            Spacer(Modifier.width(8.dp))
-        }
-        if (selected == null) Box {
-            IconButton(onClick = { menu = true }) { Icon(Icons.Rounded.MoreHoriz, L.t("Menü"), tint = UI.TextSoft) }
-            NotebookMenu(nb, menu, { menu = false }, a)
+        Text(dateFmt.format(Date(nb.updated)), fontSize = 12.sp, color = UI.TextFaint, maxLines = 1)
+        if (selected == null) {
+            IconButton(onClick = a.onFavorite) {
+                Icon(if (nb.favorite) Icons.Rounded.Star else Icons.Rounded.StarBorder, L.t("Favori"), tint = if (nb.favorite) Color(0xFFF59E0B) else UI.TextFaint)
+            }
+            Box {
+                IconButton(onClick = { menu = true }) { Icon(Icons.Rounded.MoreHoriz, L.t("Menü"), tint = UI.TextSoft) }
+                NotebookMenu(nb, menu, { menu = false }, a)
+            }
         }
     }
 }

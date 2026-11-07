@@ -87,13 +87,17 @@ object UI {
 
     private fun c(light: Long, darkC: Long) = Color(if (dark) darkC else light)
     /** Özel tema rengi (Ayarlar › Renk teması › +). */
-    var customAccent by mutableStateOf(0xFF4F46E5.toInt())
+    var customAccent by mutableStateOf(0xFFF5A000.toInt())
     private fun mix(a: Int, b: Int, t: Float): Color {
         fun ch(x: Int, s: Int) = ((x shr s) and 0xFF)
         val r = ch(a, 16) + (ch(b, 16) - ch(a, 16)) * t; val g = ch(a, 8) + (ch(b, 8) - ch(a, 8)) * t; val bl = ch(a, 0) + (ch(b, 0) - ch(a, 0)) * t
         return Color(r / 255f, g / 255f, bl / 255f)
     }
     private fun p(i: Int): Color {
+        if (palette == Palette.CUSTOM && i >= 3 && !dark) {
+            val a = customAccent
+            return if (i == 3) mix(a, 0xFFFFFFFF.toInt(), 0.955f) else mix(a, 0xFFF0F0F0.toInt(), 0.92f)
+        }
         if (palette == Palette.CUSTOM && i <= 2) {
             val a = customAccent; val w = 0xFFFFFFFF.toInt(); val k = 0xFF000000.toInt(); val dk = 0xFF1A1D23.toInt()
             return when (i) {
@@ -327,3 +331,28 @@ fun ColorChoiceRow(presets: List<Int>, saved: List<Int>, selected: Int, size: In
 
 /** Sayfanın arkası (masa) için önerilen renkler. */
 val DESK_PRESETS = listOf(0xFFE9EBEF, 0xFFF3EBDD, 0xFFDCE6EE, 0xFFE3EADF, 0xFF5B6472, 0xFF2A2F38, 0xFF111418).map { it.toInt() }
+
+/** Uygulama rengi için önerilenler. */
+val ACCENT_PRESETS = listOf(0xFFF5A000, 0xFFF97316, 0xFFEF4444, 0xFFEC4899, 0xFF8B5CF6, 0xFF4F46E5, 0xFF0EA5E9, 0xFF14B8A6, 0xFF22C55E, 0xFF475569).map { it.toInt() }
+
+/** Sol üstteki uygulama simgesi seçenekleri. */
+enum class AppIcon(val title: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
+    PEN("Kalem", androidx.compose.material.icons.Icons.Rounded.Edit),
+    BOOK("Kitap", androidx.compose.material.icons.Icons.Rounded.MenuBook),
+    SCHOOL("Kep", androidx.compose.material.icons.Icons.Rounded.School),
+    CALC("Hesap", androidx.compose.material.icons.Icons.Rounded.Calculate),
+    IDEA("Ampul", androidx.compose.material.icons.Icons.Rounded.Lightbulb),
+    STAR("Yıldız", androidx.compose.material.icons.Icons.Rounded.Star),
+    SCIENCE("Bilim", androidx.compose.material.icons.Icons.Rounded.Science),
+    ;
+    companion object { fun of(name: String) = entries.firstOrNull { it.name == name } ?: PEN }
+}
+
+/** Ana sayfadaki sol menüde sıralanabilir / gizlenebilir bölümler. */
+enum class SideItem(val title: String) {
+    ALL("Tüm defterler"), FAVORITES("Favoriler"), QUICK("Hızlı notlar"), WRONG("Yanlış defteri"), TODO("Yapılacaklar"), TRASH("Çöp kutusu");
+    companion object {
+        const val DEFAULT = "ALL,FAVORITES,QUICK,WRONG,TODO,TRASH"
+        fun parse(s: String): List<SideItem> = s.split(',').mapNotNull { n -> entries.firstOrNull { it.name == n.trim() } }
+    }
+}

@@ -109,7 +109,7 @@ class Settings(context: Context) {
     /** Sayfa dışındaki masa rengi (0 = temaya göre). */
     val deskColor = int("deskColor", 0)
     val sortMode = str("sortMode", SortMode.UPDATED.name)
-    val libraryView = str("libraryView", LibraryView.MEDIUM.name)
+    val libraryView = str("libraryView", LibraryView.LIST.name)
     /** Klasör renkleri: "ad=AARRGGBB" çiftleri, ayraç \u0001. */
     val folderColors = str("folderColors", "")
 
@@ -117,7 +117,15 @@ class Settings(context: Context) {
     val theme = str("theme", ThemeMode.SYSTEM.name)
     val colorTheme = str("colorTheme", "DEFAULT")
     /** Özel tema rengi ve kullanıcının eklediği tema / masa renkleri. */
-    val customAccent = int("customAccent", 0xFF4F46E5.toInt())
+    val customAccent = int("customAccent", 0xFFF5A000.toInt())
+    /** Kişiselleştirme: sol üstteki başlık, simge, profil ve sol menü. */
+    val appTitle = str("appTitle", "Note")
+    val appSubtitle = str("appSubtitle", "Not defterim")
+    val appIcon = str("appIcon", "PEN")
+    val profileName = str("profileName", "")
+    val profileSubtitle = str("profileSubtitle", "")
+    val folderTitle = str("folderTitle", "")
+    val sideItems = str("sideItems", "ALL,FAVORITES,QUICK,WRONG,TODO,TRASH")
     val savedAccents = str("savedAccents", "")
     val savedDesks = str("savedDesks", "")
     /** Arayüz stili: CLEAN (Sade), VIVID (Canlı), DARK (Koyu). */
@@ -125,7 +133,9 @@ class Settings(context: Context) {
     /** Araç çubuğu: TOP (üstte şerit) veya LEFT (solda yüzen menü). */
     val toolbarPos = str("toolbarPos", "TOP")
     /** Soldaki araç listesinde görünecekler (virgülle, sırayla). */
-    val railItems = str("railItems", "PEN,HIGHLIGHTER,ERASER,LASSO,GEOMETRY,TEXT,LASER,UNDO,REDO,PAGES")
+    val railItems = str("railItems", "UNDO,REDO,PEN,HIGHLIGHTER,ERASER,LASSO,GEOMETRY,TEXT,RULER,PAGES,COLORS")
+    /** Soldaki araç listesi tamamen gizli mi (ör. video çekerken). */
+    val dockHidden = bool("dockHidden", false)
     /** Uygulama dili: "tr" veya "en". */
     val language = str("language", "tr")
     /** İlk açılış tanıtımı gösterildi mi. */

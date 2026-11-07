@@ -15,6 +15,7 @@ import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
@@ -531,6 +532,15 @@ class SmokeTest {
     fun libraryViews() {
         val st = com.poyankee.note.data.Settings.get(rule.activity)
         newNotebook()
+        // yeni ⋮ menüsü
+        rule.onNodeWithContentDescription("Diğer").performClick()
+        rule.waitForIdle()
+        shot("18a-defter-menusu")
+        rule.onNodeWithText("Sayfaya sığdır").performClick()
+        // araç çubuğunu gizle / göster
+        main { st.dockHidden.value = true }
+        shot("18b-araclar-gizli")
+        main { st.dockHidden.value = false }
         main { rule.activity.onBackPressedDispatcher.onBackPressed() }
         rule.waitUntil(5000) { rule.onAllNodesWithTag("add").fetchSemanticsNodes().isNotEmpty() }
         main { st.libraryView.value = "LIST" }
@@ -554,6 +564,22 @@ class SmokeTest {
         rule.onAllNodesWithText("Yapılacaklar")[0].performClick()
         shot("21-yapilacaklar")
         rule.onNodeWithContentDescription("Kapat").performClick()
+
+        // yanlış defteri galerisi
+        val store0 = com.poyankee.note.data.Store(rule.activity)
+        val q = android.graphics.Bitmap.createBitmap(400, 200, android.graphics.Bitmap.Config.ARGB_8888).apply {
+            val cv = android.graphics.Canvas(this); cv.drawColor(android.graphics.Color.WHITE)
+            cv.drawText("2x + 3 = 11  ise  x = ?", 20f, 100f, Paint().apply { textSize = 32f })
+        }
+        com.poyankee.note.data.WrongBook.add(store0, st, q, "", "Deneme", 0)
+        com.poyankee.note.data.WrongBook.add(store0, st, q, "", "Deneme", 1)
+        rule.onAllNodesWithText("Yanlış defteri")[0].performClick()
+        rule.waitUntil(8000) { rule.onAllNodesWithText("Soru 2").fetchSemanticsNodes().isNotEmpty() }
+        shot("21b-yanlis-galeri")
+        rule.onAllNodesWithText("Soru 2")[0].performClick()
+        rule.waitUntil(8000) { rule.onAllNodesWithContentDescription("Diğer").fetchSemanticsNodes().isNotEmpty() }
+        main { rule.activity.onBackPressedDispatcher.onBackPressed() }
+        rule.waitUntil(5000) { rule.onAllNodesWithTag("add").fetchSemanticsNodes().isNotEmpty() }
 
         // çöp kutusu: sil → çöpte görünür → geri getir
         val store = com.poyankee.note.data.Store(rule.activity)

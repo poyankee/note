@@ -138,10 +138,28 @@ Kurulum: GitHub › Releases › en yeni **Note sürüm N** › `Note-N.apk` (es
 - [ ] Büyük bir PDF'te (100+ sayfa) kaydırma akıcı
 - [ ] Uygulama hiç çökmedi (çöktüyse Ayarlar › Hata kayıtları › Paylaş)
 
+## 14. Yeni tasarım (7 Kasım)
+- [ ] Ana sayfa: solda logo kutusu + başlık/alt başlık, menü (Tüm defterler, Favoriler, Hızlı notlar, Yanlış defteri, Yapılacaklar, Çöp kutusu), renkli klasör listesi, altta profil kartı
+- [ ] Ortada: arama, filtre (Tümü / Defterler / PDF / Favoriler), liste kartları (kapak, ad, klasör · sayfa, tarih, ☆, ⋯), sağ altta turuncu **+**
+- [ ] Liste kartındaki ☆ ile favoriye ekle / çıkar
+- [ ] Dar ekranda sol menü ☰ ile açılıyor
+- [ ] Ayarlar › Görünüm › **Uygulama rengi**: hazır renkler ve kendi renginiz; tüm uygulama (ve masa rengi) değişiyor
+- [ ] Ayarlar › **Kişiselleştirme**: başlık, alt başlık, simge, profil adı/açıklaması, "Klasörler" bölümünün adı
+- [ ] Ayarlar › Kişiselleştirme: sol menü ve defter araç listesi için kutucukla aç/kapat, ↑ ↓ ile sıralama, Varsayılana dön
+- [ ] Ayarlar › Hakkında: "Geliştiren: Poyraz DOĞAN"
+- [ ] Defterde ⋮ menüsü: üstte 4 kutucuk (Ara, Yazdır, Konu özeti, Ayarlar), altında Sayfa ve Defter bölümleri
+- [ ] Soldaki araç çubuğu: aşağı/yukarı ortaya sürüklenince **yatay** oluyor, kenara sürüklenince dikey
+- [ ] Araç çubuğundaki göz simgesi ile tamamen gizle; köşede kalan küçük düğme ile geri getir (video çekerken)
+- [ ] Araç çubuğundaki renk noktaları ve gökkuşağı düğmesi (palet düzenleme)
+- [ ] Fotoğraflardan defter → yeni sayfa eklenince fotoğraf arka plan **olmuyor**
+- [ ] Defter kapatırken / defterler arasında geçerken bekleme ekranı yok; sağ üstte küçük dönen gösterge
+- [ ] Kalem: basınç gelmese de çizgi düzgün kalınlıkta
+- [ ] Sol menüden **Yanlış defteri**: soruların galerisi açılıyor; Tümü / Çözülmedi / Çözüldü; karta dokununca o sayfa açılıyor; "Defter olarak aç"
+
 ---
 
 ## Henüz yapılmayanlar (sonraki adımlar)
 - Ders videoları listesi (ders kaydı beklemede olduğu için geliştirilmedi)
 - Mağaza için: imzalama anahtarı (Play'e yüklerken sizin oluşturmanız gerekir) ve mağaza görselleri
-- Xiaomi kalem çift dokunuşu: **Kalem testi** sonucunuza göre
+- Xiaomi kalem çift dokunuşu ve sıkıştırma (pinch): test sonucuna göre bu hareketler uygulamalara hiç ulaşmıyor (HyperOS kendisi kullanıyor), desteklenemiyor
 - İngilizce'de sayfaya çizilen hazır çizimlerin bazı küçük etiketleri ve el ile yazılan metinler çevrilmez (yalnızca arayüz çevrilir)

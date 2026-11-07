@@ -71,6 +71,9 @@ class Store(context: Context) {
         } catch (_: Exception) { null }
     }
 
+    /** Defterin adı (bulunamazsa boş). */
+    fun nameOf(id: String): String = readInfo(File(root, id))?.name ?: ""
+
     fun list(): List<NotebookInfo> =
         (root.listFiles()?.mapNotNull { if (it.isDirectory) readInfo(it) else null } ?: emptyList()).sortedByDescending { it.updated }
 

@@ -377,7 +377,8 @@ class EditorController(
     /** Yeni sayfa: verilen stil, yoksa ayara göre düz beyaz ya da yanındaki sayfanın stili. */
     private fun newPaperLike(ref: Page?, style: Background.Paper?): Page {
         val bg = ref?.background
-        val paper = style ?: if (settings.newPageSame.value) ((bg as? Background.Paper) ?: nb.defaultPaper) else Background.Paper(Template.BLANK, PaperColors.WHITE)
+        // fotoğraf / çalışma kağıdı zemini yeni sayfaya geçmez; desen, renk ve aralık geçebilir
+        val paper = (style ?: if (settings.newPageSame.value) ((bg as? Background.Paper) ?: nb.defaultPaper) else Background.Paper(Template.BLANK, PaperColors.WHITE)).copy(image = "")
         val w = ref?.width ?: nb.defaultSize.w
         val h = ref?.height ?: nb.defaultSize.h
         return Page(Ids.next(), paper, w, h)
@@ -1095,9 +1096,12 @@ class EditorController(
         view?.clearSelection()
         saveCover()
         store.saveMeta(nb)
-        store.flush()
-        pdf?.close()
-        imageExec.shutdown(); thumbExec.shutdown()
+        // yazma işleri arka planda bitirilir (ekranı bekletmez); PDF ve iş parçacıkları onların ardından kapanır
+        Thread {
+            try { store.flush() } catch (_: Exception) {}
+            pdf?.close()
+            imageExec.shutdown(); thumbExec.shutdown()
+        }.start()
     }
 
     companion object {
