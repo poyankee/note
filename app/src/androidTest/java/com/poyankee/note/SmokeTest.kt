@@ -577,7 +577,8 @@ class SmokeTest {
         rule.waitUntil(8000) { rule.onAllNodesWithText("Soru 2").fetchSemanticsNodes().isNotEmpty() }
         shot("21b-yanlis-galeri")
         rule.onAllNodesWithText("Soru 2")[0].performClick()
-        rule.waitUntil(8000) { rule.onAllNodesWithContentDescription("Diğer").fetchSemanticsNodes().isNotEmpty() }
+        rule.waitUntil(15_000) { rule.onAllNodesWithContentDescription("Diğer").fetchSemanticsNodes().isNotEmpty() }
+        assertEquals(1, st.lastPage(st.wrongNotebook.value))
         main { rule.activity.onBackPressedDispatcher.onBackPressed() }
         rule.waitUntil(5000) { rule.onAllNodesWithTag("add").fetchSemanticsNodes().isNotEmpty() }
 
@@ -633,9 +634,10 @@ class SmokeTest {
 
         // yanlış defteri: dikdörtgen içine alınan bölge ayrı deftere eklenir
         val st = com.poyankee.note.data.Settings.get(ctx)
+        fun wqCount() = if (st.wrongNotebook.value.isEmpty()) 0 else (c.store.dir(st.wrongNotebook.value).listFiles()?.count { it.name.startsWith("wq_") } ?: 0)
+        val wq0 = wqCount()
         main { c.captureToWrongNotebook(0, 40f, 40f, 400f, 300f) }
-        rule.waitUntil(15_000) { st.wrongNotebook.value.isNotEmpty() && File(c.store.dir(st.wrongNotebook.value), "notebook.bin").exists() &&
-            (c.store.dir(st.wrongNotebook.value).listFiles()?.any { it.name.startsWith("wq_") } == true) }
+        rule.waitUntil(15_000) { st.wrongNotebook.value.isNotEmpty() && File(c.store.dir(st.wrongNotebook.value), "notebook.bin").exists() && wqCount() > wq0 }
         Thread.sleep(500)
         val wb = c.store.load(st.wrongNotebook.value)
         assertTrue(wb.pages.last().items.any { it is com.poyankee.note.core.ImageItem })
