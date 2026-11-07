@@ -16,10 +16,23 @@ object PenKeys {
     private val STANDARD = setOf(
         KeyEvent.KEYCODE_STYLUS_BUTTON_PRIMARY, KeyEvent.KEYCODE_STYLUS_BUTTON_SECONDARY,
         KeyEvent.KEYCODE_STYLUS_BUTTON_TERTIARY, KeyEvent.KEYCODE_STYLUS_BUTTON_TAIL,
+        // Xiaomi Focus Pen Pro: sıkma (squeeze) bazı sistemlerde bu kodla uygulamaya gelir
+        KeyEvent.KEYCODE_BUTTON_7,
     )
+
+    /** Tuş bir kalemden mi geliyor (ör. "Xiaomi Focus Pen Pro Keyboard")? */
+    fun fromPen(e: KeyEvent): Boolean = e.device?.name?.contains("pen", ignoreCase = true) == true
+
+    /** Kalemden gelen kaydırma hareketleri (Focus Pen Pro: yukarı = NUMPAD_9, aşağı = NUMPAD_3). */
+    fun slideUp(e: KeyEvent) = fromPen(e) && e.keyCode == KeyEvent.KEYCODE_NUMPAD_9
+    fun slideDown(e: KeyEvent) = fromPen(e) && e.keyCode == KeyEvent.KEYCODE_NUMPAD_3
 
     /** Bu tuş kalem tuşu olarak işlenmeli mi? Geri, ses ve güç tuşlarına dokunulmaz (öğretilmedikçe). */
     fun isPenKey(code: Int, learned: Set<Int>): Boolean = code in learned || code in STANDARD
+
+    /** Kalem cihazından gelen her tuş (çift dokunma = NUMPAD_ENTER vb.) kalem tuşu sayılır. */
+    fun isPenKey(e: KeyEvent, learned: Set<Int>): Boolean =
+        isPenKey(e.keyCode, learned) || (fromPen(e) && e.keyCode != KeyEvent.KEYCODE_BACK && e.keyCode != KeyEvent.KEYCODE_POWER)
 
     fun canLearn(code: Int) = code != KeyEvent.KEYCODE_BACK && code != KeyEvent.KEYCODE_POWER && code != KeyEvent.KEYCODE_HOME
 }

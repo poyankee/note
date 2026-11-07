@@ -226,7 +226,12 @@ class MainActivity : ComponentActivity() {
         val ed = editor
         // klavye kısayolları (klavye bağlıyken): Ctrl+Z geri al, Ctrl+Y yinele, Ctrl+C/X/V, Ctrl+D çoğalt, Sayfa yukarı/aşağı, Del, Esc
         if (ed != null && event.action == KeyEvent.ACTION_DOWN && handleShortcut(ed, event)) return true
-        if (ed != null && PenKeys.isPenKey(code, settings.penKeyCodeSet())) {
+        // Focus Pen Pro'da kalemi yukarı / aşağı kaydırma: önceki / sonraki sayfa
+        if (ed != null && (PenKeys.slideUp(event) || PenKeys.slideDown(event))) {
+            if (event.action == KeyEvent.ACTION_DOWN) ed.goToPage(ed.currentPage + (if (PenKeys.slideDown(event)) 1 else -1), false)
+            return true
+        }
+        if (ed != null && PenKeys.isPenKey(event, settings.penKeyCodeSet())) {
             if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) ed.onPenKey()
             return true
         }
