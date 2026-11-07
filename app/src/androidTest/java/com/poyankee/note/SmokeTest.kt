@@ -188,11 +188,13 @@ class SmokeTest {
         assertEquals(Template.ISOMETRIC, st.template); assertEquals(0.3f, st.opacity, 0f)
         main { c.setPageStyle(0, Background.Paper(Template.GRID)) }
         shot("03-bos-defter")
-        rule.onAllNodesWithText("Sayfa")[0].performClick()
+        rule.onNodeWithTag("title").performClick()
+        rule.onNodeWithText("Sayfa düzeni (desen, renk)").performClick()
         shot("04-sayfa-paneli")
         main { c.setPageStyle(0, Background.Paper(Template.ISOMETRIC, PaperColors.CREAM, 20f, 0.4f)) }
         shot("05-izometrik-krem")
-        rule.onAllNodesWithText("Sayfa")[0].performClick()
+        rule.onNodeWithTag("title").performClick()
+        rule.onNodeWithText("Sayfa düzeni (desen, renk)").performClick()
         main { c.setPageStyle(0, Background.Paper(Template.GRID)) }
 
         // 1) Kalemle yaz
@@ -545,6 +547,7 @@ class SmokeTest {
         rule.waitUntil(5000) { rule.onAllNodesWithTag("add").fetchSemanticsNodes().isNotEmpty() }
         main { st.libraryView.value = "LIST" }
         shot("18-liste-gorunumu")
+        rule.onNodeWithContentDescription("Sırala ve seç").performClick()
         rule.onNodeWithText("Seç").performClick()
         rule.onNodeWithText("Tümünü seç").performClick()
         shot("19-toplu-secim")
@@ -573,11 +576,11 @@ class SmokeTest {
         }
         com.poyankee.note.data.WrongBook.add(store0, st, q, "", "Deneme", 0)
         com.poyankee.note.data.WrongBook.add(store0, st, q, "", "Deneme", 1)
-        rule.onAllNodesWithText("Yanlış defteri")[0].performClick()
+        rule.onAllNodesWithText("Yanlış Defteri")[0].performClick()
         rule.waitUntil(8000) { rule.onAllNodesWithText("Soru 2").fetchSemanticsNodes().isNotEmpty() }
         shot("21b-yanlis-galeri")
         rule.onAllNodesWithText("Soru 2")[0].performClick()
-        rule.waitUntil(15_000) { rule.onAllNodesWithText("Defter olarak aç").fetchSemanticsNodes().isEmpty() && rule.onAllNodesWithTag("add").fetchSemanticsNodes().isEmpty() }
+        rule.waitUntil(15_000) { rule.onAllNodesWithText("Defter olarak aç").fetchSemanticsNodes().isEmpty() && rule.onAllNodesWithTag("pagepill").fetchSemanticsNodes().isNotEmpty() }
         Thread.sleep(1500)
         shot("21c-galeriden-soru-2")
         assertEquals(1, st.lastPage(st.wrongNotebook.value))
@@ -608,7 +611,8 @@ class SmokeTest {
         val ctx = rule.activity
 
         // hazır kütüphane: panel ve ekleme
-        rule.onNodeWithContentDescription("Kütüphane").performClick()
+        rule.onNodeWithTag("title").performClick()
+        rule.onNodeWithText("Kütüphane").performClick()
         rule.waitForIdle()
         shot("23-kutuphane")
         val before = items(c).size
@@ -617,7 +621,7 @@ class SmokeTest {
         assertTrue(main { c.hasSelection })
         rule.onAllNodesWithText("Kesir modelleri")[0].performClick()
         shot("24-kesir-modelleri")
-        rule.onNodeWithContentDescription("Kütüphane").performClick()
+        rule.onAllNodesWithContentDescription("Kapat")[0].performClick()
         // kütüphaneye kaydet
         val sel = main { v.selectedItems() }
         assertTrue(com.poyankee.note.data.UserLibrary.get(ctx).save("Birim çemberim", sel) > 0)
@@ -726,7 +730,7 @@ class SmokeTest {
         com.poyankee.note.core.L.dict = ctx.assets.open("i18n/en.tsv").bufferedReader().use { com.poyankee.note.core.L.parse(it.readText()) }
         main { com.poyankee.note.core.L.english = true }
         main { rule.activity.onBackPressedDispatcher.onBackPressed() }
-        rule.waitUntil(5000) { rule.onAllNodesWithText("Notebooks").fetchSemanticsNodes().isNotEmpty() }
+        rule.waitUntil(5000) { rule.onAllNodesWithText("All Notes").fetchSemanticsNodes().isNotEmpty() }
         shot("32-ingilizce")
         main { com.poyankee.note.core.L.english = false }
     }

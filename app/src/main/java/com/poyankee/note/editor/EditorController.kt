@@ -121,6 +121,8 @@ class EditorController(
     var currentPage by mutableIntStateOf(settings.lastPage(nb.id).coerceIn(0, maxOf(0, nb.pages.size - 1)))
     var pageCount by mutableIntStateOf(nb.pages.size)
     var hasSelection by mutableStateOf(false)
+    /** Seçim aracıyla boş bir alan çevrildi (yanlış defterine eklenebilir). */
+    var hasRegion by mutableStateOf(false)
     var selectionHasShapes by mutableStateOf(false)
     var presentation by mutableStateOf(false)
     var hint by mutableStateOf<String?>(null)

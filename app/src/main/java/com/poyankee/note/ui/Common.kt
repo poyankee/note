@@ -95,7 +95,7 @@ object UI {
 
     private fun c(light: Long, darkC: Long) = Color(if (dark) darkC else light)
     /** Özel tema rengi (Ayarlar › Renk teması › +). */
-    var customAccent by mutableStateOf(0xFFF5A000.toInt())
+    var customAccent by mutableStateOf(0xFF1F5C99.toInt())
     private fun mix(a: Int, b: Int, t: Float): Color {
         fun ch(x: Int, s: Int) = ((x shr s) and 0xFF)
         val r = ch(a, 16) + (ch(b, 16) - ch(a, 16)) * t; val g = ch(a, 8) + (ch(b, 8) - ch(a, 8)) * t; val bl = ch(a, 0) + (ch(b, 0) - ch(a, 0)) * t
@@ -104,7 +104,7 @@ object UI {
     private fun p(i: Int): Color {
         if (palette == Palette.CUSTOM && i >= 3 && !dark) {
             val a = customAccent
-            return if (i == 3) mix(a, 0xFFFFFFFF.toInt(), 0.955f) else mix(a, 0xFFF0F0F0.toInt(), 0.92f)
+            return if (i == 3) mix(a, 0xFFFAFAFB.toInt(), 0.965f) else mix(a, 0xFFF0F1F3.toInt(), 0.94f)
         }
         if (palette == Palette.CUSTOM && i <= 2) {
             val a = customAccent; val w = 0xFFFFFFFF.toInt(); val k = 0xFF000000.toInt(); val dk = 0xFF1A1D23.toInt()
@@ -130,6 +130,12 @@ object UI {
     val Desk get() = p(4)
     val Danger get() = c(0xFFE5484D, 0xFFFF6B6F)
     val Shadow = Color(0x1A101828)
+    /** Sol menü zemini (yeni tasarım). */
+    val SideBg get() = if (dark) Color(0xFF1E2229) else mix(customAccent, 0xFFF0F2F5.toInt(), 0.94f)
+    /** Logo kutusu (koyu lacivert). */
+    val LogoBg get() = c(0xFF2F3E50, 0xFF3A4A5E)
+    /** Kart kapak zemini. */
+    val CardThumb get() = c(0xFFF8F9FB, 0xFF2A2F37)
 }
 
 // Eski adlar (diğer dosyalarla uyum)
@@ -341,7 +347,7 @@ fun ColorChoiceRow(presets: List<Int>, saved: List<Int>, selected: Int, size: In
 val DESK_PRESETS = listOf(0xFFE9EBEF, 0xFFF3EBDD, 0xFFDCE6EE, 0xFFE3EADF, 0xFF5B6472, 0xFF2A2F38, 0xFF111418).map { it.toInt() }
 
 /** Uygulama rengi için önerilenler. */
-val ACCENT_PRESETS = listOf(0xFFF5A000, 0xFFF97316, 0xFFEF4444, 0xFFEC4899, 0xFF8B5CF6, 0xFF4F46E5, 0xFF0EA5E9, 0xFF14B8A6, 0xFF22C55E, 0xFF475569).map { it.toInt() }
+val ACCENT_PRESETS = listOf(0xFF1F5C99, 0xFFF5A000, 0xFFF97316, 0xFFEF4444, 0xFFEC4899, 0xFF8B5CF6, 0xFF4F46E5, 0xFF0EA5E9, 0xFF14B8A6, 0xFF22C55E, 0xFF475569).map { it.toInt() }
 
 /** Sol üstteki uygulama simgesi seçenekleri. */
 enum class AppIcon(val title: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
@@ -358,7 +364,7 @@ enum class AppIcon(val title: String, val icon: androidx.compose.ui.graphics.vec
 
 /** Ana sayfadaki sol menüde sıralanabilir / gizlenebilir bölümler. */
 enum class SideItem(val title: String) {
-    ALL("Tüm defterler"), FAVORITES("Favoriler"), QUICK("Hızlı notlar"), WRONG("Yanlış defteri"), TODO("Yapılacaklar"), TRASH("Çöp kutusu");
+    ALL("Tüm Notlar"), FAVORITES("Favoriler"), QUICK("Hızlı Notlar"), WRONG("Yanlış Defteri"), TODO("Yapılacaklar"), TRASH("Çöp Kutusu");
     companion object {
         const val DEFAULT = "ALL,FAVORITES,QUICK,WRONG,TODO,TRASH"
         fun parse(s: String): List<SideItem> = s.split(',').mapNotNull { n -> entries.firstOrNull { it.name == n.trim() } }

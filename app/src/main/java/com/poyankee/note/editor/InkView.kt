@@ -44,6 +44,7 @@ import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 
 /**
  * Sayfaların çizildiği ve kalem/parmak girişinin işlendiği görünüm.
@@ -180,6 +181,19 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
         val p = nb.pages[i]
         val l = (pageLeft(i) - sx) * zoom; val t = (tops[i] - sy) * zoom
         return RectF(l, t, l + p.width * zoom, t + p.height * zoom)
+    }
+
+    /** Yakınlaştırma yüzdesi (sayfa genişliğine sığdırılmış hal = %100). */
+    fun zoomPercent(): Int = if (width == 0) 100 else (zoom / fitZoom() * 100f).roundToInt()
+
+    /** Ekranın ortası sabit kalarak yakınlaştır / uzaklaştır (alttaki % düğmeleri). */
+    fun zoomStep(factor: Float) {
+        if (width == 0) return
+        val cx = toDocX(width / 2f); val cy = toDocY(height / 2f)
+        zoom = (zoom * factor).coerceIn(fitZoom() * 0.35f, fitZoom() * 12f)
+        sx = cx - width / 2f / zoom
+        sy = cy - height / 2f / zoom
+        clampScroll(); invalidate(); scheduleSharp(); updateCurrentPage()
     }
 
     /** Sayfa genişliğine sığdır (ekranın ortasındaki yer korunur). */
@@ -1156,7 +1170,42 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
         ctl.captureToWrongNotebook(i, l, t, r, bt)
     }
 
+    /** Seçim aracıyla boş bir alan (ör. PDF'teki soru) çevrilince: sayfa ve kutu (sayfa koordinatı). */
+    private var region: Pair<Int, Box>? = null
+
+    fun clearRegion() {
+        if (region == null) return
+        region = null; ctl.hasRegion = false; invalidate()
+    }
+
+    /** Çevrilen alanı yanlış defterine ekler. */
+    fun regionToWrong() {
+        val (i, b) = region ?: return
+        clearRegion()
+        ctl.captureToWrongNotebook(i, b.left, b.top, b.right, b.bottom)
+    }
+
+    /** Seçili öğelerin kapladığı alanı (biraz pay bırakarak) yanlış defterine ekler. */
+    fun selectionToWrong() {
+        val s = sel ?: return
+        val p = nb.pages[s.page]
+        val b = s.box().inflate(10f)
+        clearSelection()
+        ctl.captureToWrongNotebook(s.page, b.left.coerceAtLeast(0f), b.top.coerceAtLeast(0f), b.right.coerceAtMost(p.width), b.bottom.coerceAtMost(p.height))
+    }
+
     private fun drawCapture(c: Canvas, z: Float) {
+        region?.let { (i, b) ->
+            if (i < tops.size) {
+                val l = b.left + pageLeft(i); val t = b.top + tops[i]
+                overlayFill.color = 0x221565C0
+                c.drawRect(l, t, l + b.width, t + b.height, overlayFill)
+                overlayStroke.color = 0xFF1565C0.toInt(); overlayStroke.strokeWidth = 2f / z
+                overlayStroke.pathEffect = android.graphics.DashPathEffect(floatArrayOf(10f / z, 6f / z), 0f)
+                c.drawRect(l, t, l + b.width, t + b.height, overlayStroke)
+                overlayStroke.pathEffect = null
+            }
+        }
         val a = capA ?: return; val b = capB ?: return
         val l = minOf(a.x, b.x); val t = minOf(a.y, b.y); val r = maxOf(a.x, b.x); val bt = maxOf(a.y, b.y)
         overlayFill.color = 0x221565C0
@@ -1171,6 +1220,7 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
         scroller.forceFinished(true)
         laserDot = null; cursor = null
         val dx = toDocX(e.getX(idx)); val dy = toDocY(e.getY(idx))
+        clearRegion()
         if (ctl.captureMode) {
             clearSelection()
             capA = android.graphics.PointF(dx, dy); capB = android.graphics.PointF(dx, dy)
@@ -1522,8 +1572,17 @@ class InkView(context: Context, private val ctl: EditorController) : View(contex
             }
             Tool.LASSO -> {
                 if (st.n >= 3) {
-                    val found = HitTest.lasso(page.items, st.xy())
+                    val pts = st.xy()
+                    val found = HitTest.lasso(page.items, pts)
                     if (found.isNotEmpty()) select(st.page, found)
+                    else {
+                        // boş alan (ör. PDF'teki bir soru): alanı yanlış defterine ekleme seçeneği
+                        var l = Float.MAX_VALUE; var t = Float.MAX_VALUE; var r = -Float.MAX_VALUE; var b = -Float.MAX_VALUE
+                        var k = 0
+                        while (k + 1 < pts.size) { l = min(l, pts[k]); r = max(r, pts[k]); t = min(t, pts[k + 1]); b = max(b, pts[k + 1]); k += 2 }
+                        l = l.coerceAtLeast(0f); t = t.coerceAtLeast(0f); r = r.coerceAtMost(page.width); b = b.coerceAtMost(page.height)
+                        if (r - l > 24f && b - t > 24f) { region = st.page to Box(l, t, r, b); ctl.hasRegion = true; invalidate() }
+                    }
                 }
             }
             Tool.LASER -> laserDot = null

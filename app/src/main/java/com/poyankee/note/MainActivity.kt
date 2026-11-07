@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.width
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.CircularProgressIndicator
@@ -85,6 +87,7 @@ class MainActivity : ComponentActivity() {
         applyLanguage(this)
         store = Store(applicationContext)
         settings = Settings.get(this)
+        settings.migrateDesign()
         bg.execute { Exporter.init(applicationContext) }
         folders = store.folders()
         store.purgeOldTrash()
@@ -121,6 +124,47 @@ class MainActivity : ComponentActivity() {
                     isAppearanceLightNavigationBars = !UI.dark
                 }
             }
+            val libraryUi: @androidx.compose.runtime.Composable (Boolean, String?) -> Unit = { compact, cur ->
+                LibraryScreen(
+                            notebooks = notebooks,
+                            folders = folders,
+                            folder = folder,
+                            busy = busy,
+                            onSelectFolder = { folder = it },
+                            onOpen = { id -> if (editor?.nb?.id != id) { if (editor != null) closeEditor(keepTab = true); openById(id) } },
+                            onCreate = { create(it) },
+                            onImportPdf = { openPdf.launch(arrayOf("application/pdf")) },
+                            onRename = { id, name -> if (name.isNotBlank()) { store.rename(id, name); notebooks = notebooks.map { if (it.id == id) it.copy(name = name) else it } } },
+                            onDelete = { id -> store.delete(id); notebooks = notebooks.filter { it.id != id }; tabs = tabs.filter { it.first != id }; refresh() },
+                            trash = trash,
+                            onRestoreTrash = { id -> store.restoreFromTrash(id); refresh() },
+                            onPurge = { id -> store.purge(id); trash = trash.filter { it.first.id != id } },
+                            onEmptyTrash = { store.emptyTrash(); trash = emptyList() },
+                            onOpenTodo = { id, page -> if (page >= 0) settings.setLastPage(id, page); openById(id) },
+                            onSaveTemplate = { id -> saveTemplate(id) },
+                            onFromTemplate = { id -> fromTemplate(id) },
+                            onMerge = { ids -> mergeNotebooks(ids) },
+                            onFromImages = { pickImages.launch("image/*") },
+                            onForgotPin = { nb -> forgotPin(nb) },
+                            onWrongBook = {
+                                bg.execute {
+                                    val id = com.poyankee.note.data.WrongBook.ensure(store, settings)
+                                    runOnUiThread { refresh(); if (editor != null) closeEditor(keepTab = true); wrongGallery = id }
+                                }
+                            },
+                            onMove = { id, f -> store.setFolder(id, f); notebooks = notebooks.map { if (it.id == id) it.copy(folder = f) else it } },
+                            onCreateFolder = { name -> addFolder(name) },
+                            onRenameFolder = { old, new -> renameFolder(old, new) },
+                            onDeleteFolder = { name -> deleteFolder(name) },
+                            onSettings = { showSettings = true },
+                            sort = settings.sortValue,
+                            onSort = { settings.sortMode.value = it.name },
+                            onFavorite = { id, fav -> store.setFavorite(id, fav); notebooks = notebooks.map { if (it.id == id) it.copy(favorite = fav) else it } },
+                            onLock = { id, hash -> store.setLock(id, hash); notebooks = notebooks.map { if (it.id == id) it.copy(lockHash = hash) else it } },
+                            onQuickNote = { quickNote() },
+                            compact = compact, currentId = cur,
+                        )
+            }
             NoteTheme {
                 val ed = editor
                 val presenting = ed?.presentation == true
@@ -143,52 +187,28 @@ class MainActivity : ComponentActivity() {
                                 onOpenPage = { p -> if (p >= 0) settings.setLastPage(wid, p); wrongGallery = null; open(wid) },
                                 onBack = { wrongGallery = null })
                         }
-                        ed != null -> EditorScreen(
-                            ed, onClose = { closeEditor() }, onSettings = { showSettings = true },
-                            tabs = tabs, onTab = { id -> if (id != ed.nb.id) { closeEditor(keepTab = true); openById(id) } },
-                            onCloseTab = { id -> closeTab(id) },
-                            onOpenTodo = { id, page -> settings.setLastPage(id, page); closeEditor(keepTab = true); openById(id) },
-                            onInsertPdf = { uri, after -> insertPdfInto(ed.nb.id, uri, after) },
-                            onExtract = { idx, name -> extractPages(ed.nb.id, idx, name) },
-                        )
-                        else -> LibraryScreen(
-                            notebooks = notebooks,
-                            folders = folders,
-                            folder = folder,
-                            busy = busy,
-                            onSelectFolder = { folder = it },
-                            onOpen = { openById(it) },
-                            onCreate = { create(it) },
-                            onImportPdf = { openPdf.launch(arrayOf("application/pdf")) },
-                            onRename = { id, name -> if (name.isNotBlank()) { store.rename(id, name); notebooks = notebooks.map { if (it.id == id) it.copy(name = name) else it } } },
-                            onDelete = { id -> store.delete(id); notebooks = notebooks.filter { it.id != id }; tabs = tabs.filter { it.first != id }; refresh() },
-                            trash = trash,
-                            onRestoreTrash = { id -> store.restoreFromTrash(id); refresh() },
-                            onPurge = { id -> store.purge(id); trash = trash.filter { it.first.id != id } },
-                            onEmptyTrash = { store.emptyTrash(); trash = emptyList() },
-                            onOpenTodo = { id, page -> if (page >= 0) settings.setLastPage(id, page); openById(id) },
-                            onSaveTemplate = { id -> saveTemplate(id) },
-                            onFromTemplate = { id -> fromTemplate(id) },
-                            onMerge = { ids -> mergeNotebooks(ids) },
-                            onFromImages = { pickImages.launch("image/*") },
-                            onForgotPin = { nb -> forgotPin(nb) },
-                            onWrongBook = {
-                                bg.execute {
-                                    val id = com.poyankee.note.data.WrongBook.ensure(store, settings)
-                                    runOnUiThread { refresh(); wrongGallery = id }
+                        ed != null -> androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+                            // geniş ekranda (tablet yatay) notlar solda, defter sağda
+                            val canSplit = maxWidth >= 1000.dp && !presenting
+                            val split = canSplit && settings.splitView.value
+                            androidx.compose.foundation.layout.Row(Modifier.fillMaxSize()) {
+                                if (split) Box(Modifier.width(if (maxWidth > 1400.dp) 680.dp else 620.dp).fillMaxHeight()) { libraryUi(true, ed.nb.id) }
+                                Box(Modifier.weight(1f).fillMaxHeight()) {
+                                    EditorScreen(
+                                        ed, onClose = { closeEditor() }, onSettings = { showSettings = true },
+                                        tabs = tabs, onTab = { id -> if (id != ed.nb.id) { closeEditor(keepTab = true); openById(id) } },
+                                        onCloseTab = { id -> closeTab(id) },
+                                        onOpenTodo = { id, page -> settings.setLastPage(id, page); closeEditor(keepTab = true); openById(id) },
+                                        onInsertPdf = { uri, after -> insertPdfInto(ed.nb.id, uri, after) },
+                                        onExtract = { idx, name -> extractPages(ed.nb.id, idx, name) },
+                                        onNew = { closeEditor(keepTab = true); create("") },
+                                        split = if (canSplit) split else null,
+                                        onSplit = { settings.splitView.value = !settings.splitView.value },
+                                    )
                                 }
-                            },
-                            onMove = { id, f -> store.setFolder(id, f); notebooks = notebooks.map { if (it.id == id) it.copy(folder = f) else it } },
-                            onCreateFolder = { name -> addFolder(name) },
-                            onRenameFolder = { old, new -> renameFolder(old, new) },
-                            onDeleteFolder = { name -> deleteFolder(name) },
-                            onSettings = { showSettings = true },
-                            sort = settings.sortValue,
-                            onSort = { settings.sortMode.value = it.name },
-                            onFavorite = { id, fav -> store.setFavorite(id, fav); notebooks = notebooks.map { if (it.id == id) it.copy(favorite = fav) else it } },
-                            onLock = { id, hash -> store.setLock(id, hash); notebooks = notebooks.map { if (it.id == id) it.copy(lockHash = hash) else it } },
-                            onQuickNote = { quickNote() },
-                        )
+                            }
+                        }
+                        else -> libraryUi(false, null)
                     }
                     if (!settings.introShown.value && !introSuppressed) com.poyankee.note.ui.IntroDialog { settings.introShown.value = true }
                     // açılıyor / kaydediliyor: ekranı bekletmeden sağ üstte küçük gösterge
@@ -524,6 +544,9 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun showEditor(c: EditorController) {
+        // yanda başka bir defter açıksa önce onu kaydedip kapat
+        val old = editor
+        if (old != null && old !== c) closeEditor(keepTab = true)
         editor = c
         if (tabs.none { it.first == c.nb.id }) tabs = (tabs + (c.nb.id to c.nb.name)).takeLast(6)
     }

@@ -156,6 +156,23 @@ Kurulum: GitHub › Releases › en yeni **Note sürüm N** › `Note-N.apk` (es
 - [ ] Kalem: basınç gelmese de çizgi düzgün kalınlıkta
 - [ ] Sol menüden **Yanlış defteri**: soruların galerisi açılıyor; Tümü / Çözülmedi / Çözüldü; karta dokununca o sayfa açılıyor; "Defter olarak aç"
 
+## 15. İkinci tasarım (mavi) ve gelişmiş ayarlar
+- [ ] Mavi tema geldi (eski sarı tema kendiliğinden maviye geçti; Ayarlar › Uygulama rengi ile değişir)
+- [ ] Sol menü: üstte dağ manzarası + logo + "Note+", altta "Ayarlar · Profil, tema, yedekleme" kartı
+- [ ] Ayarlar › Kişiselleştirme: sol menü görseli (Dağlar, Deniz, Tepeler, Gece, Yok)
+- [ ] "Tüm Notlar" başlığı, sağda ızgara/liste düğmesi; arama kutusu ve yanında ayar (sırala, kapak boyutu, seç) düğmesi
+- [ ] Filtreler: Tümü / Defterler / PDF / Favoriler; kartlarda ⋯ sağ üstte, ☆ sağ altta, "N sayfa · 7 Kas"
+- [ ] Tablet yatayken defter açınca **notlar solda, defter sağda** (3 bölme); sekmelerin solundaki ☰ ile notlar gizlenir/gösterilir
+- [ ] Soldaki listeden başka bir deftere dokununca sağda o defter açılıyor
+- [ ] Sekmeler üstte, seçili sekme mavi ve altı çizili; "+" ile yeni defter
+- [ ] Defter başlık kartı: ← | ad ▾ (sayfalar, sayfa düzeni, kütüphane, yapılacaklar, ders kaydı, odak modu) | geri al, yinele, ⊕, yer imi, paylaş, ⋮
+- [ ] Sol araç çubuğu: Kalem, Silgi, Fosforlu, Şekiller, Seçim, Resim, Metin, Geometri, renkler, ⋯ (diğer araçlar, daralt, gizle)
+- [ ] Altta "‹ 1/3 ›  −  %100  +" çubuğu; %'ye dokununca sayfaya sığar
+- [ ] Ayarlar sade; "Gelişmiş ayarlar" ayrı sayfada
+- [ ] Gelişmiş › "Defter başlığı sayfayla birlikte kaysın" (eski davranış) ve "Notlar listesi defterin yanında"
+- [ ] **Seçim aracıyla bir çizimi seçince** alttaki çubukta "Yanlış defterine" var
+- [ ] **PDF'teki bir soruyu seçim aracıyla çevirince** (çizim yoksa) "Bu alanı yanlış defterine ekle" çıkıyor
+
 ---
 
 ## Henüz yapılmayanlar (sonraki adımlar)

@@ -109,7 +109,7 @@ class Settings(context: Context) {
     /** Sayfa dışındaki masa rengi (0 = temaya göre). */
     val deskColor = int("deskColor", 0)
     val sortMode = str("sortMode", SortMode.UPDATED.name)
-    val libraryView = str("libraryView", LibraryView.LIST.name)
+    val libraryView = str("libraryView", LibraryView.MEDIUM.name)
     /** Klasör renkleri: "ad=AARRGGBB" çiftleri, ayraç \u0001. */
     val folderColors = str("folderColors", "")
 
@@ -117,10 +117,10 @@ class Settings(context: Context) {
     val theme = str("theme", ThemeMode.SYSTEM.name)
     val colorTheme = str("colorTheme", "DEFAULT")
     /** Özel tema rengi ve kullanıcının eklediği tema / masa renkleri. */
-    val customAccent = int("customAccent", 0xFFF5A000.toInt())
+    val customAccent = int("customAccent", 0xFF1F5C99.toInt())
     /** Kişiselleştirme: sol üstteki başlık, simge, profil ve sol menü. */
-    val appTitle = str("appTitle", "Note")
-    val appSubtitle = str("appSubtitle", "Not defterim")
+    val appTitle = str("appTitle", "Note+")
+    val appSubtitle = str("appSubtitle", "")
     val appIcon = str("appIcon", "PEN")
     val profileName = str("profileName", "")
     val profileSubtitle = str("profileSubtitle", "")
@@ -133,7 +133,15 @@ class Settings(context: Context) {
     /** Araç çubuğu: TOP (üstte şerit) veya LEFT (solda yüzen menü). */
     val toolbarPos = str("toolbarPos", "TOP")
     /** Soldaki araç listesinde görünecekler (virgülle, sırayla). */
-    val railItems = str("railItems", "UNDO,REDO,PEN,HIGHLIGHTER,ERASER,LASSO,GEOMETRY,TEXT,RULER,PAGES,COLORS")
+    val railItems = str("railItems", "PEN,ERASER,HIGHLIGHTER,SHAPES,LASSO,IMAGE,TEXT,GEOMETRY,COLORS")
+    /** Sol menünün üstündeki görsel (Dağlar, Deniz...). */
+    val sideArt = str("sideArt", "MOUNTAIN")
+    /** Defter başlığı sabit değil, ilk sayfanın üstünde sayfayla birlikte kaysın (Gelişmiş). */
+    val headerScroll = bool("headerScroll", false)
+    /** Geniş ekranda defter açıkken notlar listesi solda kalsın. */
+    val splitView = bool("splitView", true)
+    /** Tasarım sürümü: eski ayarları yeni tasarıma bir kez taşımak için. */
+    val designVersion = int("designVersion", 0)
     /** Soldaki araç listesi tamamen gizli mi (ör. video çekerken). */
     val dockHidden = bool("dockHidden", false)
     /** Uygulama dili: "tr" veya "en". */
@@ -177,6 +185,17 @@ class Settings(context: Context) {
     val buttonActionValue get() = try { ButtonAction.valueOf(buttonAction.value) } catch (_: Exception) { ButtonAction.ERASER }
     val penKeyActionValue get() = try { PenAction.valueOf(penKeyAction.value) } catch (_: Exception) { PenAction.ERASER_TOGGLE }
     val themeValue get() = try { ThemeMode.valueOf(theme.value) } catch (_: Exception) { ThemeMode.SYSTEM }
+    /** Yeni tasarıma geçiş (bir kez): eski varsayılanları yenileriyle değiştirir; kullanıcının seçtikleri korunur. */
+    fun migrateDesign() {
+        if (designVersion.value >= 2) return
+        if (customAccent.value == 0xFFF5A000.toInt()) customAccent.value = 0xFF1F5C99.toInt()
+        if (libraryView.value == LibraryView.LIST.name) libraryView.value = LibraryView.MEDIUM.name
+        if (appTitle.value == "Note") appTitle.value = "Note+"
+        if (appSubtitle.value == "Not defterim") appSubtitle.value = ""
+        if (railItems.value == "UNDO,REDO,PEN,HIGHLIGHTER,ERASER,LASSO,GEOMETRY,TEXT,RULER,PAGES,COLORS") railItems.value = "PEN,ERASER,HIGHLIGHTER,SHAPES,LASSO,IMAGE,TEXT,GEOMETRY,COLORS"
+        designVersion.value = 2
+    }
+
     val libraryViewValue get() = try { LibraryView.valueOf(libraryView.value) } catch (_: Exception) { LibraryView.MEDIUM }
     private fun folderColorMap(): Map<String, Int> = folderColors.value.split('\u0001').mapNotNull {
         val i = it.lastIndexOf('='); if (i <= 0) null else it.substring(i + 1).toLongOrNull(16)?.let { c -> it.substring(0, i) to c.toInt() }
