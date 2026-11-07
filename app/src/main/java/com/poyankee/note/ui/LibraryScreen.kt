@@ -622,7 +622,7 @@ private fun NotebookRow(nb: NotebookInfo, selected: Boolean?, folderColor: Color
             Spacer(Modifier.height(3.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (nb.folder.isNotEmpty()) {
-                    Icon(Icons.Rounded.Folder, null, tint = folderColor ?: folderAutoColor(nb.folder), modifier = Modifier.size(14.dp))
+                    Icon(Icons.Rounded.Folder, null, tint = folderColor ?: Color(folderAutoColor(nb.folder)), modifier = Modifier.size(14.dp))
                     Spacer(Modifier.width(4.dp))
                     Text(nb.folder + " · ", fontSize = 13.sp, color = UI.TextSoft, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 180.dp))
                 }

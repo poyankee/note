@@ -22,7 +22,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.MenuBook
 import androidx.compose.material3.CircularProgressIndicator
@@ -81,7 +81,7 @@ fun WrongGallery(store: Store, settings: Settings, id: String, onOpenPage: (Int)
     }
     Column(Modifier.fillMaxSize().background(UI.Bg)) {
         Row(Modifier.fillMaxWidth().padding(start = 6.dp, end = 12.dp, top = 8.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, L.t("Geri"), tint = UI.Text) }
+            IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, L.t("Geri"), tint = UI.Text) }
             Column(Modifier.weight(1f)) {
                 Text(L.t("Yanlış defteri"), fontSize = 22.sp, fontWeight = FontWeight.Bold, color = UI.Text)
                 list?.let { l -> Text("${l.size} " + L.t("soru") + " · ${l.count { it.done }} " + L.t("çözüldü"), fontSize = 13.sp, color = UI.TextSoft) }

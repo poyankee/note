@@ -1,5 +1,13 @@
 package com.poyankee.note.ui
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.MenuBook
+import androidx.compose.material.icons.rounded.School
+import androidx.compose.material.icons.rounded.Calculate
+import androidx.compose.material.icons.rounded.Lightbulb
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.Science
 import com.poyankee.note.core.L
 
 import androidx.compose.foundation.BorderStroke
@@ -337,13 +345,13 @@ val ACCENT_PRESETS = listOf(0xFFF5A000, 0xFFF97316, 0xFFEF4444, 0xFFEC4899, 0xFF
 
 /** Sol üstteki uygulama simgesi seçenekleri. */
 enum class AppIcon(val title: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
-    PEN("Kalem", androidx.compose.material.icons.Icons.Rounded.Edit),
-    BOOK("Kitap", androidx.compose.material.icons.Icons.Rounded.MenuBook),
-    SCHOOL("Kep", androidx.compose.material.icons.Icons.Rounded.School),
-    CALC("Hesap", androidx.compose.material.icons.Icons.Rounded.Calculate),
-    IDEA("Ampul", androidx.compose.material.icons.Icons.Rounded.Lightbulb),
-    STAR("Yıldız", androidx.compose.material.icons.Icons.Rounded.Star),
-    SCIENCE("Bilim", androidx.compose.material.icons.Icons.Rounded.Science),
+    PEN("Kalem", Icons.Rounded.Edit),
+    BOOK("Kitap", Icons.Rounded.MenuBook),
+    SCHOOL("Kep", Icons.Rounded.School),
+    CALC("Hesap", Icons.Rounded.Calculate),
+    IDEA("Ampul", Icons.Rounded.Lightbulb),
+    STAR("Yıldız", Icons.Rounded.Star),
+    SCIENCE("Bilim", Icons.Rounded.Science),
     ;
     companion object { fun of(name: String) = entries.firstOrNull { it.name == name } ?: PEN }
 }
