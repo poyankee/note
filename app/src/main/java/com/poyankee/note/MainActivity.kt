@@ -189,10 +189,11 @@ class MainActivity : ComponentActivity() {
                         }
                         ed != null -> androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
                             // geniş ekranda (tablet yatay) notlar solda, defter sağda
-                            val canSplit = maxWidth >= 1000.dp && !presenting
+                            val areaW = maxWidth
+                            val canSplit = areaW >= 1000.dp && !presenting
                             val split = canSplit && settings.splitView.value
                             androidx.compose.foundation.layout.Row(Modifier.fillMaxSize()) {
-                                if (split) Box(Modifier.width(if (maxWidth > 1400.dp) 680.dp else 620.dp).fillMaxHeight()) { libraryUi(true, ed.nb.id) }
+                                if (split) Box(Modifier.width(if (areaW > 1400.dp) 680.dp else 620.dp).fillMaxHeight()) { libraryUi(true, ed.nb.id) }
                                 Box(Modifier.weight(1f).fillMaxHeight()) {
                                     EditorScreen(
                                         ed, onClose = { closeEditor() }, onSettings = { showSettings = true },
